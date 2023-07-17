@@ -12,8 +12,9 @@ QUERIES = {
 
 QUERIES_WITH_TIME = {
 	'A':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts +' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
-	# 'B':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts + ' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
-	# 'Memory Utilisation (from requests)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
+	'B':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts + ' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
+	'C':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}' + ts + ') / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')',
+	'D':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}' + ts + ') / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')'
 }
 
 def find_query_values():
@@ -21,9 +22,12 @@ def find_query_values():
 
 	for query_title, query in QUERIES.items():
 		try:
-			query_values[query] = query_api_site(query).json()['data']['result'][0]['value']
+			query_values[query_title] = query_api_site(query).json()['data']['result'][0]['value']
 		except KeyError:
-			query_values[query] = "no data/failed response"
+			query_values[query_title] = "no data/failed response"
+		except IndexError:
+			query_values[query_title] = "no data/failed response"
+
 	return query_values
 
 
