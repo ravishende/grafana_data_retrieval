@@ -1,15 +1,29 @@
 import requests
 import json
 
-QUERY_VALUES = {
+QUERIES = {
 	'CPU Utilisation (from requests)':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',
+	'CPU Utilisation (from limits)':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',
 	'Memory Utilisation (from requests)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
 }
 
-def query_api_site():
-	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
-	query = 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}[1h])'
+def find_query_values():
+	query_values = {}
 
+	for query_title, query in QUERIES.items():
+		query_values[query] = query_api_site(query).json()['data']['result'][0]['value']
+	return query_values
+
+
+def print_query_values():
+	query_values = find_query_values()
+	for query_title, value in query_values.items():
+		print(f'{query_title}: \n\t{value}')
+
+
+def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
+	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
+	query = 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})'
 	endpoint = f'query?query={query}'
 	full_url = base_url + endpoint
 	cpu_data = requests.get(full_url)
