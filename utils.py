@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import requests
 import json
+from termcolor import cprint, colored
 
 ts = '[1h]'
 
@@ -36,8 +37,8 @@ def find_query_values():
     for (query_title, query) in QUERIES.items():
         try:
             query_values[query_title] = \
-                query_api_site(query).json()['data']['result'
-                    ][0]['value']
+                round(float(query_api_site(query).json()['data']['result'
+                    ][0]['value'][1]),3)
         except KeyError:
             query_values[query_title] = 'no data/failed response'
         except IndexError:
@@ -49,14 +50,15 @@ def find_query_values():
 def print_query_values():
     query_values = find_query_values()
     for (query_title, value) in query_values.items():
-        print(f'{query_title}: \n\t\t{value}\n')
+        if (str(value)[0] == "n"):
+        	print(f'{query_title}: \n\t{colored(value,"red")}')
+        else:
+        	print(f'{query_title}: \n\t{colored(value,"green")}')
+
 
 def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
     base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
-
-    # endpoint = f'query?query={query}'
-
-    endpoint = 'query?query=' + str(query)
+    endpoint = f'query?query={query}'
     full_url = base_url + endpoint
     cpu_data = requests.get(full_url)
     return cpu_data
