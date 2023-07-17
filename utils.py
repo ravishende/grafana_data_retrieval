@@ -10,8 +10,9 @@ QUERIES = {
 	'Memory Utilisation (from limits)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})'
 }
 
+#for testing accuracy of the code against the website
 QUERIES_WITH_TIME = {
-	'A':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts +' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
+	'A':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts + ' / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
 	'B':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts + ' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
 	'C':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""})' + ts + ' / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')',
 	'D':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""})' + ts + ' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')' # always no data here
@@ -20,8 +21,10 @@ QUERIES_WITH_TIME = {
 def find_query_values():
 	query_values = {}
 
-	for query_title, query in QUERIES_WITH_TIME.items():
+	for query_title, query in QUERIES.items():
+	# for query_title, query in QUERIES_WITH_TIME.items():
 		try:
+			# query_values[query_title] = query_api_site(query).json()
 			query_values[query_title] = query_api_site(query).json()['data']['result'][0]['value']
 		except KeyError:
 			query_values[query_title] = "no data/failed response"
@@ -33,13 +36,13 @@ def find_query_values():
 
 def print_query_values():
 	query_values = find_query_values()
+	# query_values = QUERIES
 	for query_title, value in query_values.items():
 		print(f'{query_title}: \n\t\t{value}\n')
 
 
 def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
 	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
-	query = 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})'
 	endpoint = f'query?query={query}'
 	full_url = base_url + endpoint
 	cpu_data = requests.get(full_url)
