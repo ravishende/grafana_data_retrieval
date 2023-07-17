@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from utils import *
 
-data = query_api_site()
+data = query_api_site(QUERIES_WITH_TIME['B'])
 print(data.text)
 print(type(data))
 print(data.json())
