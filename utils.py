@@ -1,7 +1,7 @@
 import requests
 import json
 
-ts = '[15m]'
+ts = '[3h]'
 
 QUERIES = {
 	'CPU Utilisation (from requests)':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',
@@ -13,14 +13,14 @@ QUERIES = {
 QUERIES_WITH_TIME = {
 	'A':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts +' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
 	'B':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"})' + ts + ' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}' + ts + ')',
-	'C':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}' + ts + ') / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')',
-	'D':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}' + ts + ') / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')'
+	'C':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""})' + ts + ' / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')',
+	'D':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""})' + ts + ' / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"}' + ts + ')' # always no data here
 }
 
 def find_query_values():
 	query_values = {}
 
-	for query_title, query in QUERIES.items():
+	for query_title, query in QUERIES_WITH_TIME.items():
 		try:
 			query_values[query_title] = query_api_site(query).json()['data']['result'][0]['value']
 		except KeyError:
@@ -54,31 +54,3 @@ def read_json():
 		data = json.load(file)
 	return data
 
-"""
-The following example expression returns the per-second rate of HTTP requests 
-as measured over the last 5 minutes, 
-per time series in the range vector:
-
-rate(http_requests_total{job="api-server"}[5m])
-
-rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])
-
-rate()
-
-container_cpu_usage_seconds_total
-
-
-time = 3h
-namespace "wifire-quicfire"
-
-
-
-
-
-
-
-
-
-
-
-"""

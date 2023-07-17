@@ -3,13 +3,13 @@ import requests
 from bs4 import BeautifulSoup
 from utils import *
 
-data = query_api_site(QUERIES_WITH_TIME['A'])
-print(data.text)
-print(type(data))
-print(data.json())
+data = query_api_site(QUERIES_WITH_TIME['C'])
+
 # print(data.json()['data'])
 write_json(data)
 
+print("time frame is ",ts)
+print_query_values()
 # url = "https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=thanos&var-cluster=&var-namespace=wifire&from=1756419957757&to=1806913309834"
 # all_data = requests.get(url)
 
