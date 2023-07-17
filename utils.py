@@ -2,17 +2,13 @@ import requests
 import json
 
 QUERY_VALUES = {
-	"CPU Utilisation (from requests)":'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',
-
+	'CPU Utilisation (from requests)':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',
+	'Memory Utilisation (from requests)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
 }
 
 def query_api_site():
 	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
-	# query = 'rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])'
-	# query = 'rate(node_cpu_seconds_total[1m])'
-	# query = ' sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})'
-	# query = 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"})'
-	query = 'sum(node_namespace_pod_container:container_cpu_usage_seconds)'
+	query = 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"}[1h])'
 
 	endpoint = f'query?query={query}'
 	full_url = base_url + endpoint
