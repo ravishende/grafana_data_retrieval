@@ -24,13 +24,13 @@ def find_query_values():
     #generates a new dictionary that holds the data titles and their values
     for (query_title, query) in QUERIES.items():
         api_response = query_api_site(query).json()
-        result_list = get_result_list(response)
+        result_list = get_result_list(api_response)
 
         #there is a bug with the api itself where every fifth request comes back with no data
         if(len(result_list) == 0):
             #the fix to this is simply to regenerate the response if it comes back empty.    
             api_response = query_api_site(query).json()
-            query_values[query_title] = get_query_value(get_result_list(response))
+            query_values[query_title] = get_query_value(get_result_list(api_response))
         else:
             query_values[query_title] = get_query_value(result_list)
 
@@ -44,7 +44,6 @@ def get_result_list(api_response):
 #given a two element result list, select the second element and make it a usable float.
 def get_query_value(result_list):
     return round(float(result_list[0]['value'][1]),3)
-
 
 
 #print the values of the 4 header panels
