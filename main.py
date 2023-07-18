@@ -2,23 +2,30 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from utils import *
-
-print("\n\n\n\n")
-print_query_values(True)
-print("\n\n\n\n")
+import pandas as pd
 
 
-# json_print()
+column_names=["CPU Usage","CPU Requests",'CPU Requests %', 'CPU Limits']
+data = [ [None, None, None, None]]
 
+df = pd.DataFrame(data, columns=column_names)
 
-# url = "https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=thanos&var-cluster=&var-namespace=wifire&from=1756419957757&to=1806913309834"
-# all_data = requests.get(url)
+def get_cpu_usage(pod):
+	cpu_usage = query_api_site('sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire", pod="'+pod+'"})')
+	cpu_usage = cpu_usage.json()['data']['result']
+	
+	# if error retrieving from api, ping again recursively
+	if (len(cpu_usage) == 0):
 
-# s = BeautifulSoup(all_data.content, "html.parser")
-# print(s)
-# print("successfully requested url")
+		return get_cpu_usage(pod)
 
-# print(s.text)
-# res = s.find(id="containername")
-# title = s.find("h2",class_="title is-5")
-# print(title[0].text)
+	return float(cpu_usage[0]['value'][1])
+
+cpu = round(get_cpu_usage('bp3d-rabbitmq-5845c99598-99rcn'),2)
+
+df["CPU Usage"][0] = cpu
+
+# row = {'CPU Usage':cpu, 'CPU Requests':0, 'CPU Requests %': 0, 'CPU Limits': 0}
+# df = df.append(row, ignore_index = True)
+print(df)
+print("\n\n\n")
