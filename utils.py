@@ -23,18 +23,28 @@ def find_query_values():
 
     #generates a new dictionary that holds the data titles and their values
     for (query_title, query) in QUERIES.items():
-        try:
-            query_values[query_title] = \
-                round(float(query_api_site(query).json()[
-                    'data']['result'][0]['value'][1]),3)
+        api_response = query_api_site(query).json()
+        result_list = get_result_list(response)
 
-        #deal with improper/no data
-        except KeyError:
-            query_values[query_title] = 'no data/failed response'
-        except IndexError:
-            query_values[query_title] = 'no data/failed response'
+        #there is a bug with the api itself where every fifth request comes back with no data
+        if(len(result_list) == 0):
+            #the fix to this is simply to regenerate the response if it comes back empty.    
+            api_response = query_api_site(query).json()
+            query_values[query_title] = get_query_value(get_result_list(response))
+        else:
+            query_values[query_title] = get_query_value(result_list)
 
     return query_values
+
+
+#given json data from querying the api, retrieve the result of the query as a list of two floats
+def get_result_list(api_response):
+    return api_response['data']['result']
+
+#given a two element result list, select the second element and make it a usable float.
+def get_query_value(result_list):
+    return round(float(result_list[0]['value'][1]),3)
+
 
 
 #print the values of the 4 header panels
@@ -63,14 +73,6 @@ def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
     full_url = base_url + endpoint
     cpu_data = requests.get(full_url)
     return cpu_data
-
-#TODO: delete this later; it is just for developing and testing
-def json_print(query = 'rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])'):
-    query_data = query_api_site(query).json()
-    pprint(query_data)
-
-
-
 
 
 
