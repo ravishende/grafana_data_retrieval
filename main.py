@@ -4,8 +4,11 @@ from bs4 import BeautifulSoup
 from utils import *
 
 print("\n\n\n\n")
-print_query_values()
+print_query_values(True)
 print("\n\n\n\n")
+
+
+# json_print()
 
 
 # url = "https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=thanos&var-cluster=&var-namespace=wifire&from=1756419957757&to=1806913309834"
