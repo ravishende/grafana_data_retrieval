@@ -11,7 +11,7 @@ data = [ [None, None, None, None]]
 df = pd.DataFrame(data, columns=column_names)
 
 M = CPUQuota()
-a = M.get_values('bp3d-rabbitmq-5845c99598-99rcn')
+a = M.get_table_row('bp3d-rabbitmq-5845c99598-99rcn')
 
 # cpu = round(get_cpu_usage('bp3d-rabbitmq-5845c99598-99rcn'),2)
 
