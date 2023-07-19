@@ -74,7 +74,6 @@ def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
     return cpu_data
 
 
-
 def write_json(data):
     with open('e.json', 'w') as file:
         json.dump(data.json(), file)
