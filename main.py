@@ -29,6 +29,7 @@ pods_l = get_pods_list()
 for p in pods_l:
 	cpu_quota = CPUQuota()
 	a = cpu_quota.get_table_row(p)
+	print("\n\n\n", a, "\n\n\n")
 	df = df.append(a, ignore_index = True)
 
 
