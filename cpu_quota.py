@@ -29,11 +29,7 @@ class CPUQuota():
 
 		#fill in self.result with percentages and pod
 		self.result["Pod"] = pod
-		self.result['CPU Requests %'] = self._get_percent(self.result['CPU Usage'], self.result['CPU Requests'])
-		self.result['CPU Limits %'] = self._get_percent(self.result['CPU Usage'], self.result['CPU Limits'])
+		self.result['CPU Requests %'] = get_percent(self.result['CPU Usage'], self.result['CPU Requests'])
+		self.result['CPU Limits %'] = get_percent(self.result['CPU Usage'], self.result['CPU Limits'])
 		
 		return self.result
-
-	#used to avoid any unnecessary queries to the database, instead calculating the percent on our own
-	def _get_percent(self, portion, total):
-		return round(portion/total, 3)*100
