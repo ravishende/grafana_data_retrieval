@@ -5,20 +5,30 @@ from utils import *
 import pandas as pd
 from cpu_quota import *
 
-column_names=["CPU Usage","CPU Requests",'CPU Requests %', 'CPU Limits']
-data = [ [None, None, None, None]]
+column_names=["Pod","CPU Usage","CPU Requests",'CPU Requests %', 'CPU Limits']
+data = [ [None, None, None, None, None]]
 
-df = pd.DataFrame(data, columns=column_names)
+df = pd.DataFrame(columns=column_names)
 
-M = CPUQuota()
-a = M.get_table_row('bp3d-rabbitmq-5845c99598-99rcn')
+def get_pods_list():
+	data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])')
+	try:
+		pods = data["data"]["result"]
+		pods_list = []
+		for pod in pods:
+			pods_list.append(pod["metric"]["pod"])
+	except KeyError as e:
+		return ["Error retrieving pods"]
+	return pods_list
 
-# cpu = round(get_cpu_usage('bp3d-rabbitmq-5845c99598-99rcn'),2)
+pods_l = get_pods_list()
 
-# df = cpu
 
-# row = {'CPU Usage':cpu, 'CPU Requests':0, 'CPU Requests %': 0, 'CPU Limits': 0}
-df = df.append(a, ignore_index = True)
+for p in pods_l:
+	cpu_quota = CPUQuota()
+	a = cpu_quota.get_table_row(p)
+	df = df.append(a, ignore_index = True)
+
 
 print(df)
 print("\n\n\n")
