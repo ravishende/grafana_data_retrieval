@@ -10,9 +10,14 @@ class MemQuota():
 		result = {
 			"CPU Usage":None, 
 			"CPU Requests":None, 
-			'CPU Requests %':None, 
-			'CPU Limits':None
+			"CPU Requests %":None, 
+			"CPU Limits":None,
+			"CPU Limits %": None
 		}
+		result["CPU Usage"] = self._get_cpu_requests()
+		result["CPU Usage"] = self._get_cpu_requests()
+		result["CPU Usage"] = self._get_cpu_requests()
+		result["CPU Usage"] = self._get_cpu_requests()
 		result["CPU Usage"] = self._get_cpu_requests()
 		return result
 
@@ -27,12 +32,28 @@ class MemQuota():
 		return float(cpu_usage[0]['value'][1])
 
 	def _get_cpu_requests(self,pod):
-		pass
+		cpu_usage = query_api_site('sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{cluster="", namespace="wifire-quicfire", pod="'+pod+'"})')
+		cpu_usage = cpu_usage.json()['data']['result']
+		
+		# if error retrieving from api, ping again recursively
+		if (len(cpu_usage) == 0):
+			return get_cpu_usage(pod)
 
-	def _get_cpu_requests_percent(self,pod):
-		pass
+		return float(cpu_usage[0]['value'][1])
+
+	def _get_cpu_requests_percent(self, pod):
+		return self.result["CPU Usage"] / self.result["CPU Requests"]
 
 	def _get_cpu_limits(self,pod):
-		pass
+		cpu_usage = query_api_site('sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits{cluster="", namespace="wifire-quicfire", pod="'+pod+'"})')
+		cpu_usage = cpu_usage.json()['data']['result']
+		
+		# if error retrieving from api, ping again recursively
+		if (len(cpu_usage) == 0):
+			return get_cpu_usage(pod)
+
+		return float(cpu_usage[0]['value'][1])
 
 
+	def _get_cpu_limits_percent(self,pod):
+		return self.result["CPU Usage"] / self.result["CPU Limits"]
