@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from utils import *
 import pandas as pd
 from cpu_quota import *
+from mem_quota import *
 
 column_names=["Pod","CPU Usage","CPU Requests",'CPU Requests %', 'CPU Limits']
 data = [ [None, None, None, None, None]]
@@ -27,8 +28,8 @@ pods_l = get_pods_list()
 for p in pods_l:
 	cpu_quota = CPUQuota()
 	a = cpu_quota.get_table_row(p)
-	df = df.append(a, ignore_index = True)
+	# df = df.append(a, ignore_index = True)
 
 
-print(df)
+# print(df)
 print("\n\n\n")
