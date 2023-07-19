@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from utils import *
 import pandas as pd
-from mem_quota import *
+from cpu_quota import *
 
 column_names=["Pod","CPU Usage","CPU Requests",'CPU Requests %', 'CPU Limits']
 data = [ [None, None, None, None, None]]
@@ -24,7 +24,7 @@ def get_pods_list():
 pods_l = get_pods_list()
 
 for p in pods_l:
-	M = MemQuota()
+	M = CPUQuota()
 	a = M.get_values(p)
 	df = df.append(a, ignore_index = True)
 

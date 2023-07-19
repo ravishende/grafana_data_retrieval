@@ -2,7 +2,7 @@ from utils import *
 
 column_names=["CPU Usage","CPU Requests",'CPU Requests %', 'CPU Limits']
 
-class MemQuota():
+class CPUQuota():
 	def __init__(self):
 		self.result = {
 			"Pod":None,
