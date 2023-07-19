@@ -14,7 +14,6 @@ class CPUQuota():
 			"CPU Limits %": None
 		}
 
-
 	def get_table_row(self, pod):
 		#assemble queries for the given pod
 		queries_dict = {
@@ -24,15 +23,14 @@ class CPUQuota():
 		}
 
 		#fill in self.result for non percentage keys
-		for query_title, value in self.result:
+		for query_title, value in self.result.items():
 			if query_title in queries_dict.keys():
-				queries_dict[query_title] = query_value(queries_dict[query_title])
+				self.result[query_title] = query_value(queries_dict[query_title])
 
 		#fill in self.result with percentages and pod
 		self.result["Pod"] = pod
-		self.result['CPU Requests %'] = _get_percent(self.result['CPU Usage'], self.result['CPU Requests'])
-		self.result['CPU Limits %'] = _get_percent(self.result['CPU Usage'], self.result['CPU Limits'])
-
+		self.result['CPU Requests %'] = self._get_percent(self.result['CPU Usage'], self.result['CPU Requests'])
+		self.result['CPU Limits %'] = self._get_percent(self.result['CPU Usage'], self.result['CPU Limits'])
 		
 		return self.result
 
