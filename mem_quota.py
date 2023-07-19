@@ -1,20 +1,9 @@
 from utils import *
 
-column_names = [
-	"Memory Usage", 	
-	"Memory Requests", 
-	"Memory Requests %", 
-	"Memory Limits", 
-	"Memory Limits %", 
-	"Memory Usage (RSS)", 
-	"Memory Usage (Cache)", 
-	"Memory Usage"
-]
-
-
 class MemQuota():
 	def __init__(self):
 		self.result = {
+			"Pod": None,
 			"Memory Usage":None, 	
 			"Memory Requests":None, 
 			"Memory Requests %":None, 
@@ -37,9 +26,8 @@ class MemQuota():
 		}
 
 		#fill in self.result for non percentage keys
-		for query_title, value in self.result.items():
-			if query_title in queries_dict.keys():
-				self.result[query_title] = query_value(queries_dict[query_title])
+		for query_title, query in queries_dict.items():
+			self.result[query_title] = query_value(query)
 
 		#fill in self.result with percentages and pod
 		self.result["Pod"] = pod
