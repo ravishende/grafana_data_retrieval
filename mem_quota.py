@@ -17,6 +17,7 @@ class MemQuota():
 		self.result["CPU Requests"] = self._get_cpu_requests(pod)
 		self.result["CPU Requests %"] = self._get_cpu_requests_percent(pod)
 		self.result["CPU Limits"] = self._get_cpu_limits(pod)
+		self.result["CPU Limits %"] = self._get_cpu_limits_percent(pod)
 		return self.result
 
 	def _get_cpu_usage(self,pod):
