@@ -3,14 +3,14 @@ import requests
 from bs4 import BeautifulSoup
 from utils import *
 import pandas as pd
-from mem_quota import *
+from cpu_quota import *
 
 column_names=["CPU Usage","CPU Requests",'CPU Requests %', 'CPU Limits']
 data = [ [None, None, None, None]]
 
 df = pd.DataFrame(data, columns=column_names)
 
-M = MemQuota()
+M = CPUQuota()
 a = M.get_values('bp3d-rabbitmq-5845c99598-99rcn')
 
 # cpu = round(get_cpu_usage('bp3d-rabbitmq-5845c99598-99rcn'),2)
