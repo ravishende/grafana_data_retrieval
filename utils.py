@@ -89,6 +89,9 @@ def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
     return queried_data.json()
 
 
+#used to avoid any unnecessary queries to the database, instead calculating the percent on our own
+def get_percent(portion, total):
+    return round(portion/total, 3)*100
 
 def write_json(data):
     with open('e.json', 'w') as file:
