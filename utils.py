@@ -18,6 +18,85 @@ QUERIES = {
     }
 
 #parses json for numerical data values
+def query_value(query):
+    #get json
+    api_response = query_api_site(query)
+
+    #get result list
+    result_list = get_result_list(api_response)
+
+    #there is a bug with the api itself where every fifth request comes back with no data
+    if(len(result_list) == 0):
+        #the fix to this is simply to regenerate the response if it comes back empty.    
+        api_response = query_api_site(query)
+        return get_result(get_result_list(api_response))
+    
+    #if result already has data, just return the result 
+    return get_result(result_list)
+
+#given json data from querying the api, retrieve the result of the query as a list of two floats
+def get_result_list(api_response):
+    return api_response['data']['result']
+
+#given a two element result list, select the second element and make it a usable float.
+def get_result(result_list):
+    return round(float(result_list[0]['value'][1]),3)
+
+
+def find_query_values(query_dict=QUERIES):
+    query_values = {}
+    for query_title, query in query_dict.items():
+        query_values[query_title] = query_value(query)
+
+    return query_values
+
+#print the values of the 4 header panels
+def print_query_values(as_percentages=False):
+    #get query values
+    query_values = find_query_values()
+
+    #print out values
+    for (query_title, value) in query_values.items():
+        
+        #check if value is empty
+        if (str(value)[0] == "n"):
+        	print(f'{query_title}: \n\t{colored(value,"red")}')
+        else:
+            # print the percentage sign if requested
+            if(as_percentages):
+                print(f'{query_title}: \n\t{colored(round(value*100, 1), "green")}{colored("%", "green")}')
+            else:
+                print(f'{query_title}: \n\t{colored(value,"green")}')
+
+
+#use url and a given query to request data from the website
+def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
+    base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
+    endpoint = f'query?query={query}'
+    full_url = base_url + endpoint
+    queried_data = requests.get(full_url)
+    return queried_data.json()
+
+
+
+def write_json(data):
+    with open('e.json', 'w') as file:
+        json.dump(data.json(), file)
+
+
+def read_json():
+    with open('scrape.json', 'r') as file:
+        data = json.load(file)
+    return data
+
+
+
+
+
+
+
+'''
+#parses json for numerical data values
 def find_query_values():
     query_values = {}
 
@@ -44,46 +123,4 @@ def get_result_list(api_response):
 #given a two element result list, select the second element and make it a usable float.
 def get_query_value(result_list):
     return round(float(result_list[0]['value'][1]),3)
-
-
-#print the values of the 4 header panels
-def print_query_values(as_percentages=False):
-    #get query values
-    query_values = find_query_values()
-
-    #print out values
-    for (query_title, value) in query_values.items():
-        
-        #check if value is empty
-        if (str(value)[0] == "n"):
-        	print(f'{query_title}: \n\t{colored(value,"red")}')
-        else:
-            # print the percentage sign if requested
-            if(as_percentages):
-                print(f'{query_title}: \n\t{colored(round(value*100, 1), "green")}{colored("%", "green")}')
-            else:
-                print(f'{query_title}: \n\t{colored(value,"green")}')
-
-
-#use url and a given query to request data from the website
-def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
-    base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
-    endpoint = f'query?query={query}'
-    full_url = base_url + endpoint
-    cpu_data = requests.get(full_url)
-    return cpu_data
-
-
-
-def write_json(data):
-    with open('e.json', 'w') as file:
-        json.dump(data.json(), file)
-
-
-def read_json():
-    with open('scrape.json', 'r') as file:
-        data = json.load(file)
-    return data
-
-
-
+'''
