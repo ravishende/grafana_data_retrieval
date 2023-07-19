@@ -24,7 +24,7 @@ class CPUQuota():
 
 	def _get_cpu_usage(self,pod):
 		cpu_usage = query_api_site('sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire", pod="'+pod+'"})')
-		cpu_usage = cpu_usage.json()['data']['result']
+		cpu_usage = cpu_usage['data']['result']
 		
 		# if error retrieving from api, ping again recursively
 		if (len(cpu_usage) == 0):
@@ -34,7 +34,7 @@ class CPUQuota():
 
 	def _get_cpu_requests(self,pod):
 		cpu_usage = query_api_site('sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{cluster="", namespace="wifire-quicfire", pod="'+pod+'"})')
-		cpu_usage = cpu_usage.json()['data']['result']
+		cpu_usage = cpu_usage['data']['result']
 		
 		# if error retrieving from api, ping again recursively
 		if (len(cpu_usage) == 0):
@@ -47,7 +47,7 @@ class CPUQuota():
 
 	def _get_cpu_limits(self,pod):
 		cpu_usage = query_api_site('sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits{cluster="", namespace="wifire-quicfire", pod="'+pod+'"})')
-		cpu_usage = cpu_usage.json()['data']['result']
+		cpu_usage = cpu_usage['data']['result']
 		
 		# if error retrieving from api, ping again recursively
 		if (len(cpu_usage) == 0):

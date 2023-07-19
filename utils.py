@@ -17,6 +17,17 @@ QUERIES = {
     'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
     }
 
+def get_pods_list():
+	data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])')
+	try:
+		pods = data.json()["data"]["result"]
+		pods_list = []
+		for pod in pods:
+			pods_list.append(pod["metric"]["pod"])
+	except KeyError as e:
+		return ["Error retrieving pods"]
+	return pods_list
+
 #parses json for numerical data values
 def query_value(query):
     #get json
