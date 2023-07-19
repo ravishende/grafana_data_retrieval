@@ -17,6 +17,7 @@ class CPUQuota():
 		self.result["CPU Requests"] = self._get_cpu_requests(pod)
 		self.result["CPU Requests %"] = self._get_cpu_requests_percent(pod)
 		self.result["CPU Limits"] = self._get_cpu_limits(pod)
+		self.result["CPU Limits %"] = self._get_cpu_limits_percent(pod)
 		return self.result
 
 	def _get_cpu_usage(self,pod):
@@ -35,7 +36,7 @@ class CPUQuota():
 		
 		# if error retrieving from api, ping again recursively
 		if (len(cpu_usage) == 0):
-			return get_cpu_usage(pod)
+			return self._get_cpu_requests(pod)
 
 		return float(cpu_usage[0]['value'][1])
 
@@ -48,7 +49,7 @@ class CPUQuota():
 		
 		# if error retrieving from api, ping again recursively
 		if (len(cpu_usage) == 0):
-			return get_cpu_usage(pod)
+			return self._get_cpu_limits(pod)
 
 		return float(cpu_usage[0]['value'][1])
 
