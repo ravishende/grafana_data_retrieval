@@ -35,7 +35,7 @@ class MemQuota():
 		
 		# if error retrieving from api, ping again recursively
 		if (len(cpu_usage) == 0):
-			return get_cpu_usage(pod)
+			return self._get_cpu_requests(pod)
 
 		return float(cpu_usage[0]['value'][1])
 
@@ -48,7 +48,7 @@ class MemQuota():
 		
 		# if error retrieving from api, ping again recursively
 		if (len(cpu_usage) == 0):
-			return get_cpu_usage(pod)
+			return self._get_cpu_limits(pod)
 
 		return float(cpu_usage[0]['value'][1])
 
