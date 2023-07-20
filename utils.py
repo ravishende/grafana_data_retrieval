@@ -110,3 +110,6 @@ def read_json():
 def get_query_count():
     global QUERY_COUNT
     return QUERY_COUNT
+
+def get_column_names(table_class):
+    return list(table_class.result.keys())
