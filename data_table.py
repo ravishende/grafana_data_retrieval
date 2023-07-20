@@ -65,12 +65,12 @@ class DataTable():
 
 		#assemble queries for the given pod
 		queries_dict = {
-			"Current Receive Bandwidth":'sum(irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[' + ts + ']))',
-			"Current Transmit Bandwidth":'sum(irate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[' + ts + ']))',
-			"Rate of Received Packets":'sum(irate(container_network_receive_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[' + ts + ']))',
-			"Rate of Transmitted Packets":'sum(irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[' + ts + ']))',
-			"Rate of Received Packets Dropped":'sum(irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[' + ts + ']))',	
-			"Rate of Transmitted Packets":'sum(irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[' + ts + ']))'
+			"Current Receive Bandwidth":'sum by(pod) (irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))',
+			"Current Transmit Bandwidth":'sum by(pod) (irate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))',
+			"Rate of Received Packets":'sum by(pod) (irate(container_network_receive_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire}[' + ts + ']))',
+			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire}[' + ts + ']))',
+			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))',	
+			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))'
 		}
 
 		#fill in self.result
