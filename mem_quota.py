@@ -1,6 +1,16 @@
 from utils import *
 
 class MemQuota():
+
+	queries_dict = {
+		"Memory Usage":'sum by(pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", container!="", image!=""})', 	
+		"Memory Requests":'sum by(pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{cluster="", namespace="wifire-quicfire"})', 
+		"Memory Limits":'sum by(pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_limits{cluster="", namespace="wifire-quicfire"})', 
+		"Memory Usage (RSS)":'sum by(pod) (container_memory_rss{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!=""})', 
+		"Memory Usage (Cache)":'sum by(pod) (container_memory_cache{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!=""})', 
+		"Memory Usage":'sum by(pod) (container_memory_swap{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!=""})'
+	}
+
 	def __init__(self):
 		self.result = {
 			"Pod": None,
@@ -14,24 +24,29 @@ class MemQuota():
 			"Memory Usage":None
 		}
 
-	def get_table_row(self, pod):
-		#assemble queries for the given pod
-		queries_dict = {
-			"Memory Usage":'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire", container!="", image!="", pod="' + pod + '"})', 	
-			"Memory Requests":'sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{cluster="", namespace="wifire-quicfire", pod="' + pod + '"})', 
-			"Memory Limits":'sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_limits{cluster="", namespace="wifire-quicfire", pod="' + pod + '"})', 
-			"Memory Usage (RSS)":'sum(container_memory_rss{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", pod="' + pod + '"})', 
-			"Memory Usage (Cache)":'sum(container_memory_cache{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", pod="' + pod + '"})', 
-			"Memory Usage":'sum(container_memory_swap{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", pod="' + pod + '"})'
-		}
 
-		#fill in self.result for non percentage keys
-		for query_title, query in queries_dict.items():
-			self.result[query_title] = query_value(query)
+	def _get_table_column(self, query):
+		#result to be returned
+		column = []
 
-		#fill in self.result with percentages and pod
-		self.result["Pod"] = pod
-		self.result['Memory Requests %'] = get_percent(self.result['Memory Usage'], self.result['Memory Requests'])
-		self.result['Memory Limits %'] = get_percent(self.result['Memory Usage'], self.result['Memory Limits'])
-		
+		#get json
+		res_list = get_result_list(query_api_site(query))
+
+		#get the value of each pod for the given query (column title)
+		for i in range(0, len(res_list)):
+		    value = res_list[i]['value'][1]
+		    column.append(value)
+
+		return column
+
+
+	def get_table(self):
+		#get the table columns for each header and
+		for col_title, query in MemQuota.queries_dict.items():
+			self.result[col_title] = self.get_table_column(query)
+
+		self.result["Pod"] = get_pods_list()
+		self.result["Memory Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(self.result["Memory Usage"], self.result["Memory Requests"])]
+		self.result["Memory Limits %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(self.result["Memory Usage"], self.result["Memory Limits"])]
+
 		return self.result
