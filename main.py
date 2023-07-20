@@ -12,18 +12,20 @@ pd.set_option('display.max_columns', None)
 
 pods_l = get_pods_list()
 
-# cpu_quota = CPUQuota()
-# mem_quota = MemQuota()
+#generate pickle
+'''
+cpu_quota = CPUQuota()
+mem_quota = MemQuota()
 
-# cpu_df = pd.DataFrame(columns=get_column_names(cpu_quota))
-# mem_df = pd.DataFrame(columns=get_column_names(mem_quota))
+cpu_df = pd.DataFrame(columns=get_column_names(cpu_quota))
+mem_df = pd.DataFrame(columns=get_column_names(mem_quota))
 
-# for p in pods_l:
-#     a = cpu_quota.get_table_row(p)
-#     cpu_df = cpu_df.append(a, ignore_index = True)
-#     b = mem_quota.get_table_row(p)
-#     mem_df = mem_df.append(b, ignore_index=True)
-
+for p in pods_l:
+    a = cpu_quota.get_table_row(p)
+    cpu_df = cpu_df.append(a, ignore_index = True)
+    b = mem_quota.get_table_row(p)
+    mem_df = mem_df.append(b, ignore_index=True)
+'''
 
 # mem_df.to_pickle("mem_df.pkl")
 # cpu_df.to_pickle("cpu_df.pkl")
