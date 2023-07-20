@@ -27,7 +27,7 @@ class MemQuota():
 	def get_table(self):
 		#get the table columns for each header and
 		for col_title, query in MemQuota.queries_dict.items():
-			self.result[col_title] = [res[i]['value'][1] for res in get_result_list(query_api_site(query))]
+			self.result[col_title] = [res['value'][1] for res in get_result_list(query_api_site(query))]
 
 		self.result["Pod"] = get_pods_list()
 		self.result["Memory Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(self.result["Memory Usage"], self.result["Memory Requests"])]
