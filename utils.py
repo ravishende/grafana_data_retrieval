@@ -1,104 +1,3 @@
-*** Please tell me who you are.
-
-Run
-
-  git config --global user.email "you@example.com"
-  git config --global user.name "Your Name"
-
-to set your account's default identity.
-Omit --global to set the identity only in this repository.
-
-fatal: empty ident name (for <devin@zorak.nic.uoregon.edu>) not allowed
-[devin@zorak grafana_data_retrieval]$ git push
-
-(gnome-ssh-askpass:2594016): Gtk-WARNING **: 19:54:53.486: cannot open display: 
-error: unable to read askpass response from '/usr/libexec/openssh/gnome-ssh-askpass'
-Username for 'https://github.com': devinshende
-
-(gnome-ssh-askpass:2594044): Gtk-WARNING **: 19:54:57.223: cannot open display: 
-error: unable to read askpass response from '/usr/libexec/openssh/gnome-ssh-askpass'
-Password for 'https://devinshende@github.com': 
-remote: Support for password authentication was removed on August 13, 2021.
-remote: Please see https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories#cloning-with-https-urls for information on currently recommended modes of authentication.
-fatal: Authentication failed for 'https://github.com/ravishende/grafana_data_retrieval.git/'
-[devin@zorak grafana_data_retrieval]$ git push
-
-(gnome-ssh-askpass:2594072): Gtk-WARNING **: 19:55:12.431: cannot open display: 
-error: unable to read askpass response from '/usr/libexec/openssh/gnome-ssh-askpass'
-Username for 'https://github.com': devinshende
-
-(gnome-ssh-askpass:2594077): Gtk-WARNING **: 19:55:15.267: cannot open display: 
-error: unable to read askpass response from '/usr/libexec/openssh/gnome-ssh-askpass'
-Password for 'https://devinshende@github.com': 
-remote: Support for password authentication was removed on August 13, 2021.
-remote: Please see https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories#cloning-with-https-urls for information on currently recommended modes of authentication.
-fatal: Authentication failed for 'https://github.com/ravishende/grafana_data_retrieval.git/'
-[devin@zorak grafana_data_retrieval]$ git push
-
-(gnome-ssh-askpass:2594100): Gtk-WARNING **: 19:55:22.947: cannot open display: 
-error: unable to read askpass response from '/usr/libexec/openssh/gnome-ssh-askpass'
-Username for 'https://github.com': devinshende
-
-(gnome-ssh-askpass:2594114): Gtk-WARNING **: 19:55:28.267: cannot open display: 
-error: unable to read askpass response from '/usr/libexec/openssh/gnome-ssh-askpass'
-Password for 'https://devinshende@github.com': 
-remote: Support for password authentication was removed on August 13, 2021.
-remote: Please see https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories#cloning-with-https-urls for information on currently recommended modes of authentication.
-fatal: Authentication failed for 'https://github.com/ravishende/grafana_data_retrieval.git/'
-[devin@zorak grafana_data_retrieval]$ clear
-
-[devin@zorak grafana_data_retrieval]$ vim main.py 
-[devin@zorak grafana_data_retrieval]$ vim utils.py 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import requests
@@ -119,6 +18,7 @@ QUERIES = {
     'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
     }
 
+
 def get_pods_list():
         data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])')
         try:
@@ -129,7 +29,6 @@ def get_pods_list():
         except KeyError as e:
                 return ["Error retrieving pods"]
         return pods_list
-
 
 #parses json for numerical data values
 def query_value(query):
@@ -144,6 +43,70 @@ def query_value(query):
         #the fix to this is simply to regenerate the response if it comes back empty.    
         api_response = query_api_site(query)
         return get_result(get_result_list(api_response))
-
+    
     #if result already has data, just return the result 
-"utils.py" 190L, 6967C                                                                                                                                                        32,0-1        Top
+    return get_result(result_list)
+
+#given json data from querying the api, retrieve the result of the query as a list of two floats
+def get_result_list(api_response):
+    return api_response['data']['result']
+
+#given a two element result list, select the second element and make it a usable float.
+def get_result(result_list):
+    return round(float(result_list[0]['value'][1]),3)
+
+
+def find_query_values(query_dict=QUERIES):
+    query_values = {}
+    for query_title, query in query_dict.items():
+        query_values[query_title] = query_value(query)
+
+    return query_values
+
+#print the values of the 4 header panels
+def print_query_values(as_percentages=False):
+    #get query values
+    query_values = find_query_values()
+
+    #print out values
+    for (query_title, value) in query_values.items():
+        
+        #check if value is empty
+        if (str(value)[0] == "n"):
+        	print(f'{query_title}: \n\t{colored(value,"red")}')
+        else:
+            # print the percentage sign if requested
+            if(as_percentages):
+                print(f'{query_title}: \n\t{colored(round(value*100, 1), "green")}{colored("%", "green")}')
+            else:
+                print(f'{query_title}: \n\t{colored(value,"green")}')
+
+
+#use url and a given query to request data from the website
+def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
+    global QUERY_COUNT
+    base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
+    endpoint = f'query?query={query}'
+    full_url = base_url + endpoint
+    queried_data = requests.get(full_url)
+    QUERY_COUNT += 1
+    return queried_data.json()
+
+
+#used to avoid any unnecessary queries to the database, instead calculating the percent on our own
+def get_percent(portion, total):
+    return round(portion/total, 3)*100
+
+def write_json(data):
+    with open('e.json', 'w') as file:
+        json.dump(data.json(), file)
+
+
+def read_json():
+    with open('scrape.json', 'r') as file:
+        data = json.load(file)
+    return data
+
+def get_query_count():
+    global QUERY_COUNT
+    return QUERY_COUNT
