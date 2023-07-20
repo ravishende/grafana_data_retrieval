@@ -79,12 +79,11 @@ class DataTable():
 		}
 		result = {title:None for title in col_names}
 
-
 		#get the table columns for each header and their values
 		response = None #for getting pods later without another query
 		for col_title, query in queries_dict.items():
 			response = get_result_list(query_api_site(query))
-			result[col_title] = [res['value'][1] for res in response]
+			result[col_title] = [round_to((res['value'][1]),3) for res in response]
 
 
 		result["Pod"] = [res['metric']['pod'] for res in response]

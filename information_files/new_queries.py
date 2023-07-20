@@ -34,12 +34,10 @@
 #IOPS(Reads+Writes) (25)
 'ceil(sum(rate(container_fs_reads_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[ts]) + rate(container_fs_writes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", cluster="", namespace="wifire-quicfire", pod="' + pod + '"}[' + ts + '])))'
 
-#TODO: check if the sum by(pod) syntax works. It worked on the UI api, and if it does, then it will be able to replace many things of pod="' + pod + '", also probably making our code run faster
 #ThroughPut(Read+Write) (26)
 'sum by(pod) (rate(container_fs_reads_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", cluster="", namespace="wifire-quicfire"}[' + ts + ']) + rate(container_fs_writes_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", cluster="", namespace="wifire-quicfire"}[' + ts + ']))'
 
 
-#TODO: check if the sum by(pod) syntax works. It worked on the UI api, and if it does, then it will be able to replace many things of pod="' + pod + '", also probably making our code run faster
 #Current Storage IO (28)
 	
 	#IOPS (Reads) (0)
