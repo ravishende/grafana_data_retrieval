@@ -3,7 +3,7 @@ import pandas as pd
 from pprint import pprint
 
 class DataTable():
-	#returns a table with data from cpu-quota
+	#returns a table with data from cpu_quota
 	def cpu_quota(self):
 		#dictionary storing all queries besides percentages and pods
 		queries_dict = {
@@ -31,6 +31,7 @@ class DataTable():
 		return df
 
 
+	#returns a data table with data from mem_quota
 	def mem_quota(self):
 		#dictionary storing all queries besides percentages and pods
 		queries_dict = {
