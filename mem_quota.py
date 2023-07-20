@@ -24,29 +24,14 @@ class MemQuota():
 			"Memory Usage":None
 		}
 
-
-	def _get_table_column(self, query):
-		#result to be returned
-		column = []
-
-		#get json
-		res_list = get_result_list(query_api_site(query))
-
-		#get the value of each pod for the given query (column title)
-		for i in range(0, len(res_list)):
-		    value = res_list[i]['value'][1]
-		    column.append(value)
-
-		return column
-
-
 	def get_table(self):
 		#get the table columns for each header and
 		for col_title, query in MemQuota.queries_dict.items():
-			self.result[col_title] = self.get_table_column(query)
+			self.result[col_title] = [res[i]['value'][1] for res in get_result_list(query_api_site(query))]
 
 		self.result["Pod"] = get_pods_list()
 		self.result["Memory Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(self.result["Memory Usage"], self.result["Memory Requests"])]
 		self.result["Memory Limits %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(self.result["Memory Usage"], self.result["Memory Limits"])]
 
 		return self.result
+
