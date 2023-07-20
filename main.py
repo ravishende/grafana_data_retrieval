@@ -10,7 +10,7 @@ from network_usage import *
 
 pd.set_option('display.max_columns', None)
 
-pods_l = get_pods_list()
+# pods_l = get_pods_list()
 
 # cpu_quota = CPUQuota()
 # mem_quota = MemQuota()
