@@ -1,4 +1,6 @@
 from utils import *
+import pandas as pd
+from pprint import pprint
 
 class DataTable():
 
@@ -38,14 +40,18 @@ class DataTable():
 		result = {title:None for title in col_names}
 
 		#get the table columns for each header and
+		response = None
 		for col_title, query in queries_dict.items():
-			result[col_title] = [res['value'][1] for res in get_result_list(query_api_site(query))]
+			response = get_result_list(query_api_site(query))
+			result[col_title] = [res['value'][1] for res in response]
 
-		result["Pod"] = get_pods_list()
+		result["Pod"] = [i['metric']['pod'] for i in response]
+
 		result["Memory Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["Memory Usage"], result["Memory Requests"])]
 		result["Memory Limits %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["Memory Usage"], result["Memory Limits"])]
-
-		return result
+		
+		df = pd.DataFrame(result, columns=col_names)
+		return df
 
 
 	def network_quota(self, duration):
@@ -53,6 +59,7 @@ class DataTable():
 
 
 d = DataTable()
-d.mem_quota()
+# d.mem_quota()
+print(d.mem_quota().to_string())
 # d.cpu_quota()
 # d.network_quota(duration="4h")
