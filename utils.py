@@ -8,12 +8,12 @@ from pprint import pprint
 QUERY_COUNT = 0
 
 #retrieves information from the 4 panels under headlines (cpu and memory utilisation data)
-QUERIES = {
+header_queries = {
 	'CPU Utilisation (from requests)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',
 	'CPU Utilisation (from limits)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',
 	'Memory Utilisation (from requests)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
 	'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
-	}
+}
 
 def get_pods_list():
 	data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])')
@@ -26,23 +26,6 @@ def get_pods_list():
 		return ["Error retrieving pods"]
 	return pods_list
 
-#parses json for numerical data values
-def query_value(query):
-	# TODO Delete this function
-	#get json
-	api_response = query_api_site(query)
-
-	#get result list
-	result_list = get_result_list(api_response)
-
-	if(len(result_list) == 0):
-		#the fix to this is simply to regenerate the response if it comes back empty.    
-		api_response = query_api_site(query)
-		return get_result(get_result_list(api_response))
-	
-	#if result already has data, just return the result 
-	return get_result(result_list)
-
 #given json data from querying the api, retrieve the result of the query as a list of two floats
 def get_result_list(api_response):
 	return api_response['data']['result']
@@ -52,7 +35,7 @@ def get_result(result_list):
 	return round(float(result_list[0]['value'][1]),3)
 
 
-def find_query_values(query_dict=QUERIES):
+def find_query_values(query_dict=header_queries):
 	query_values = {}
 	for query_title, query in query_dict.items():
 		query_values[query_title] = query_value(query)
@@ -79,7 +62,7 @@ def print_query_values(as_percentages=False):
 
 
 #use url and a given query to request data from the website
-def query_api_site(query=QUERIES['CPU Utilisation (from requests)'], handle_fail=True):
+def query_api_site(query=header_queries['CPU Utilisation (from requests)'], handle_fail=True):
 	# handle fail will re request the api if it gets no response from your query. Set to true by default
 	# there is a bug with the api itself where every fifth request comes back with no data, 
 	# this parameter set to True will re request to deal with that	
