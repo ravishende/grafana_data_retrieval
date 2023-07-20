@@ -39,3 +39,9 @@ print(mem_df.to_string())
 print("\n\n\n")
 
 print("Total API pings: ",get_query_count())
+
+print("\n")
+query_api_site('sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="wifire-quicfire"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="cpu"})',handle_fail=True)
+print("\n")
+
+
