@@ -15,6 +15,7 @@ header_queries = {
 	'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
 }
 
+#generates a list of all pods being shown
 def get_pods_list():
 	data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])')
 	try:
@@ -27,6 +28,7 @@ def get_pods_list():
 	return pods_list
 
 
+#generates a dictionary of the 4 headers and their values
 def find_header_values(query_dict=header_queries):
     query_values = {}
     for query_title, query in query_dict.items():
@@ -87,21 +89,25 @@ def get_percent(portion, total):
 	return round(portion/total, 3)*100
 
 
-def write_json(data):
-	with open('e.json', 'w') as file:
-		json.dump(data.json(), file)
-
-
-def read_json():
-	with open('scrape.json', 'r') as file:
-		data = json.load(file)
-	return data
-
-
+#retrieves global variable for total number of querries since the start of the program
 def get_query_count():
 	global QUERY_COUNT
 	return QUERY_COUNT
 
 
+#gets a list of column names for data tables from the DataTable class
 def get_column_names(table_class):
 	return list(table_class.result.keys())
+
+
+#writes json data to a file
+def write_json(data):
+    with open('e.json', 'w') as file:
+        json.dump(data.json(), file)
+
+
+#reads json data from a file
+def read_json():
+    with open('scrape.json', 'r') as file:
+        data = json.load(file)
+    return data
