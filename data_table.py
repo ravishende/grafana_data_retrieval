@@ -26,8 +26,9 @@ class DataTable():
 		result["Pod"] = [res['metric']['pod'] for res in response]
 		result["CPU Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["CPU Usage"], result["CPU Requests"])]
 		result["CPU Limits %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["CPU Usage"], result["CPU Limits"])]
-
-		return result
+		
+		df = pd.DataFrame(result, columns=col_names)
+		return df
 
 
 	def mem_quota(self):
@@ -46,7 +47,7 @@ class DataTable():
 		result = {title:None for title in col_names}
 
 		
-		#get the table columns for each header and
+		#get the table columns for each header and their values
 		response = None #for getting pods later without another query
 		for col_title, query in queries_dict.items():
 			response = get_result_list(query_api_site(query))
@@ -60,8 +61,9 @@ class DataTable():
 		return df
 
 
+
 	#current network usage requires a duration. This duration has a default value, but should generally be passed in.
-	def network_usage(self, duration):
+	def network_usage(self, duration="3h"):
 		col_names = ["Pod","Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets"]
 
 		#assemble queries for the given pod
@@ -72,18 +74,20 @@ class DataTable():
 			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))',
 			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))',	
 			"Rate of Transmitted Packets Dropped":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))'
-		}
 
-		#fill in self.result
-		self.result["Pod"] = pod
+		}
+		result = {title:None for title in col_names}
+
+
+		#get the table columns for each header and their values
+		response = None #for getting pods later without another query
 		for col_title, query in queries_dict.items():
 			response = get_result_list(query_api_site(query))
 			result[col_title] = [res['value'][1] for res in response]
 
 
-		
-		return self.result
-
-
+		result["Pod"] = [res['metric']['pod'] for res in response]
+		df = pd.DataFrame(result, columns=col_names)
+		return df
 
 
