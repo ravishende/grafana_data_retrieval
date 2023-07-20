@@ -45,7 +45,7 @@ class DataTable():
 			response = get_result_list(query_api_site(query))
 			result[col_title] = [res['value'][1] for res in response]
 
-		result["Pod"] = [i['metric']['pod'] for i in response]
+		result["Pod"] = [res['metric']['pod'] for res in response]
 
 		result["Memory Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["Memory Usage"], result["Memory Requests"])]
 		result["Memory Limits %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["Memory Usage"], result["Memory Limits"])]
@@ -56,10 +56,3 @@ class DataTable():
 
 	def network_quota(self, duration):
 		pass
-
-
-d = DataTable()
-# d.mem_quota()
-print(d.mem_quota().to_string())
-# d.cpu_quota()
-# d.network_quota(duration="4h")
