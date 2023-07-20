@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import requests
 import json
+from decimal import *
 from termcolor import cprint, colored
 from pprint import pprint
 
@@ -30,12 +31,12 @@ def get_pods_list():
 
 #generates a dictionary of the 4 headers and their values
 def find_header_values(query_dict=header_queries):
-    query_values = {}
-    for query_title, query in query_dict.items():
-        res_list = get_result_list(query_api_site(query))
-        query_values[query_title] = round(float(res_list[0]['value'][1]),3)
+	query_values = {}
+	for query_title, query in query_dict.items():
+		res_list = get_result_list(query_api_site(query))
+		query_values[query_title] = round(float(res_list[0]['value'][1]),3)
 
-    return query_values
+	return query_values
 
 
 #print the values of the 4 header panels
@@ -81,7 +82,7 @@ def query_api_site(query=header_queries['CPU Utilisation (from requests)'], hand
 
 #given json data from querying the api, retrieve the result of the query as a list of two floats
 def get_result_list(api_response):
-    return api_response['data']['result']
+	return api_response['data']['result']
 
 
 #used to avoid any unnecessary queries to the database, instead calculating the percent on our own
@@ -95,19 +96,20 @@ def get_query_count():
 	return QUERY_COUNT
 
 
-#gets a list of column names for data tables from the DataTable class
-def get_column_names(table_class):
-	return list(table_class.result.keys())
-
+def round_to(number, place):
+	current_places = str(number)[::-1].find(".")
+	if(current_places > place):
+		return round(Decimal(number), place)
+	return number
 
 #writes json data to a file
 def write_json(data):
-    with open('e.json', 'w') as file:
-        json.dump(data.json(), file)
+	with open('e.json', 'w') as file:
+		json.dump(data.json(), file)
 
 
 #reads json data from a file
 def read_json():
-    with open('scrape.json', 'r') as file:
-        data = json.load(file)
-    return data
+	with open('scrape.json', 'r') as file:
+		data = json.load(file)
+	return data

@@ -32,6 +32,7 @@ print("\n\n\n\n")
 print(cpu_df.to_string())
 print("\n\n\n\n")
 
+network_df.round()
 print(network_df)
 print("\n\n\n\n")
 
