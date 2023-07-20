@@ -3,7 +3,7 @@ import pandas as pd
 from pprint import pprint
 
 class DataTable():
-
+	#returns a table with data from cpu-quota
 	def cpu_quota(self):
 		#dictionary storing all queries besides percentages and pods
 		queries_dict = {
@@ -42,7 +42,7 @@ class DataTable():
 		}
 		
 		#create a final dictionary for storing columns and their titles
-		col_names = ["Pod", "Memory Usage","Memory Requests",  "Memory Requests %",  "Memory Limits", "Memory Limits %", "Memory Usage (RSS)", "Memory Usage (Cache)", "Memory Usage"]
+		col_names = ["Pod", "Memory Usage","Memory Requests",  "Memory Requests %",  "Memory Limits", "Memory Limits %", "Memory Usage (RSS)", "Memory Usage (Cache)"]
 		result = {title:None for title in col_names}
 
 		
@@ -60,23 +60,26 @@ class DataTable():
 		return df
 
 
-	def network_quota(self, duration):
+	#current network usage requires a duration. This duration has a default value, but should generally be passed in.
+	def network_usage(self, duration):
 		col_names = ["Pod","Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets"]
 
 		#assemble queries for the given pod
 		queries_dict = {
-			"Current Receive Bandwidth":'sum by(pod) (irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))',
-			"Current Transmit Bandwidth":'sum by(pod) (irate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))',
-			"Rate of Received Packets":'sum by(pod) (irate(container_network_receive_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire}[' + ts + ']))',
-			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire}[' + ts + ']))',
-			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))',	
-			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + ts + ']))'
+			"Current Receive Bandwidth":'sum by(pod) (irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))',
+			"Current Transmit Bandwidth":'sum by(pod) (irate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))',
+			"Rate of Received Packets":'sum by(pod) (irate(container_network_receive_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))',
+			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))',
+			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))',	
+			"Rate of Transmitted Packets Dropped":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire"}[' + duration + ']))'
 		}
 
 		#fill in self.result
 		self.result["Pod"] = pod
-		for query_title, query in queries_dict.items():
-			self.result[query_title] = query_value(query)
+		for col_title, query in queries_dict.items():
+			response = get_result_list(query_api_site(query))
+			result[col_title] = [res['value'][1] for res in response]
+
 
 		
 		return self.result
