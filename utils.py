@@ -8,6 +8,7 @@ from pprint import pprint
 ts = '[1h]'
 #TODO: handle time inputs for data collection
 
+QUERY_COUNT = 0
 
 #retrieves information from the 4 panels under headlines (cpu and memory utilisation data)
 QUERIES = {
@@ -17,16 +18,17 @@ QUERIES = {
     'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="wifire-quicfire",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="wifire-quicfire", resource="memory"})',
     }
 
+
 def get_pods_list():
-	data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])')
-	try:
-		pods = data.json()["data"]["result"]
-		pods_list = []
-		for pod in pods:
-			pods_list.append(pod["metric"]["pod"])
-	except KeyError as e:
-		return ["Error retrieving pods"]
-	return pods_list
+        data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[3h])')
+        try:
+                pods = data["data"]["result"]
+                pods_list = []
+                for pod in pods:
+                        pods_list.append(pod["metric"]["pod"])
+        except KeyError as e:
+                return ["Error retrieving pods"]
+        return pods_list
 
 #parses json for numerical data values
 def query_value(query):
@@ -82,10 +84,12 @@ def print_query_values(as_percentages=False):
 
 #use url and a given query to request data from the website
 def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
+    global QUERY_COUNT
     base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
     endpoint = f'query?query={query}'
     full_url = base_url + endpoint
     queried_data = requests.get(full_url)
+    QUERY_COUNT += 1
     return queried_data.json()
 
 
@@ -102,3 +106,7 @@ def read_json():
     with open('scrape.json', 'r') as file:
         data = json.load(file)
     return data
+
+def get_query_count():
+    global QUERY_COUNT
+    return QUERY_COUNT
