@@ -28,13 +28,13 @@ def get_pods_list():
 
 #parses json for numerical data values
 def query_value(query):
+	# TODO Delete this function
 	#get json
 	api_response = query_api_site(query)
 
 	#get result list
 	result_list = get_result_list(api_response)
 
-	#there is a bug with the api itself where every fifth request comes back with no data
 	if(len(result_list) == 0):
 		#the fix to this is simply to regenerate the response if it comes back empty.    
 		api_response = query_api_site(query)
@@ -79,14 +79,26 @@ def print_query_values(as_percentages=False):
 
 
 #use url and a given query to request data from the website
-def query_api_site(query=QUERIES['CPU Utilisation (from requests)']):
+def query_api_site(query=QUERIES['CPU Utilisation (from requests)'], handle_fail=True):
+	# handle fail will re request the api if it gets no response from your query. Set to true by default
+	# there is a bug with the api itself where every fifth request comes back with no data, 
+	# this parameter set to True will re request to deal with that	
 	global QUERY_COUNT
 	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
 	endpoint = f'query?query={query}'
 	full_url = base_url + endpoint
-	queried_data = requests.get(full_url)
+	queried_data = requests.get(full_url).json()
 	QUERY_COUNT += 1
-	return queried_data.json()
+	if (handle_fail):
+		try:
+			x = queried_data['data']['result']
+			if (len(queried_data['data']['result']) == 0):
+				queried_data = requests.get(full_url).json()
+		except KeyError:
+			raise TypeError("Bad query string: "+ "\""+query+"\"")
+
+		print("result is ",queried_data)
+	return queried_data
 
 #used to avoid any unnecessary queries to the database, instead calculating the percent on our own
 def get_percent(portion, total):
