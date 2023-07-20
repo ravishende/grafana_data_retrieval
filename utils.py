@@ -97,7 +97,6 @@ def query_api_site(query=QUERIES['CPU Utilisation (from requests)'], handle_fail
 		except KeyError:
 			raise TypeError("Bad query string: "+ "\""+query+"\"")
 
-		print("result is ",queried_data)
 	return queried_data
 
 #used to avoid any unnecessary queries to the database, instead calculating the percent on our own
