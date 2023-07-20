@@ -26,26 +26,20 @@ def get_pods_list():
 		return ["Error retrieving pods"]
 	return pods_list
 
-#given json data from querying the api, retrieve the result of the query as a list of two floats
-def get_result_list(api_response):
-	return api_response['data']['result']
 
-#given a two element result list, select the second element and make it a usable float.
-def get_result(result_list):
-	return round(float(result_list[0]['value'][1]),3)
+def find_header_values(query_dict=header_queries):
+    query_values = {}
+    for query_title, query in query_dict.items():
+        res_list = get_result_list(query_api_site(query))
+        query_values[query_title] = round(float(res_list[0]['value'][1]),3)
 
+    return query_values
 
-def find_query_values(query_dict=header_queries):
-	query_values = {}
-	for query_title, query in query_dict.items():
-		query_values[query_title] = query_value(query)
-
-	return query_values
 
 #print the values of the 4 header panels
-def print_query_values(as_percentages=False):
+def print_header_values(as_percentages=False):
 	#get query values
-	query_values = find_query_values()
+	query_values = find_header_values()
 
 	#print out values
 	for (query_title, value) in query_values.items():
@@ -74,17 +68,24 @@ def query_api_site(query=header_queries['CPU Utilisation (from requests)'], hand
 	QUERY_COUNT += 1
 	if (handle_fail):
 		try:
-			x = queried_data['data']['result']
-			if (len(queried_data['data']['result']) == 0):
+			res_list = get_result_list(queried_data)
+			if (len(res_list) == 0):
 				queried_data = requests.get(full_url).json()
 		except KeyError:
 			raise TypeError("Bad query string: "+ "\""+query+"\"")
 
 	return queried_data
 
+
+#given json data from querying the api, retrieve the result of the query as a list of two floats
+def get_result_list(api_response):
+    return api_response['data']['result']
+
+
 #used to avoid any unnecessary queries to the database, instead calculating the percent on our own
 def get_percent(portion, total):
 	return round(portion/total, 3)*100
+
 
 def write_json(data):
 	with open('e.json', 'w') as file:
@@ -96,9 +97,11 @@ def read_json():
 		data = json.load(file)
 	return data
 
+
 def get_query_count():
 	global QUERY_COUNT
 	return QUERY_COUNT
+
 
 def get_column_names(table_class):
 	return list(table_class.result.keys())
