@@ -1,7 +1,8 @@
 from utils import *
+from inputs import *
 import pandas as pd
 from pprint import pprint
-from inputs import *
+
 
 class DataTable():
 	#returns a table with data from cpu_quota
@@ -17,17 +18,18 @@ class DataTable():
 		col_names = ["Pod", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"]
 		result = {title:None for title in col_names}
 
-		#get the table columns for each header
+		#get the table columns of each header that has a query
 		response = "" #for getting pods later without another query
 		for col_title, query in queries_dict.items():
 			response = get_result_list(query_api_site(query))
 			result[col_title] = [res['value'][1] for res in response]
 
-		#fill in missing values (percentages and pods)
+		#fill in missing columns (percentages and pods)
 		result["Pod"] = [res['metric']['pod'] for res in response]
 		result["CPU Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["CPU Usage"], result["CPU Requests"])]
 		result["CPU Limits %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["CPU Usage"], result["CPU Limits"])]
 		
+		#fill out data table to be returned
 		df = pd.DataFrame(result, columns=col_names)
 		return df
 
@@ -55,17 +57,19 @@ class DataTable():
 			response = get_result_list(query_api_site(query))
 			result[col_title] = [res['value'][1] for res in response]
 
+		#fill in missing columns (percentages and pods)
 		result["Pod"] = [res['metric']['pod'] for res in response]
 		result["Memory Requests %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["Memory Usage"], result["Memory Requests"])]
 		result["Memory Limits %"] = [get_percent(float(usage), float(requests)) for usage,requests in zip(result["Memory Usage"], result["Memory Limits"])]
 		
+		#fill out data table to be returned
 		df = pd.DataFrame(result, columns=col_names)
 		return df
 
 
 
 	#current network usage requires a duration. This duration has a default value, but should generally be passed in.
-	def network_usage(self, duration="3h"):
+	def network_usage(self, duration="DEFAULT_DURATION"):
 		col_names = ["Pod","Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets"]
 
 		#assemble queries for the given pod
@@ -84,10 +88,12 @@ class DataTable():
 		response = None #for getting pods later without another query
 		for col_title, query in queries_dict.items():
 			response = get_result_list(query_api_site(query))
-			result[col_title] = [round_to((res['value'][1]),3) for res in response]
+			result[col_title] = [clean_round(res['value'][1]) for res in response]
 
-
+		#fill in missing column (pods)
 		result["Pod"] = [res['metric']['pod'] for res in response]
+
+		#fill out data table to be returned
 		df = pd.DataFrame(result, columns=col_names)
 		return df
 
