@@ -76,7 +76,7 @@ def query_api_site(query=header_queries['CPU Utilisation (from requests)'], hand
 			if (len(res_list) == 0):
 				queried_data = requests.get(full_url).json()
 		except KeyError:
-			raise TypeError("Bad query string: "+ "\""+query+"\"")
+			raise TypeError("Bad query string: \"" + query + "\"")
 
 	return queried_data
 
@@ -88,7 +88,7 @@ def get_result_list(api_response):
 
 #used to avoid any unnecessary queries to the database, instead calculating the percent on our own
 def get_percent(portion, total):
-	return round(portion/total, 3)*100
+	return clean_round(portion/total)*100
 
 
 #retrieves global variable for total number of querries since the start of the program
@@ -96,8 +96,8 @@ def get_query_count():
 	global QUERY_COUNT
 	return QUERY_COUNT
 
-
-def round_to(number, place):
+#given a number and X decimal places, if there are fewer than X decimal places, return it, otherwise round to three decimal places 
+def clean_round(number, place=ROUND_NUM_DECIMALS):
 	current_places = str(number)[::-1].find(".")
 	if(current_places > place):
 		return round(Decimal(number), place)
