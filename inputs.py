@@ -1,0 +1,1 @@
+NAMESPACE = 'wifire-quicfire'
