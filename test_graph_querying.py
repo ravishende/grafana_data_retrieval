@@ -1,11 +1,13 @@
 from utils import *
 from inputs import *
+from graph import *
 from pprint import pprint
+from rich import print as printc
 from datetime import datetime, timedelta
 
 
+graph_class = Graph()
+graph_class.print_graphs()
+print("\n\n\n")
 
-query = 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"})'
-queried_data = query_api_site_for_graph(query, assemble_time_filter())
-pprint(get_result_list(queried_data)[0]['values'])
 

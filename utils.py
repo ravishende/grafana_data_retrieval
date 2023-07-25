@@ -88,14 +88,10 @@ def query_api_site(query, handle_fail=True):
 	return queried_data
 
 #assembles string for the time filter to be passed into query_api_site_for_graph()
-#takes in datetime objects for start and end, and string in the form of "5h" or "2d" for step.
-def assemble_time_filter(start=None, end=None, step=DEFAULT_GRAPH_STEP):
-	#put in default values for start and end
-	if start == None:
-		start = (datetime.now()-timedelta(hours=GRAPH_START_HOURS_AGO))
-	if end == None:
-		end = end=datetime.now()
-
+#takes in datetime objects for end, int for time_period_hours, and string in the form of "5h" or "2d" for step.
+def assemble_time_filter(time_period_hours=GRAPH_START_HOURS_AGO, end=datetime.now(), step=DEFAULT_GRAPH_STEP):
+	#calculate start time
+	start = (datetime.now()-timedelta(hours=time_period_hours))
 	#assemble strings
 	end_str = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 	start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -131,7 +127,7 @@ def query_api_site_for_graph(query, time_filter=None, handle_fail=True):
 			if (len(res_list) == 0):
 				queried_data = requests.get(full_url).json()
 		except KeyError:
-			raise TypeError (f'\n\nBad query string: {full_url}\n\n')
+			raise TypeError (f'\n\nBad query string: \n{full_url}\n\n')
 
 	return queried_data
 
