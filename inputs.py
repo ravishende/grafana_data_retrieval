@@ -1,3 +1,4 @@
 NAMESPACE = 'wifire-quicfire'
+# NAMESPACE = 'alto'
 DEFAULT_DURATION = '3h'
 ROUND_NUM_DECIMALS = 3

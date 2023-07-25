@@ -7,6 +7,7 @@ from decimal import *
 from termcolor import cprint, colored
 from pprint import pprint
 
+#reset total query count
 QUERY_COUNT = 0
 
 #retrieves information from the 4 panels under headlines (cpu and memory utilisation data)
@@ -84,11 +85,6 @@ def query_api_site(query=header_queries['CPU Utilisation (from requests)'], hand
 #given json data from querying the api, retrieve the result of the query as a list of two floats
 def get_result_list(api_response):
 	return api_response['data']['result']
-
-
-#used to avoid any unnecessary queries to the database, instead calculating the percent on our own
-def get_percent(portion, total):
-	return clean_round(portion/total)*100
 
 
 #retrieves global variable for total number of querries since the start of the program
