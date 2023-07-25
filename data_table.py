@@ -30,7 +30,7 @@ class DataTable():
 		return clean_round(float(numerator)/float(divisor)*100)
 
 
-	#update
+	#update the cells of the given row meant for storing the values retrieved from the query list that generates response_dict
 	def _fill_in_queried_cells(self, row, pod, response_dict):
 		for col_title, column in response_dict.items():
 			
