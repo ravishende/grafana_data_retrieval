@@ -42,7 +42,7 @@ class DataTable():
 				#find the value associated with our current pod
 				if(pair['metric']['pod'] == pod):
 					#update row with new value rounded to 5 decimal places
-					row[col_title] = clean_round(pair['value'][1], 5) 
+					row[col_title] = clean_round(pair['value'][1], ROUND_TABLES_TO) 
 					found_pod = True
 					break
 
