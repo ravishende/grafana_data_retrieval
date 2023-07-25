@@ -61,7 +61,7 @@ def print_header_values(as_percentages=False):
 
 
 #use url and a given query to request data from the website
-def query_api_site(query=header_queries['CPU Utilisation (from requests)'], handle_fail=True):
+def query_api_site(query, handle_fail=True):
 	# handle fail will re request the api if it gets no response from your query. Set to true by default
 	# there is a bug with the api itself where every fifth request comes back with no data, 
 	# this parameter set to True will re request to deal with that	
@@ -71,6 +71,8 @@ def query_api_site(query=header_queries['CPU Utilisation (from requests)'], hand
 	full_url = base_url + endpoint
 	queried_data = requests.get(full_url).json()
 	QUERY_COUNT += 1
+	# print("query:", query)
+	# print(f'\tquery number: {colored(QUERY_COUNT,"cyan")}')
 	if (handle_fail):
 		try:
 			res_list = get_result_list(queried_data)
