@@ -4,6 +4,7 @@ import requests
 import json
 from inputs import *
 from decimal import *
+from datetime import datetime, timedelta
 from termcolor import cprint, colored
 from pprint import pprint
 
@@ -60,28 +61,80 @@ def print_header_values(as_percentages=False):
 				print(f'{query_title}: \n\t{colored(value,"green")}')
 
 
-#use url and a given query to request data from the website
+# Use url and a given query to request data from the website
 def query_api_site(query, handle_fail=True):
 	# handle fail will re request the api if it gets no response from your query. Set to true by default
 	# there is a bug with the api itself where every fifth request comes back with no data, 
 	# this parameter set to True will re request to deal with that	
+	
 	global QUERY_COUNT
+	#set up url
 	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
 	endpoint = f'query?query={query}'
 	full_url = base_url + endpoint
+	#query database
 	queried_data = requests.get(full_url).json()
 	QUERY_COUNT += 1
-	# print("query:", query)
-	# print(f'\tquery number: {colored(QUERY_COUNT,"cyan")}')
+
+	#re-request data if it comes back with no value
 	if (handle_fail):
 		try:
 			res_list = get_result_list(queried_data)
 			if (len(res_list) == 0):
 				queried_data = requests.get(full_url).json()
 		except KeyError:
-			raise TypeError("Bad query string: \"" + query + "\"")
+			raise TypeError(f'\n\nBad query string: {query}\n\n')
 
 	return queried_data
+
+#assembles string for the time filter to be passed into query_api_site_for_graph()
+#takes in datetime objects for start and end, and string in the form of "5h" or "2d" for step.
+def assemble_time_filter(start=None, end=None, step=DEFAULT_GRAPH_STEP):
+	#put in default values for start and end
+	if start == None:
+		start = (datetime.now()-timedelta(hours=GRAPH_START_HOURS_AGO))
+	if end == None:
+		end = end=datetime.now()
+
+	#assemble strings
+	end_str = end.strftime("%Y-%m-%dT%H:%M:%SZ")
+	start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+	#combine strings into time filter format
+	time_filter = f'start={start_str}&end={end_str}&step={step}'
+
+	return time_filter
+
+# Use url and a given query to request data for a graph from the website. 
+# Different function from query_api_site() to avoid confusion with querying
+def query_api_site_for_graph(query, time_filter=None, handle_fail=True):
+	# handle fail will re request the api if it gets no response from your query. Set to true by default
+	# there is a bug with the api itself where every fifth request comes back with no data, 
+	# this parameter set to True will re request to deal with that	
+	
+	#get time filter default value if needed
+	if time_filter == None:
+		time_filter = assemble_time_filter()
+
+	global QUERY_COUNT
+	#set up url
+	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
+	endpoint = f'query_range?query={query}&{time_filter}'
+	full_url = base_url + endpoint
+	#query database
+	queried_data = requests.get(full_url).json()
+	QUERY_COUNT += 1
+
+	#re-request data if it comes back with no value
+	if (handle_fail):
+		try:
+			res_list = get_result_list(queried_data)
+			if (len(res_list) == 0):
+				queried_data = requests.get(full_url).json()
+		except KeyError:
+			raise TypeError (f'\n\nBad query string: {full_url}\n\n')
+
+	return queried_data
+
 
 
 #given json data from querying the api, retrieve the result of the query as a list of two floats
