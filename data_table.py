@@ -30,7 +30,8 @@ class DataTable():
 		return clean_round(float(numerator)/float(divisor)*100)
 
 
-	def _update_row_queried_cols(self, row, pod, response_dict):
+	#update
+	def _fill_in_queried_cells(self, row, pod, response_dict):
 		for col_title, column in response_dict.items():
 			
 			#(re)set found_pod
@@ -40,7 +41,8 @@ class DataTable():
 			for pair in column: 
 				#find the value associated with our current pod
 				if(pair['metric']['pod'] == pod):
-					row[col_title] = pair['value'][1] 
+					#update row with new value rounded to 5 decimal places
+					row[col_title] = clean_round(pair['value'][1], 5) 
 					found_pod = True
 					break
 
@@ -79,7 +81,7 @@ class DataTable():
 			row['Pod'] = pod
 
 			#get queried columns
-			self._update_row_queried_cols(row, pod, response_dict)
+			self._fill_in_queried_cells(row, pod, response_dict)
 
 			#get percent columns
 			row['CPU Requests %'] = self._get_percent(row['CPU Usage'], row['CPU Requests'])
@@ -125,7 +127,7 @@ class DataTable():
 			row['Pod'] = pod
 
 			#get queried columns
-			self._update_row_queried_cols(row, pod, response_dict)
+			self._fill_in_queried_cells(row, pod, response_dict)
 
 			#get percent columns
 			row['Memory Requests %'] = self._get_percent(row['Memory Usage'], row['Memory Requests'])
@@ -170,7 +172,7 @@ class DataTable():
 			row['Pod'] = pod
 
 			#get queried columns
-			self._update_row_queried_cols(row, pod, response_dict)
+			self._fill_in_queried_cells(row, pod, response_dict)
 
 			#add row to database
 			df.loc[i] = row 

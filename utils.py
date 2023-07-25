@@ -93,7 +93,7 @@ def get_query_count():
 	return QUERY_COUNT
 
 #given a number and X decimal places, if there are fewer than X decimal places, return it, otherwise round to three decimal places 
-def clean_round(number, place=ROUND_NUM_DECIMALS):
+def clean_round(number, place=DEFAULT_ROUND_TO):
 	current_places = str(number)[::-1].find(".")
 	if(current_places > place):
 		return round(Decimal(number), place)
