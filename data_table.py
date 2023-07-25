@@ -112,6 +112,7 @@ class DataTable():
 
 		#store json data from querying the api
 		for col_title, query in queries_dict.items():
+			# print(f'{colored("Mem_quota", "yellow")}: querying, {colored(col_title, "green")}')
 			response_dict[col_title] = get_result_list(query_api_site(query))
 
 		#get a list of all pods and create a row to be added to the database later
@@ -142,7 +143,7 @@ class DataTable():
 
 	#current network usage requires a duration. This duration has a default value, but should generally be passed in.
 	def network_usage(self, duration="DEFAULT_DURATION"):
-		col_names = ["Pod","Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets"]
+		col_names = ["Pod","Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"]
 
 		#assemble queries for the given pod
 		queries_dict = {
@@ -152,7 +153,6 @@ class DataTable():
 			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
 			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',	
 			"Rate of Transmitted Packets Dropped":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))'
-
 		}
 		response_dict = {}
 

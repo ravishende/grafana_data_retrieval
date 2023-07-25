@@ -5,6 +5,8 @@ from utils import *
 from inputs import *
 import pandas as pd
 from data_table import DataTable
+from termcolor import cprint, colored
+
 
 
 
@@ -27,15 +29,16 @@ network_df = table_retreiver.network_usage("1h")
 
 
 #print collected data
-print("\n\n\n\n")
+print(f'\n\n\n\n{colored("Header:", "cyan")}')
 print_header_values()
-print(mem_df.to_string())
-print("\n\n\n\n")
 
+print(f'\n\n\n\n{colored("CPU Quota:", "cyan")}')
 print(cpu_df.to_string())
-print("\n\n\n\n")
 
-# network_df.round()
+print(f'\n\n\n\n{colored("Memory Quota:", "cyan")}')
+print(mem_df.to_string())
+
+print(f'\n\n\n\n{colored("Current Network Usage:", "cyan")}')
 print(network_df)
 print("\n\n\n\n")
 
