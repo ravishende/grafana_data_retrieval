@@ -56,6 +56,8 @@ class Graph():
 		elif offset_unit == 's':
 			return end - timedelta(seconds = offset_value)
 		# TODO: raise error if time unit is not what we are expecting
+		else:	
+			raise TypeError (f'\n\nBad time_offset string: \n{time_offset}\n\n')
 
 
 
