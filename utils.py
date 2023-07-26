@@ -87,18 +87,6 @@ def query_api_site(query, handle_fail=True):
 
 	return queried_data
 
-#assembles string for the time filter to be passed into query_api_site_for_graph()
-#takes in datetime objects for end, int for time_period_hours, and string in the form of "5h" or "2d" for step.
-def assemble_time_filter(time_period_hours=GRAPH_START_HOURS_AGO, end=datetime.now(), step=DEFAULT_GRAPH_STEP):
-	#calculate start time
-	start = (datetime.now()-timedelta(hours=time_period_hours))
-	#assemble strings
-	end_str = end.strftime("%Y-%m-%dT%H:%M:%SZ")
-	start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
-	#combine strings into time filter format
-	time_filter = f'start={start_str}&end={end_str}&step={step}'
-
-	return time_filter
 
 # Use url and a given query to request data for a graph from the website. 
 # Different function from query_api_site() to avoid confusion with querying
