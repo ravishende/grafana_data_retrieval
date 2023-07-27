@@ -16,6 +16,7 @@ table_retreiver = DataTable()
 cpu_df = table_retreiver.cpu_quota()
 mem_df = table_retreiver.mem_quota()
 network_df = table_retreiver.network_usage("1h")
+storage_io_df = table_retreiver.storage_io()
 
 # #generate pickle
 # mem_df.to_pickle("mem_df.pkl")
@@ -29,17 +30,21 @@ network_df = table_retreiver.network_usage("1h")
 
 
 #print collected data
-print(f'\n\n\n\n{colored("Header:", "cyan")}')
+print(f'\n\n\n\n{colored("Header:", "magenta")}')
 print_header_values()
 
-print(f'\n\n\n\n{colored("CPU Quota:", "cyan")}')
+print(f'\n\n\n\n{colored("CPU Quota:", "magenta")}')
 print(cpu_df.to_string())
 
-print(f'\n\n\n\n{colored("Memory Quota:", "cyan")}')
+print(f'\n\n\n\n{colored("Memory Quota:", "magenta")}')
 print(mem_df.to_string())
 
-print(f'\n\n\n\n{colored("Current Network Usage:", "cyan")}')
+print(f'\n\n\n\n{colored("Current Network Usage:", "magenta")}')
 print(network_df)
+
+print(f'\n\n\n\n{colored("Current Storage IO:", "magenta")}')
+print(storage_io_df.to_string())
+
 print("\n\n\n\n")
 
 
