@@ -97,8 +97,7 @@ class Graph():
 				result_list[i].append(time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
 			else:
 				#adds the time as a datetime object for accessing/manipulating the time more easily
-				result_list[i].append(time_stamp)
-		
+				result_list[i].append(time_stamp)	
 
 		return result_list
 

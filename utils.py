@@ -36,8 +36,14 @@ def get_pods_list():
 def find_header_values(query_dict=header_queries):
 	query_values = {}
 	for query_title, query in query_dict.items():
+		#get data
 		res_list = get_result_list(query_api_site(query))
-		query_values[query_title] = round(float(res_list[0]['value'][1]),3)
+		#handle if there isn't data
+		if len(res_list) == 0:
+			query_values[query_title] = "No data"
+		else:
+			#add data to dictionary
+			query_values[query_title] = clean_round(float(res_list[0]['value'][1]),3)
 
 	return query_values
 
@@ -51,7 +57,7 @@ def print_header_values(as_percentages=False):
 	for (query_title, value) in query_values.items():
 		
 		#check if value is empty
-		if (str(value)[0] == "n"):
+		if (str(value)[0] == "N"):
 			print(f'{query_title}: \n\t{colored(value,"red")}')
 		else:
 			# print the percentage sign if requested
@@ -77,10 +83,10 @@ def query_api_site(query, handle_fail=True):
 	QUERY_COUNT += 1
 
 	#re-request data if it comes back with no value
-	if (handle_fail):
+	if handle_fail:
 		try:
 			res_list = get_result_list(queried_data)
-			if (len(res_list) == 0):
+			if len(res_list) == 0:
 				queried_data = requests.get(full_url).json()
 		except KeyError:
 			print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
@@ -116,7 +122,6 @@ def query_api_site_for_graph(query, time_filter, handle_fail=True):
 			print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
 			raise TypeError (f'\n\nBad query string: \n{full_url}\n\n')
 
-
 	return queried_data
 
 
@@ -137,7 +142,7 @@ def clean_round(number, place=DEFAULT_ROUND_TO):
 	current_places = str(number)[::-1].find(".")
 	#if it has fewer places than the specified number, return it, otherwise round it to the specified number of places
 	if(current_places > place):
-		return round(Decimal(number), place)
+		return float(round(Decimal(number), place))
 	return number
 
 #writes json data to a file
