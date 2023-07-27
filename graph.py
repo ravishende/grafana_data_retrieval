@@ -82,6 +82,8 @@ class Graph():
 
 		# add time context into result list
 		for i in range(len(result_list)):
+			#get rid of unnecessary extra info
+			result_list[i].pop(0)
 			#calculate time offset
 			time_offset_value = i*int(time_step[:-1])
 			time_offset = str(time_offset_value) + time_step[-1]
@@ -101,9 +103,9 @@ class Graph():
 
 
 	#print the values list from _get_values_list
-	def print_graphs(self):
+	def print_graphs(self, show_time_as_timestamp=True):
 		for query_title, query in self.queries_dict.items():
 			print("\n\n____________________________________________________") 
 			print("\t", colored(query_title, 'magenta'))
 			print("____________________________________________________") 
-			printc(self.get_values_list(query))
+			printc(self.get_values_list(query, show_time_as_timestamp=show_time_as_timestamp))
