@@ -76,7 +76,7 @@ class Graph():
 
 
 	#get a list of all the values and add a column for timestamps
-	def get_values_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
+	def _get_values_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
 		time_filter = self._assemble_time_filter(end, time_offset, time_step)
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))[0]['values']
 
@@ -84,6 +84,8 @@ class Graph():
 		for i in range(len(result_list)):
 			#get rid of unnecessary extra info
 			result_list[i].pop(0)
+			result_list[i][0] = clean_round(result_list[i][0])
+
 			#calculate time offset
 			time_offset_value = i*int(time_step[:-1])
 			time_offset = str(time_offset_value) + time_step[-1]
@@ -100,6 +102,11 @@ class Graph():
 
 		return result_list
 
+	def get_graphs(self, show_time_as_timestamp=True):
+		graphs = {}
+		for query_title, query in self.queries_dict.items():
+			graphs[query_title] = self._get_values_list(query, show_time_as_timestamp=show_time_as_timestamp)
+		return graphs
 
 
 	#print the values list from _get_values_list
@@ -108,4 +115,4 @@ class Graph():
 			print("\n\n____________________________________________________") 
 			print("\t", colored(query_title, 'magenta'))
 			print("____________________________________________________") 
-			printc(self.get_values_list(query, show_time_as_timestamp=show_time_as_timestamp))
+			printc(self._get_values_list(query, show_time_as_timestamp=show_time_as_timestamp))

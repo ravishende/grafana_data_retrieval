@@ -1,16 +1,36 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+import time
+# from utils import *
+from graph import *
+from requests import *
 
+graph_retriever = Graph()
+graph_list = graph_retriever.get_graphs(show_time_as_timestamp=False).items()
+for graph_title, graph_data in graph_list:
+	#set up variables
+	x_data = []
+	y_data = []
 
-# any python lists or numpy arrays will do, make sure they have same element count though
-x_data = [datetime(month=2, year=2023, day=4),datetime(month=2, year=2023, day=23), datetime(month=2, year=2023, day=26)]
-y_data = [1,3,4]
+	#collect the data from the graph
+	for datapoint in graph_data:
+		x_data.append(f'{datapoint[1].hour}h {datapoint[1].minute}m')
+		y_data.append(datapoint[0])
 
-plt.title("CPU Usage vs Time")
-plt.xlabel("Time")
-plt.ylabel("CPU Usage")
-plt.plot(x_data,y_data)
-plt.scatter(x_data,y_data,s=30,alpha=1)
-plt.show()
+	# any python lists or numpy arrays will do, make sure they have same element count though
+	# x_data = [datetime(month=2, year=2023, day=4),datetime(month=2, year=2023, day=23), datetime(month=2, year=2023, day=26)]
+	# y_data = [1,3,4]
+
+	plt.title(f'{graph_title} over time')
+	plt.xlabel("Time")
+	plt.ylabel(graph_title)
+	plt.plot(x_data,y_data)
+	# plt.ylim([-1, 3])
+	plt.xticks(x_data, rotation=90)
+	plt.scatter(x_data,y_data,s=30,alpha=1)
+	plt.show()
+
+	time.sleep(0.2)
+	plt.close()
 
