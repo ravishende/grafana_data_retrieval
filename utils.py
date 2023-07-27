@@ -4,9 +4,11 @@ import requests
 import json
 from inputs import *
 from decimal import *
+from datetime import datetime, timedelta
 from termcolor import cprint, colored
 from pprint import pprint
 
+#reset total query count
 QUERY_COUNT = 0
 
 #retrieves information from the 4 panels under headlines (cpu and memory utilisation data)
@@ -59,26 +61,64 @@ def print_header_values(as_percentages=False):
 				print(f'{query_title}: \n\t{colored(value,"green")}')
 
 
-#use url and a given query to request data from the website
-def query_api_site(query=header_queries['CPU Utilisation (from requests)'], handle_fail=True):
+# Use url and a given query to request data from the website
+def query_api_site(query, handle_fail=True):
 	# handle fail will re request the api if it gets no response from your query. Set to true by default
 	# there is a bug with the api itself where every fifth request comes back with no data, 
 	# this parameter set to True will re request to deal with that	
+	
 	global QUERY_COUNT
+	#set up url
 	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
 	endpoint = f'query?query={query}'
 	full_url = base_url + endpoint
+	#query database
 	queried_data = requests.get(full_url).json()
 	QUERY_COUNT += 1
+
+	#re-request data if it comes back with no value
 	if (handle_fail):
 		try:
 			res_list = get_result_list(queried_data)
 			if (len(res_list) == 0):
 				queried_data = requests.get(full_url).json()
 		except KeyError:
-			raise TypeError("Bad query string: \"" + query + "\"")
+			print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
+			raise TypeError(f'\n\nBad query string: {query}\n\n')
 
 	return queried_data
+
+
+# Use url and a given query and time_filter to request data for a graph from the api
+# Different function from query_api_site() to avoid confusion with querying single data points and tables vs graphs
+def query_api_site_for_graph(query, time_filter, handle_fail=True):
+	# handle fail will re request the api if it gets no response from your query. Set to true by default
+	# there is a bug with the api itself where every fifth request comes back with no data, 
+	# this parameter set to True will re request to deal with that	
+	
+
+	global QUERY_COUNT
+	#set up url
+	base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
+	endpoint = f'query_range?query={query}&{time_filter}'
+	full_url = base_url + endpoint
+	#query database
+	queried_data = requests.get(full_url).json()
+	QUERY_COUNT += 1
+
+	#re-request data if it comes back with no value
+	if (handle_fail):
+		try:
+			res_list = get_result_list(queried_data)
+			if (len(res_list) == 0):
+				queried_data = requests.get(full_url).json()
+		except KeyError:
+			print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
+			raise TypeError (f'\n\nBad query string: \n{full_url}\n\n')
+
+
+	return queried_data
+
 
 
 #given json data from querying the api, retrieve the result of the query as a list of two floats
@@ -86,19 +126,16 @@ def get_result_list(api_response):
 	return api_response['data']['result']
 
 
-#used to avoid any unnecessary queries to the database, instead calculating the percent on our own
-def get_percent(portion, total):
-	return clean_round(portion/total)*100
-
-
 #retrieves global variable for total number of querries since the start of the program
 def get_query_count():
 	global QUERY_COUNT
 	return QUERY_COUNT
 
-#given a number and X decimal places, if there are fewer than X decimal places, return it, otherwise round to three decimal places 
-def clean_round(number, place=ROUND_NUM_DECIMALS):
+#given a number and X decimal places, if there are fewer than X decimal places, return it, otherwise round to X decimal places 
+def clean_round(number, place=DEFAULT_ROUND_TO):
+	#find the number of decimal places kept in the string
 	current_places = str(number)[::-1].find(".")
+	#if it has fewer places than the specified number, return it, otherwise round it to the specified number of places
 	if(current_places > place):
 		return round(Decimal(number), place)
 	return number
