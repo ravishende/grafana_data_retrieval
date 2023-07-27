@@ -143,8 +143,6 @@ class DataTable():
 
 	#current network usage requires a duration. This duration has a default value, but should generally be passed in.
 	def network_usage(self, duration="DEFAULT_DURATION"):
-		col_names = ["Pod","Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"]
-
 		#assemble queries for the given pod
 		queries_dict = {
 			"Current Receive Bandwidth":'sum by(pod) (irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
@@ -154,6 +152,9 @@ class DataTable():
 			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',	
 			"Rate of Transmitted Packets Dropped":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))'
 		}
+
+		#create a final dictionary for storing columns and their titles
+		col_names = ["Pod","Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"]
 		response_dict = {}
 
 		#store json data from querying the api
@@ -181,6 +182,7 @@ class DataTable():
 		return df
 
 	def storage_io(self, duration=DEFAULT_DURATION):
+		#assemble queries for the given pod
 		queries_dict = {
 			'IOPS (Reads)':'sum by(pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
 			'IOPS(Writes)':'sum by(pod) (rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
@@ -191,10 +193,32 @@ class DataTable():
 			#query that doesn't work but can probably be calculated with Read + Write
 			# 'Throughput(Read + Write)':'sum by(pod) (rate(container_fs_reads_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']) + rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']))'
 		}
+
+		#create a final dictionary for storing columns and their titles
+		col_names = ["Pod","IOPS (Reads)", "IOPS (Writes)", "Throughput(Read)", "Throughput(Write)"]
 		response_dict = {}
+
 
 		for col_title, query in queries_dict.items():
 			response_dict[col_title] = get_result_list(query_api_site(query))
 
-		return response_dict
+		#get a list of all pods and create a row to be added to the database later
+		pods = self._get_pods(response_dict)
+		row = {title:None for title in col_names}
+		df = pd.DataFrame({i:[] for i in col_names})
+
+		#assemble row
+		i = 0
+		for pod in pods:
+			#get pod
+			row['Pod'] = pod
+
+			#get queried columns
+			self._fill_in_queried_cells(row, pod, response_dict)
+
+			#add row to database
+			df.loc[i] = row 
+			i += 1
+
+		return df
 
