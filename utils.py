@@ -83,21 +83,19 @@ def query_api_site(query, handle_fail=True):
 			if (len(res_list) == 0):
 				queried_data = requests.get(full_url).json()
 		except KeyError:
+			print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
 			raise TypeError(f'\n\nBad query string: {query}\n\n')
 
 	return queried_data
 
 
-# Use url and a given query to request data for a graph from the website. 
-# Different function from query_api_site() to avoid confusion with querying
-def query_api_site_for_graph(query, time_filter=None, handle_fail=True):
+# Use url and a given query and time_filter to request data for a graph from the api
+# Different function from query_api_site() to avoid confusion with querying single data points and tables vs graphs
+def query_api_site_for_graph(query, time_filter, handle_fail=True):
 	# handle fail will re request the api if it gets no response from your query. Set to true by default
 	# there is a bug with the api itself where every fifth request comes back with no data, 
 	# this parameter set to True will re request to deal with that	
 	
-	#get time filter default value if needed
-	if time_filter == None:
-		time_filter = assemble_time_filter()
 
 	global QUERY_COUNT
 	#set up url
@@ -115,7 +113,9 @@ def query_api_site_for_graph(query, time_filter=None, handle_fail=True):
 			if (len(res_list) == 0):
 				queried_data = requests.get(full_url).json()
 		except KeyError:
+			print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
 			raise TypeError (f'\n\nBad query string: \n{full_url}\n\n')
+
 
 	return queried_data
 
@@ -131,7 +131,7 @@ def get_query_count():
 	global QUERY_COUNT
 	return QUERY_COUNT
 
-#given a number and X decimal places, if there are fewer than X decimal places, return it, otherwise round to three decimal places 
+#given a number and X decimal places, if there are fewer than X decimal places, return it, otherwise round to X decimal places 
 def clean_round(number, place=DEFAULT_ROUND_TO):
 	#find the number of decimal places kept in the string
 	current_places = str(number)[::-1].find(".")

@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 
 class Graph():
 
-	def __init__(self):
-		self.queries_dict_no_pods = {
+	def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
+		self.queries_dict = {
 			'CPU Usage':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
 			'Memory Usage (w/o cache)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + NAMESPACE + '", container!="", image!=""})',
 			'Receive Bandwidth':'sum(irate(container_network_receive_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
@@ -17,20 +17,19 @@ class Graph():
 			'Rate of Received Packets':'sum(irate(container_network_receive_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
 			'Rate of Transmitted Packets':'sum(irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
 			'Rate of Received Packets Dropped':'sum(irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Rate of Transmitted Packets Dropped':'sum(irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'IOPS(Reads+Writes)':'ceil(sum(rate(container_fs_reads_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']) + rate(container_fs_writes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + '])))'
-
+			'Rate of Transmitted Packets Dropped':'sum(irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
+		# working queries 
+		  # - just need to add them to get the IOPS(Reads+Writes) that we're looking for. But it would take 2 queries instead of the 1 that we're hoping for
+		  # - same thing with the Throughput(Read+Write).NOTE: WHEN ADDING MORE QUERIES, REMEMBER TO ADD A COMMA TO THE LAST QUERY FROM BEFORE
+			# 'IOPS(Write)':'ceil(sum by(pod) (rate(container_fs_writes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + '])))',
+			# 'IOPS(Read)':'ceil(sum by(pod) (rate(container_fs_reads_total{container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']) + ))'
+			#'ThroughPut(Read)':'sum by(pod) (rate(container_fs_reads_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			#'ThroughPut(Write)':'sum by(pod) (rate(container_fs_writes_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+		#not working queries - it doesn't like the '+' between the reads and writes 
+			# 'IOPS(Read+Write)':'ceil(sum by(pod) (rate(container_fs_reads_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']) + rate(container_fs_writes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + '])))'
+			# 'ThroughPut(Read+Write)':'sum by(pod) (rate(container_fs_reads_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + duration + ']) + rate(container_fs_writes_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + duration + ']))',
 		}
 
-		self.queries_dict_with_pods = {
-			'ThroughPut(Read+Write)':'sum by(pod) (rate(container_fs_reads_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']) + rate(container_fs_writes_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'IOPS (Reads)':'sum by(pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'IOPS(Writes)':'sum by(pod) (rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'IOPS(Reads + Writes)':'sum by(pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']) + rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Throughput(Read)':'sum by(pod) (rate(container_fs_reads_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Throughput(Write)':'sum by(pod) (rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Throughput(Read + Write)':'sum by(pod) (rate(container_fs_reads_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']) + rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
-		}
 
 
 	
@@ -55,7 +54,7 @@ class Graph():
 
 		elif offset_unit == 's':
 			return end - timedelta(seconds = offset_value)
-		# TODO: raise error if time unit is not what we are expecting
+		#raise error if time unit is not what we are expecting
 		else:	
 			raise TypeError (f'\n\nBad time_offset string: \n{time_offset}\n\n')
 
@@ -67,8 +66,8 @@ class Graph():
 		#calculate start time
 		start = self._find_time_from_offset(end, time_offset)
 		#assemble strings
-		end_str = end.strftime("%Y-%m-%dT%H:%M:%SZ")
-		start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+		end_str = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+		start_str = start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 		#combine strings into time filter format
 		time_filter = f'start={start_str}&end={end_str}&step={step}'
 
@@ -77,7 +76,7 @@ class Graph():
 
 
 	#get a list of all the values and add a column for timestamps
-	def get_values_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP):
+	def get_values_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
 		time_filter = self._assemble_time_filter(end, time_offset, time_step)
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))[0]['values']
 
@@ -88,17 +87,23 @@ class Graph():
 			time_offset = str(time_offset_value) + time_step[-1]
 			#find new time_stamp and add it to result
 			time_stamp = self._find_time_from_offset(end, time_offset)
-			# result_list[i].append(time_stamp.strftime("%Y-%m-%d %H:%M:%S")) #for printing as a readable time
-			result_list[i].append(time_stamp) #for accessing as a datetime
+			
+			if(show_time_as_timestamp):
+				#adds the time in a format for printing in a more readable way
+				result_list[i].append(time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
+			else:
+				#adds the time as a datetime object for accessing/manipulating the time more easily
+				result_list[i].append(time_stamp)
 		
+
 		return result_list
 
 
 
 	#print the values list from _get_values_list
 	def print_graphs(self):
-		print("\n\n_____________________________\nGraphs Without Pods\n_____________________________")
-		for query_title, query in self.queries_dict_no_pods.items():
-			print("\n\n", query_title)
+		for query_title, query in self.queries_dict.items():
+			print("\n\n____________________________________________________") 
+			print("\t", colored(query_title, 'magenta'))
+			print("____________________________________________________") 
 			printc(self.get_values_list(query))
-			# printc(query_api_site_for_graph(query))

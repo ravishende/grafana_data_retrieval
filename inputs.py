@@ -3,7 +3,7 @@ NAMESPACE = 'wifire-quicfire'
 # NAMESPACE = 'alto'
 
 #duration for current_network_usage table
-DEFAULT_DURATION = '1h'
+DEFAULT_DURATION = '5m'
 
 #rounding
 DEFAULT_ROUND_TO = 3
