@@ -8,8 +8,6 @@ from data_table import DataTable
 from termcolor import cprint, colored
 
 
-
-
 pd.set_option('display.max_columns', 8)
 
 table_retreiver = DataTable()
