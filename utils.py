@@ -154,14 +154,18 @@ def get_time_dict(time_str):
 
 	#save time variables (if not in time_str they will be set to None)
 	w, d, h, m, s = feedback.groups()
-
+	#put time variables into a dictionary
 	time_dict = {
-		'w':w,
-		'd':d,
-		'h':h,
-		'm':m,
-		's':s
+		'weeks':w,
+		'days':d,
+		'hours':h,
+		'minutes':m,
+		'seconds':s
 	}
+
+	#get rid of null values in time_dict
+	time_dict = {unit:float(value) for unit, value in time_dict.items() if value != None}
+	
 	return time_dict
 
 #writes json data to a file
