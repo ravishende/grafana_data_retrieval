@@ -8,9 +8,6 @@ import matplotlib.pyplot as plt
 
 
 graph_class = Graph()
-# graph_class.print_graphs()
-# graph_class.get_graphs(show_time_as_timestamp=False)
-print("\n\n\n")
 
 data = graph_class.get_graphs(show_time_as_timestamp=False)["CPU Usage"]
 

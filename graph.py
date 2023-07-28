@@ -18,14 +18,6 @@ class Graph():
 			'Rate of Transmitted Packets':'sum by(pod) (irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
 			'Rate of Received Packets Dropped':'sum by(pod) (irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
 			'Rate of Transmitted Packets Dropped':'sum by(pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
-			# 'CPU Usage':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
-			# 'Memory Usage (w/o cache)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + NAMESPACE + '", container!="", image!=""})',
-			# 'Receive Bandwidth':'sum(irate(container_network_receive_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Transmit Bandwidth':'sum(irate(container_network_transmit_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION +']))',
-			# 'Rate of Received Packets':'sum(irate(container_network_receive_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Rate of Transmitted Packets':'sum(irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Rate of Received Packets Dropped':'sum(irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Rate of Transmitted Packets Dropped':'sum(irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
 		# working queries 
 		  # - just need to add them to get the IOPS(Reads+Writes) that we're looking for. But it would take 2 queries instead of the 1 that we're hoping for
 		  # - same thing with the Throughput(Read+Write).NOTE: WHEN ADDING MORE QUERIES, REMEMBER TO ADD A COMMA TO THE LAST QUERY FROM BEFORE
@@ -104,7 +96,7 @@ class Graph():
 		return graphs
 
 	#print the values list from _get_reshaped_list
-	def print_graphs(self, show_time_as_timestamp=True):
+	def print_graphs(self, show_time_as_timestamp=False):
 		for query_title, query in self.queries_dict.items():
 			print("\n\n____________________________________________________") 
 			print("\t", colored(query_title, 'magenta'))
