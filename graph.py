@@ -34,30 +34,38 @@ class Graph():
 
 
 	
-	#given a datetime object (end) and a string (time_offset) (e.g. "15m"), return a new date_time object time_offset away from the end time
+	# #given a datetime object (end) and a string (time_offset) (e.g. "15m"), return a new date_time object time_offset away from the end time
+	# def _find_time_from_offset(self, end, time_offset):
+	# 	#split time_offset to get the value and unit
+	# 	offset_value = int(time_offset[:-1])
+	# 	offset_unit = time_offset[-1]
+
+	# 	#return a datetime object for the start time (offset away from end time)
+	# 	if offset_unit == 'w':
+	# 		return end - timedelta(weeks = offset_value)
+
+	# 	elif offset_unit == 'd':
+	# 		return end - timedelta(days = offset_value)
+
+	# 	elif offset_unit == 'h':
+	# 		return end - timedelta(hours = offset_value)
+
+	# 	elif offset_unit == 'm':
+	# 		return end - timedelta(minutes = offset_value)
+
+	# 	elif offset_unit == 's':
+	# 		return end - timedelta(seconds = offset_value)
+	# 	#raise error if time unit is not what we are expecting
+	# 	else:	
+	# 		raise TypeError (f'\n\nBad time_offset string: \n{time_offset}\n\n')
+
+	#given a datetime object (end) and a string (time_offset) (e.g. "12h5m30s"), return a new date_time object time_offset away from the end time
 	def _find_time_from_offset(self, end, time_offset):
-		#split time_offset to get the value and unit
-		offset_value = int(time_offset[:-1])
-		offset_unit = time_offset[-1]
-
-		#return a datetime object for the start time (offset away from end time)
-		if offset_unit == 'w':
-			return end - timedelta(weeks = offset_value)
-
-		elif offset_unit == 'd':
-			return end - timedelta(days = offset_value)
-
-		elif offset_unit == 'h':
-			return end - timedelta(hours = offset_value)
-
-		elif offset_unit == 'm':
-			return end - timedelta(minutes = offset_value)
-
-		elif offset_unit == 's':
-			return end - timedelta(seconds = offset_value)
-		#raise error if time unit is not what we are expecting
-		else:	
-			raise TypeError (f'\n\nBad time_offset string: \n{time_offset}\n\n')
+		time_dict = get_time_dict(time_offset)
+		#create new datetime timedelta to represent the time offset and pass in parameters as values from time_dict
+		offset = timedelta(**time_dict)
+		#get the time time_offset away from the end
+		return end-offset
 
 
 
