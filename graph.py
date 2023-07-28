@@ -10,6 +10,7 @@ class Graph():
 
 	def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
 		self.queries_dict = {
+			# 'CPU Usage':'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
 			'CPU Usage':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
 			'Memory Usage (w/o cache)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + NAMESPACE + '", container!="", image!=""})',
 			'Receive Bandwidth':'sum(irate(container_network_receive_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
@@ -78,35 +79,40 @@ class Graph():
 	#get a list of all the values and add a column for timestamps
 	def _get_values_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
 		time_filter = self._assemble_time_filter(end, time_offset, time_step)
-		result_list = get_result_list(query_api_site_for_graph(query, time_filter))[0]['values']
-
+		values_list = get_result_list(query_api_site_for_graph(query, time_filter))[0]['values']
+		# #testing code with pods
+			# result_list = get_result_list(query_api_site_for_graph(query, time_filter))
+			# if query == 'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})':
+			# 	printc(result_list)
 		# add time context into result list
-		for i in range(len(result_list)):
-			#get rid of unnecessary extra info
-			result_list[i].pop(0)
-			result_list[i][0] = clean_round(result_list[i][0])
+		for i in range(len(values_list)):
+			#get rid of unnecessary extra info and round values
+			values_list[i].pop(0)
+			values_list[i][0] = clean_round(values_list[i][0])
 
 			#calculate time offset
 			time_offset_value = i*int(time_step[:-1])
 			time_offset = str(time_offset_value) + time_step[-1]
-			#find new time_stamp and add it to result
+			#find new time_stamp and add it to each value in values_list
 			time_stamp = self._find_time_from_offset(end, time_offset)
 			
+			#add times to values_list
 			if(show_time_as_timestamp):
 				#adds the time in a format for printing in a more readable way
-				result_list[i].append(time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
+				values_list[i].append(time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
 			else:
 				#adds the time as a datetime object for accessing/manipulating the time more easily
-				result_list[i].append(time_stamp)	
+				values_list[i].append(time_stamp)	
 
-		return result_list
+		return values_list
 
+
+	#get a dictionary in the form of graph titles: list of graph data
 	def get_graphs(self, show_time_as_timestamp=True):
 		graphs = {}
 		for query_title, query in self.queries_dict.items():
 			graphs[query_title] = self._get_values_list(query, show_time_as_timestamp=show_time_as_timestamp)
 		return graphs
-
 
 	#print the values list from _get_values_list
 	def print_graphs(self, show_time_as_timestamp=True):
@@ -115,3 +121,7 @@ class Graph():
 			print("\t", colored(query_title, 'magenta'))
 			print("____________________________________________________") 
 			printc(self._get_values_list(query, show_time_as_timestamp=show_time_as_timestamp))
+
+
+
+
