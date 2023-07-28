@@ -67,7 +67,7 @@ class Graph():
 
 
 	#get a list of all the values and add a column for timestamps
-	def _get_reshaped_result_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
+	def _get_reshaped_result_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True, display_as_seconds=False):
 		time_filter = self._assemble_time_filter(end, time_offset, time_step)
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
 		
@@ -80,14 +80,15 @@ class Graph():
 				#round values
 				values_list[j][1] = clean_round(float(values_list[j][1]))
 
-				#Display timestamps as datetimes or timestamps
-				time_stamp = datetime.fromtimestamp(values_list[j][0])
-				if(show_time_as_timestamp):
-					#formats the time as a string for printing in a more readable way
-					values_list[j][0] = (time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
-				else:
-					#formats the time as a datetime object for accessing/manipulating the time more easily
-					values_list[j][0] = time_stamp
+				if not display_as_seconds:
+					#Display timestamps as datetimes or timestamps
+					time_stamp = datetime.fromtimestamp(values_list[j][0])
+					if show_time_as_timestamp:
+						#formats the time as a string for printing in a more readable way
+						values_list[j][0] = (time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
+					else:
+						#formats the time as a datetime object for accessing/manipulating the time more easily
+						values_list[j][0] = time_stamp
 
 			#make sure the result list that is returned has the new updates
 			result_list[i]['values'] = values_list
@@ -96,10 +97,10 @@ class Graph():
 
 
 	#get a dictionary in the form of graph titles: list of graph data
-	def get_graphs(self, show_time_as_timestamp=True):
+	def get_graphs(self, show_time_as_timestamp=True, display_as_seconds=False):
 		graphs = {}
 		for query_title, query in self.queries_dict.items():
-			graphs[query_title] = self._get_reshaped_result_list(query, show_time_as_timestamp=show_time_as_timestamp)
+			graphs[query_title] = self._get_reshaped_result_list(query, show_time_as_timestamp=show_time_as_timestamp, display_as_seconds=display_as_seconds)
 		return graphs
 
 	#print the values list from _get_reshaped_list
