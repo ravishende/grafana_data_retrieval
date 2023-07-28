@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 
 graph_class = Graph()
-graph_class.print_graphs(show_time_as_timestamp=True)
+graph_class.print_graphs(show_time_as_timestamp=False)
 # graph_class.get_graphs(show_time_as_timestamp=False)
 print("\n\n\n")
 

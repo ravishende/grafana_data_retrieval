@@ -18,14 +18,6 @@ class Graph():
 			'Rate of Transmitted Packets':'sum by(pod) (irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
 			'Rate of Received Packets Dropped':'sum by(pod) (irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
 			'Rate of Transmitted Packets Dropped':'sum by(pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
-			# 'CPU Usage':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
-			# 'Memory Usage (w/o cache)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + NAMESPACE + '", container!="", image!=""})',
-			# 'Receive Bandwidth':'sum(irate(container_network_receive_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Transmit Bandwidth':'sum(irate(container_network_transmit_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION +']))',
-			# 'Rate of Received Packets':'sum(irate(container_network_receive_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Rate of Transmitted Packets':'sum(irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Rate of Received Packets Dropped':'sum(irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			# 'Rate of Transmitted Packets Dropped':'sum(irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
 		# working queries 
 		  # - just need to add them to get the IOPS(Reads+Writes) that we're looking for. But it would take 2 queries instead of the 1 that we're hoping for
 		  # - same thing with the Throughput(Read+Write).NOTE: WHEN ADDING MORE QUERIES, REMEMBER TO ADD A COMMA TO THE LAST QUERY FROM BEFORE
@@ -67,7 +59,7 @@ class Graph():
 
 
 	#get a list of all the values and add a column for timestamps
-	def _get_reshaped_result_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
+	def _get_reshaped_result_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=False):
 		time_filter = self._assemble_time_filter(end, time_offset, time_step)
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
 		
@@ -96,14 +88,14 @@ class Graph():
 
 
 	#get a dictionary in the form of graph titles: list of graph data
-	def get_graphs(self, show_time_as_timestamp=True):
+	def get_graphs(self, show_time_as_timestamp=False):
 		graphs = {}
 		for query_title, query in self.queries_dict.items():
 			graphs[query_title] = self._get_reshaped_result_list(query, show_time_as_timestamp=show_time_as_timestamp)
 		return graphs
 
 	#print the values list from _get_reshaped_list
-	def print_graphs(self, show_time_as_timestamp=True):
+	def print_graphs(self, show_time_as_timestamp=False):
 		for query_title, query in self.queries_dict.items():
 			print("\n\n____________________________________________________") 
 			print("\t", colored(query_title, 'magenta'))
