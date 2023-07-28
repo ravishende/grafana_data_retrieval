@@ -10,15 +10,22 @@ class Graph():
 
 	def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
 		self.queries_dict = {
-			# 'CPU Usage':'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
-			'CPU Usage':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
-			'Memory Usage (w/o cache)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + NAMESPACE + '", container!="", image!=""})',
-			'Receive Bandwidth':'sum(irate(container_network_receive_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Transmit Bandwidth':'sum(irate(container_network_transmit_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION +']))',
-			'Rate of Received Packets':'sum(irate(container_network_receive_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Rate of Transmitted Packets':'sum(irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Rate of Received Packets Dropped':'sum(irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
-			'Rate of Transmitted Packets Dropped':'sum(irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
+			'CPU Usage':'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
+			'Memory Usage (w/o cache)':'sum by(pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + NAMESPACE + '", container!="", image!=""})',
+			'Receive Bandwidth':'sum by(pod) (irate(container_network_receive_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			'Transmit Bandwidth':'sum by(pod) (irate(container_network_transmit_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION +']))',
+			'Rate of Received Packets':'sum by(pod) (irate(container_network_receive_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			'Rate of Transmitted Packets':'sum by(pod) (irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			'Rate of Received Packets Dropped':'sum by(pod) (irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			'Rate of Transmitted Packets Dropped':'sum by(pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
+			# 'CPU Usage':'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})',
+			# 'Memory Usage (w/o cache)':'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + NAMESPACE + '", container!="", image!=""})',
+			# 'Receive Bandwidth':'sum(irate(container_network_receive_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			# 'Transmit Bandwidth':'sum(irate(container_network_transmit_bytes_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION +']))',
+			# 'Rate of Received Packets':'sum(irate(container_network_receive_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			# 'Rate of Transmitted Packets':'sum(irate(container_network_transmit_packets_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			# 'Rate of Received Packets Dropped':'sum(irate(container_network_receive_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))',
+			# 'Rate of Transmitted Packets Dropped':'sum(irate(container_network_transmit_packets_dropped_total{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION + ']))'
 		# working queries 
 		  # - just need to add them to get the IOPS(Reads+Writes) that we're looking for. But it would take 2 queries instead of the 1 that we're hoping for
 		  # - same thing with the Throughput(Read+Write).NOTE: WHEN ADDING MORE QUERIES, REMEMBER TO ADD A COMMA TO THE LAST QUERY FROM BEFORE
@@ -33,38 +40,13 @@ class Graph():
 
 
 
-	
-	# #given a datetime object (end) and a string (time_offset) (e.g. "15m"), return a new date_time object time_offset away from the end time
-	# def _find_time_from_offset(self, end, time_offset):
-	# 	#split time_offset to get the value and unit
-	# 	offset_value = int(time_offset[:-1])
-	# 	offset_unit = time_offset[-1]
-
-	# 	#return a datetime object for the start time (offset away from end time)
-	# 	if offset_unit == 'w':
-	# 		return end - timedelta(weeks = offset_value)
-
-	# 	elif offset_unit == 'd':
-	# 		return end - timedelta(days = offset_value)
-
-	# 	elif offset_unit == 'h':
-	# 		return end - timedelta(hours = offset_value)
-
-	# 	elif offset_unit == 'm':
-	# 		return end - timedelta(minutes = offset_value)
-
-	# 	elif offset_unit == 's':
-	# 		return end - timedelta(seconds = offset_value)
-	# 	#raise error if time unit is not what we are expecting
-	# 	else:	
-	# 		raise TypeError (f'\n\nBad time_offset string: \n{time_offset}\n\n')
 
 	#given a datetime object (end) and a string (time_offset) (e.g. "12h5m30s"), return a new date_time object time_offset away from the end time
 	def _find_time_from_offset(self, end, time_offset):
 		time_dict = get_time_dict(time_offset)
 		#create new datetime timedelta to represent the time offset and pass in parameters as values from time_dict
 		offset = timedelta(**time_dict)
-		#get the time time_offset away from the end
+		#take the difference between the end and time offset to get the start
 		return end-offset
 
 
@@ -85,51 +67,49 @@ class Graph():
 
 
 	#get a list of all the values and add a column for timestamps
-	def _get_values_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
+	def _get_reshaped_result_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True):
 		time_filter = self._assemble_time_filter(end, time_offset, time_step)
-		values_list = get_result_list(query_api_site_for_graph(query, time_filter))[0]['values']
-		# #testing code with pods
-			# result_list = get_result_list(query_api_site_for_graph(query, time_filter))
-			# if query == 'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"})':
-			# 	printc(result_list)
-		# add time context into result list
-		for i in range(len(values_list)):
-			#get rid of unnecessary extra info and round values
-			values_list[i].pop(0)
-			values_list[i][0] = clean_round(values_list[i][0])
+		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
+		
+		#loop through the data for each pod
+		for i in range(len(result_list)):
+			values_list = result_list[i]['values']
+		
+			#go through the values list of each pod and clean up time and value
+			for j in range(len(result_list[i]['values'])):
+				#round values
+				values_list[j][1] = clean_round(float(values_list[j][1]))
 
-			#calculate time offset
-			time_offset_value = i*int(time_step[:-1])
-			time_offset = str(time_offset_value) + time_step[-1]
-			#find new time_stamp and add it to each value in values_list
-			time_stamp = self._find_time_from_offset(end, time_offset)
-			
-			#add times to values_list
-			if(show_time_as_timestamp):
-				#adds the time in a format for printing in a more readable way
-				values_list[i].append(time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
-			else:
-				#adds the time as a datetime object for accessing/manipulating the time more easily
-				values_list[i].append(time_stamp)	
+				#Display timestamps as datetimes or timestamps
+				time_stamp = datetime.fromtimestamp(values_list[j][0])
+				if(show_time_as_timestamp):
+					#formats the time as a string for printing in a more readable way
+					values_list[j][0] = (time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
+				else:
+					#formats the time as a datetime object for accessing/manipulating the time more easily
+					values_list[j][0] = time_stamp
 
-		return values_list
+			#make sure the result list that is returned has the new updates
+			result_list[i]['values'] = values_list
+
+		return result_list
 
 
 	#get a dictionary in the form of graph titles: list of graph data
 	def get_graphs(self, show_time_as_timestamp=True):
 		graphs = {}
 		for query_title, query in self.queries_dict.items():
-			graphs[query_title] = self._get_values_list(query, show_time_as_timestamp=show_time_as_timestamp)
+			graphs[query_title] = self._get_reshaped_result_list(query, show_time_as_timestamp=show_time_as_timestamp)
 		return graphs
 
-	#print the values list from _get_values_list
+	#print the values list from _get_reshaped_list
 	def print_graphs(self, show_time_as_timestamp=True):
 		for query_title, query in self.queries_dict.items():
 			print("\n\n____________________________________________________") 
 			print("\t", colored(query_title, 'magenta'))
 			print("____________________________________________________") 
-			printc(self._get_values_list(query, show_time_as_timestamp=show_time_as_timestamp))
-
+			printc(self._get_reshaped_result_list(query, show_time_as_timestamp=show_time_as_timestamp))
+		print("\n\n\n")
 
 
 

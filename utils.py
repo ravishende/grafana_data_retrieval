@@ -168,6 +168,16 @@ def get_time_dict(time_str):
 	
 	return time_dict
 
+
+	def get_worker_id(pod_name):
+		worker_title = 'bp3d-worker-k8s-'
+		#if pod_name is a bp3d worker, return the ensemble
+		if(pod_name[0:len(worker_title)] == worker_title):
+			return pod_name[16:-1]
+		#otherwise, return None
+		return None
+
+
 #writes json data to a file
 def write_json(data):
 	with open('e.json', 'w') as file:
