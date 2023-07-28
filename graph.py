@@ -59,7 +59,7 @@ class Graph():
 
 
 	#get a list of all the values and add a column for timestamps
-	def _get_reshaped_result_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=True, display_as_seconds=False):
+	def _get_reshaped_result_list(self, query, end=datetime.now(), time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, show_time_as_timestamp=False, display_as_seconds=False):
 		time_filter = self._assemble_time_filter(end, time_offset, time_step)
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
 		
@@ -88,8 +88,9 @@ class Graph():
 		return result_list
 
 
+
 	#get a dictionary in the form of graph titles: list of graph data
-	def get_graphs(self, show_time_as_timestamp=True, display_as_seconds=False):
+	def get_graphs(self, show_time_as_timestamp=False, display_as_seconds=False):
 		graphs = {}
 		for query_title, query in self.queries_dict.items():
 			graphs[query_title] = self._get_reshaped_result_list(query, show_time_as_timestamp=show_time_as_timestamp, display_as_seconds=display_as_seconds)
