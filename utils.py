@@ -101,7 +101,6 @@ def query_api_site_for_graph(query, time_filter, handle_fail=True):
 	# handle fail will re request the api if it gets no response from your query. Set to true by default
 	# there is a bug with the api itself where every fifth request comes back with no data, 
 	# this parameter set to True will re request to deal with that	
-	
 
 	global QUERY_COUNT
 	#set up url
