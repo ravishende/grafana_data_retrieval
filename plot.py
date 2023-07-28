@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 import time
-# from utils import *
 from graph import *
 from requests import *
 
