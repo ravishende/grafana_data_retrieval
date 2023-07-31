@@ -55,7 +55,7 @@ def print_header_values(as_percentages=False):
 	query_values = find_header_values()
 
 	#print out values
-	for (query_title, value) in query_values.items():
+	for query_title, value in query_values.items():
 		
 		#check if value is empty
 		if (str(value)[0] == "N"):
@@ -66,6 +66,24 @@ def print_header_values(as_percentages=False):
 				print(f'{query_title}: \n\t{colored(round(value*100, 1), "green")}{colored("%", "green")}')
 			else:
 				print(f'{query_title}: \n\t{colored(value,"green")}')
+
+
+# #using for trying to figure out how to include nodes data - will be deleted later
+# def get_header_json(query_dict=header_queries):
+# 	query_data = {}
+# 	for query_title, query in query_dict.items():
+# 		api_response = query_api_site(query)
+# 		query_data[query_title] = api_response
+# 	return query_data
+
+# #using for trying to figure out how to include nodes data - will be deleted later
+# def print_header_json():
+# 	#get the json data of each query
+# 	json_data = get_header_json()
+
+# 	#print out the data
+# 	for query_title, data in json_data.items():
+# 		print(f'{query_title}: \n\t{colored(data,"green")}')
 
 
 # Use url and a given query to request data from the website
@@ -147,7 +165,7 @@ def clean_round(number, place=DEFAULT_ROUND_TO):
 
 #given a string in the form 5w3d6h30m5s, save the times to a dict accesible by the unit as their key. The int times can be any length (500m160s is allowed)
 #works given as many or few of the time units. (e.g. 12h also works and sets everything but h to None)
-def get_time_dict(time_str):
+def get_time_dict_from_str(time_str):
 	#define regex pattern (groups by int and unit but only keeps the int)
 	pattern = '(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?'
 	feedback = re.search(pattern, time_str)

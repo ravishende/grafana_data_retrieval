@@ -7,9 +7,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import time
 
-
-def display_graphs():
-	graph_class = Graph()
+def display_graphs(graph_class):
 	graph_list = graph_class.get_graphs(show_time_as_timestamp=True).items()
 
 
@@ -36,6 +34,7 @@ def display_graphs():
 		time.sleep(0.2)
 		plt.close()
 
-
-#print_graphs()
-display_graphs()
+#Either run display_graphs(graph_class) or graph_class.print_graphs() depending on if you want data visualized or just printed
+graph_class = Graph()
+graph_class.print_graphs()
+# display_graphs()
