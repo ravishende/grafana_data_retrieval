@@ -69,7 +69,8 @@ class Graph():
 
 
 	#get a list of all the values and add a column for timestamps
-	def _generate_formated_result_list(self, query, show_time_as_timestamp=False, display_as_seconds=False):
+	def _generate_formated_result_list(self, query, display_time_as):
+		#create time filter to then generate list of all datapoints for the graph
 		time_filter = self._assemble_time_filter()
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
 		
@@ -82,15 +83,24 @@ class Graph():
 				#round values
 				values_list[j][1] = clean_round(float(values_list[j][1]))
 
-				if not display_as_seconds:
-					#Display timestamps as datetimes or timestamps
-					time_stamp = datetime.fromtimestamp(values_list[j][0])
-					if show_time_as_timestamp:
+				#display the time in each datapoint how the user specified.
+				#the time is queried in seconds since the epoch (01/01/1970) so if user wants to display as seconds, do nothing.
+				if display_time_as != "seconds":
+					#get seconds to a datetime that can be used 
+					date_time = datetime.fromtimestamp(values_list[j][0])
+					
+					if display_time_as == "datetime":
+						#Display timestamps as datetimes
+						values_list[j][0] = date_time
+
+					elif display_time_as == "timestamp":
 						#formats the time as a string for printing in a more readable way
-						values_list[j][0] = (time_stamp.strftime("%Y-%m-%d %H:%M:%S.%f"))
+						values_list[j][0] = (date_time.strftime("%Y-%m-%d %H:%M:%S.%f"))
+
 					else:
-						#formats the time as a datetime object for accessing/manipulating the time more easily
-						values_list[j][0] = time_stamp
+						#input was not one of the options. 
+						raise ValueError('display_time_as can only be set to one of the following: "datetime", "timestamp", or "seconds".')
+
 
 			#make sure the result list that is returned has the new updates
 			result_list[i]['values'] = values_list
@@ -100,19 +110,19 @@ class Graph():
 
 
 	#get a dictionary in the form of {graph titles: list of graph data}
-	def get_graphs(self, show_time_as_timestamp=False, display_as_seconds=False):
+	def get_graphs(self, display_time_as=DEFAULT_GRAPH_DISPLAY_TIME):
 		graphs = {}
 		for query_title, query in self.queries_dict.items():
-			graphs[query_title] = self._generate_formated_result_list(query, show_time_as_timestamp=show_time_as_timestamp, display_as_seconds=display_as_seconds)
+			graphs[query_title] = self._generate_formated_result_list(query, display_time_as=display_time_as)
 		return graphs
 
 	#print the values list received from _generate_formated_result_list for each graph
-	def print_graphs(self, show_time_as_timestamp=False):
+	def print_graphs(self, display_time_as=DEFAULT_GRAPH_DISPLAY_TIME):
 		for query_title, query in self.queries_dict.items():
 			print("\n\n____________________________________________________") 
 			print("\t", colored(query_title, 'magenta'))
 			print("____________________________________________________") 
-			printc(self._generate_formated_result_list(query, show_time_as_timestamp=show_time_as_timestamp))
+			printc(self._generate_formated_result_list(query, display_time_as=display_time_as))
 
 		print("\n\n\n")
 
