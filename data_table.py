@@ -2,9 +2,14 @@ from utils import *
 from inputs import *
 import pandas as pd
 from pprint import pprint
+from rich import print as printc
 
 
 class DataTable():
+	def __init__(self, namespace=NAMESPACE, duration = DEFAULT_DURATION, round_to=ROUND_TABLES_TO):
+		self.namespace = namespace
+		self.duration = duration
+		self.round_to = round_to
 	
 	#get a list of all the pods in a table
 	def _get_pods(self, response_dict):
@@ -19,6 +24,17 @@ class DataTable():
 
 		return pods
 
+	# def _get_pods_from_json(self, response_dict):
+	# 	pods = []
+		
+	# 	#loop through columns
+	# 	for col_title, column in response_dict.items():
+	# 		#loop through pods and values in a given columns
+	# 		for item in get_result_list(column): 
+	# 			if item['metric']['pod'] not in pods:
+	# 				pods.append(item['metric']['pod'])
+
+	# 	return pods
 
 	#calculate the percentages manually to avoid unnecessary querying
 	def _get_percent(self, numerator, divisor):
@@ -38,11 +54,11 @@ class DataTable():
 			found_pod = False
 
 			#loop through pods and values in a given column
-			for pair in column: 
+			for pod_value_pair in column: 
 				#find the value associated with our current pod
-				if(pair['metric']['pod'] == pod):
+				if(pod_value_pair['metric']['pod'] == pod):
 					#update row with new value rounded to 5 decimal places
-					row[col_title] = clean_round(pair['value'][1], ROUND_TABLES_TO) 
+					row[col_title] = clean_round(pod_value_pair['value'][1], self.round_to) 
 					found_pod = True
 					break
 
@@ -52,7 +68,7 @@ class DataTable():
 
 
 	#returns a table with data from cpu_quota
-	def cpu_quota(self):
+	def cpu_quota(self, as_json_data=False):
 		#dictionary storing all queries besides percentages and pods
 		queries_dict = {
 			'CPU Usage':'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"})',
@@ -66,13 +82,15 @@ class DataTable():
 
 		#store json data from querying the api
 		for col_title, query in queries_dict.items():
-			response_dict[col_title] = get_result_list(query_api_site(query))
+			# response_dict[col_title] = get_result_list(query_api_site(query))
+			queried_data = query_api_site(query)
+			printc(col_title, "\n", queried_data, "\n")
+			response_dict[col_title] = get_result_list(queried_data)
 
 		#get a list of all pods and create a row to be added to the database later
 		pods = self._get_pods(response_dict)
 		row = {title:None for title in col_names}
 		df = pd.DataFrame({i:[] for i in col_names})
-
 
 		#assemble row
 		i = 0
@@ -83,7 +101,6 @@ class DataTable():
 			#get queried columns
 			self._fill_in_queried_cells(row, pod, response_dict)
 
-			#get percent columns
 			row['CPU Requests %'] = self._get_percent(row['CPU Usage'], row['CPU Requests'])
 			row['CPU Limits %'] = self._get_percent(row['CPU Usage'], row['CPU Limits'])
 
@@ -142,15 +159,15 @@ class DataTable():
 
 
 	#current network usage requires a duration. This duration has a default value, but should generally be passed in.
-	def network_usage(self, duration="DEFAULT_DURATION"):
+	def network_usage(self):
 		#assemble queries for the given pod
 		queries_dict = {
-			"Current Receive Bandwidth":'sum by(pod) (irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
-			"Current Transmit Bandwidth":'sum by(pod) (irate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
-			"Rate of Received Packets":'sum by(pod) (irate(container_network_receive_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
-			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
-			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))',	
-			"Rate of Transmitted Packets Dropped":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + duration + ']))'
+			"Current Receive Bandwidth":'sum by(pod) (irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + self.duration + ']))',
+			"Current Transmit Bandwidth":'sum by(pod) (irate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + self.duration + ']))',
+			"Rate of Received Packets":'sum by(pod) (irate(container_network_receive_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + self.duration + ']))',
+			"Rate of Transmitted Packets":'sum by(pod) (irate(container_network_transmit_packets_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + self.duration + ']))',
+			"Rate of Received Packets Dropped":'sum by(pod) (irate(container_network_receive_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + self.duration + ']))',	
+			"Rate of Transmitted Packets Dropped":'sum by(pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '"}[' + self.duration + ']))'
 		}
 
 		#create a final dictionary for storing columns and their titles
@@ -184,7 +201,7 @@ class DataTable():
 	def storage_io(self, duration=DEFAULT_DURATION):
 		#assemble queries for the given pod
 		queries_dict = {
-			'IOPS (Reads)':'sum by(pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
+			'IOPS(Reads)':'sum by(pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
 			'IOPS(Writes)':'sum by(pod) (rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
 			#query that doesn't work but can probably be calculated with Read + Write
 			# 'IOPS(Reads + Writes)':'sum by(pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']) + rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + NAMESPACE + '"}[' + duration + ']))',
@@ -195,7 +212,7 @@ class DataTable():
 		}
 
 		#create a final dictionary for storing columns and their titles
-		col_names = ["Pod","IOPS (Reads)", "IOPS (Writes)", "Throughput(Read)", "Throughput(Write)"]
+		col_names = ["Pod","IOPS(Reads)", "IOPS(Writes)", "IOPS(Reads + Writes)," "Throughput(Read)", "Throughput(Write)", "Throughput(Read + Write)"]
 		response_dict = {}
 
 
@@ -215,6 +232,9 @@ class DataTable():
 
 			#get queried columns
 			self._fill_in_queried_cells(row, pod, response_dict)
+
+			row['IOPS(Reads + Writes)'] = [read+write for read, write in zip(row['IOPS(Reads)'], row['IOPS(Writes)'])]
+			row['Throughput(Read + Write)'] = [read+write for read, write in zip(row['Throuput(Read)'], row['Throughput(Write)'])]
 
 			#add row to database
 			df.loc[i] = row 
