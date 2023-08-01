@@ -16,9 +16,10 @@ class Graph():
 		self.time_offset = time_offset
 		self.time_step = time_step
 
-
 		#dict storing titles and their queries
 		self.queries_dict = {
+			# 'CPU Usage':'label_replace(sum by(pod, node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}), "node", "$1", "pod", "(.*)")',
+			# 'CPU Usage':'sum by(pod, node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})'
 			'CPU Usage':'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})',
 			'Memory Usage (w/o cache)':'sum by(pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""})',
 			'Receive Bandwidth':'sum by(pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
@@ -26,17 +27,19 @@ class Graph():
 			'Rate of Received Packets':'sum by(pod) (irate(container_network_receive_packets_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
 			'Rate of Transmitted Packets':'sum by(pod) (irate(container_network_transmit_packets_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
 			'Rate of Received Packets Dropped':'sum by(pod) (irate(container_network_receive_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
-			'Rate of Transmitted Packets Dropped':'sum by(pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))'
-		# working queries 
-		  # - just need to add them to get the IOPS(Reads+Writes) that we're looking for. But it would take 2 queries instead of the 1 that we're hoping for
-		  # - same thing with the Throughput(Read+Write).NOTE: WHEN ADDING MORE QUERIES, REMEMBER TO ADD A COMMA TO THE LAST QUERY FROM BEFORE
-			# 'IOPS(Write)':'ceil(sum by(pod) (rate(container_fs_writes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + self.namespace + '"}[' + self.duration + '])))',
-			# 'IOPS(Read)':'ceil(sum by(pod) (rate(container_fs_reads_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + ']) + ))'
-			#'ThroughPut(Read)':'sum by(pod) (rate(container_fs_reads_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + self.namespace + '"}[' + self.duration + ']))',
-			#'ThroughPut(Write)':'sum by(pod) (rate(container_fs_writes_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + self.namespace + '"}[' + self.duration + ']))',
-		#not working queries - it doesn't like the '+' between the reads and writes 
-			# 'IOPS(Read+Write)':'ceil(sum by(pod) (rate(container_fs_reads_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + self.namespace + '"}[' + self.duration + ']) + rate(container_fs_writes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + self.namespace + '"}[' + self.duration + '])))'
-			# 'ThroughPut(Read+Write)':'sum by(pod) (rate(container_fs_reads_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + self.namespace + '"}[' + self.duration + ']) + rate(container_fs_writes_bytes_total{container!="", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", namespace="' + self.namespace + '"}[' + self.duration + ']))',
+			'Rate of Transmitted Packets Dropped':'sum by(pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
+		}
+		self.partial_queries_dict = {
+			# - just need to add them to get the IOPS(Reads+Writes) that we're looking for. But it would take 2 queries instead of the 1 that we're hoping for
+		  	# - same thing with the Throughput(Read+Write).NOTE: WHEN ADDING MORE QUERIES, REMEMBER TO ADD A COMMA TO THE LAST QUERY FROM BEFORE
+			'IOPS(Read+Write)':[
+				'ceil(sum by(pod) (rate(container_fs_reads_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + ']) + ))', 
+				'ceil(sum by(pod) (rate(container_fs_writes_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + '])))'
+			],
+			'ThroughPut(Read+Write)':[
+				'sum by(pod) (rate(container_fs_reads_bytes_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
+				'sum by(pod) (rate(container_fs_writes_bytes_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))'
+			]
 		}
 
 
@@ -54,7 +57,6 @@ class Graph():
 
 
 	#assembles string for the time filter to be passed into query_api_site_for_graph()
-	#takes in datetime objects for end, int for time_period_hours, and string in the form of "5h" or "2d" for step.
 	def _assemble_time_filter(self):
 		#calculate start time
 		start = self._find_time_from_offset(self.end, self.time_offset)
@@ -111,20 +113,33 @@ class Graph():
 
 	#get a dictionary in the form of {graph titles: list of graph data}
 	def get_graphs(self, display_time_as=DEFAULT_GRAPH_DISPLAY_TIME):
-		graphs = {}
+		#get all of the initial graphs from the normal queries
+		graphs_dict = {}
 		for query_title, query in self.queries_dict.items():
-			graphs[query_title] = self._generate_formated_result_list(query, display_time_as=display_time_as)
-		return graphs
+			graphs_dict[query_title] = self._generate_formated_result_list(query, display_time_as=display_time_as)
+		#combine the partial queries in partial_queries_dict so that each list of two queries is one datapoint in graphs_dict
+		for query_title, query_pair in self.partial_queries_dict.items():
+			#store the two queries' values
+			read_data = self._generate_formated_result_list(query_pair[0], display_time_as=display_time_as)
+			write_data = self._generate_formated_result_list(query_pair[1], display_time_as=display_time_as)
+			graphs_dict[query_title] = read_data
+			#combine the queries
+			#loop through graph_datas per pods
+			for pod_i in range(len(read_data)):
+				#loop through the data points in a pod's graph
+				for datapoint_i in range(len(read_data[pod_i]['values'])):
+					graphs_dict[query_title][pod_i]['values'][datapoint_i][1] += write_data[pod_i]['values'][datapoint_i][1]
+
+		return graphs_dict
 
 	#print the values list received from _generate_formated_result_list for each graph
 	def print_graphs(self, display_time_as=DEFAULT_GRAPH_DISPLAY_TIME):
-		for query_title, query in self.queries_dict.items():
+		graphs = self.get_graphs(display_time_as)
+		for graph_title, graph_data in graphs.items():
 			print("\n\n____________________________________________________") 
-			print("\t", colored(query_title, 'magenta'))
+			print("\t", colored(graph_title, 'green'))
 			print("____________________________________________________") 
-			printc(self._generate_formated_result_list(query, display_time_as=display_time_as))
-
-		print("\n\n\n")
-
+			print_by_pod(graph_data)
+			print("\n\n\n")
 
 
