@@ -117,18 +117,23 @@ class Graph():
 		graphs_dict = {}
 		for query_title, query in self.queries_dict.items():
 			graphs_dict[query_title] = self._generate_formated_result_list(query, display_time_as=display_time_as)
+		
 		#combine the partial queries in partial_queries_dict so that each list of two queries is one datapoint in graphs_dict
 		for query_title, query_pair in self.partial_queries_dict.items():
+			
 			#store the two queries' values
 			read_data = self._generate_formated_result_list(query_pair[0], display_time_as=display_time_as)
 			write_data = self._generate_formated_result_list(query_pair[1], display_time_as=display_time_as)
-			graphs_dict[query_title] = read_data
-			#combine the queries
-			#loop through graph_datas per pods
+			
+			#loop through each dataset of a pod
 			for pod_i in range(len(read_data)):
 				#loop through the data points in a pod's graph
 				for datapoint_i in range(len(read_data[pod_i]['values'])):
-					graphs_dict[query_title][pod_i]['values'][datapoint_i][1] += write_data[pod_i]['values'][datapoint_i][1]
+					#add the write_data value to the read_data value for each datapoint in graphs_dict[]
+					read_data[pod_i]['values'][datapoint_i][1] += write_data[pod_i]['values'][datapoint_i][1]
+
+			#put the newly modified read_data (which is now read+write data) into graphs_dict.
+			graphs_dict[query_title] = read_data
 
 		return graphs_dict
 
