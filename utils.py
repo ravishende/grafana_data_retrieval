@@ -8,13 +8,17 @@ import re
 from datetime import datetime, timedelta
 from termcolor import cprint, colored
 from pprint import pprint
+from rich import print as printc
 
 #reset total query count
 QUERY_COUNT = 0
 
 #retrieves information from the 4 panels under headlines (cpu and memory utilisation data)
 header_queries = {
-	'CPU Utilisation (from requests)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
+	# 'CPU Utilisation (from requests)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
+	'CPU Utilisation (from requests)':'label_replace(sum by(pod, node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}),"node", "$1", "pod", "(.*)") / sum by(pod, node) (kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
+	# 'CPU Utilisation (from requests)': 'rate(container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
+	# 'CPU Utilisation (from requests)': 'sum(container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION+ '])',
 	'CPU Utilisation (from limits)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
 	'Memory Utilisation (from requests)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '",container!="", image!=""}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="memory"})',
 	'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="memory"})',
@@ -166,7 +170,7 @@ def clean_round(number, place=DEFAULT_ROUND_TO):
 #given a string in the form 5w3d6h30m5s, save the times to a dict accesible by the unit as their key. The int times can be any length (500m160s is allowed)
 #works given as many or few of the time units. (e.g. 12h also works and sets everything but h to None)
 def get_time_dict_from_str(time_str):
-	#define regex pattern (groups by int and unit but only keeps the int)
+	#define regex pattern (groups by optional int+unit but only keeps the int)
 	pattern = '(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?'
 	feedback = re.search(pattern, time_str)
 
@@ -186,6 +190,10 @@ def get_time_dict_from_str(time_str):
 	
 	return time_dict
 
+def print_by_pod(json_data_list):
+	for pod_data_pair in json_data_list:
+		print("\n\nPod:", colored(pod_data_pair['metric']['pod'], "blue"))
+		printc(pod_data_pair['values'])
 
 def get_worker_id(pod_name):
 	worker_title = 'bp3d-worker-k8s-'
