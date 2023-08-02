@@ -17,18 +17,25 @@ def print_graphs(graphs, only_print_worker_pods=False):
 		#print out graph of each pod
 		for pod in graph['Pod'].unique():
 			worker_id = get_worker_id(pod)
+			pod_graph = graph_groups.get_group(pod)
 			if only_print_worker_pods:
 				if worker_id != None:
 					print("\n\n\n")
-					printc(graph_groups.get_group(pod))
+					printc(pod_graph)
 			else:
 				print("\n\n\n")
-				printc(graph_groups.get_group(pod))
+				printc(pod_graph)
 
-# def display_graphs(graph_class):
-	# graph_list = graph_class.get_graphs(display_time_as_timestamp=True)
+def display_graphs(graphs, display_time_as_timestamp=False):
+	for graph in graphs:
+		graph_groups = graph.groupby('Pod')
 
+		#print out graph of each pod
+		for pod in graph['Pod'].unique():
+			pod_graph = graph_groups.get_group(pod)
 
+			plt.plot(pod_graph["Time"],pod_graph["Value"], label = pod_json["metric"]["pod"])
+			plt.xticks(df["time"],rotation=80)
 	#display graphs
 
 	# 	#collect the data from the graph
@@ -38,8 +45,8 @@ def print_graphs(graphs, only_print_worker_pods=False):
 	# 	# 		# df = pd.DataFrame(pod_json['values'], columns = ["time","value"])
 	# 	for pod in graph_df['Pod']:
 
-	# 			plt.plot(df["time"],df["value"], label = pod_json["metric"]["pod"])
-	# 			plt.xticks(df["time"],rotation=80)
+				# plt.plot(df["time"],df["value"], label = pod_json["metric"]["pod"])
+				# plt.xticks(df["time"],rotation=80)
 
 		#put data into a numpy readable format
 		# y_np_list = np.array(y_data, dtype=np.float64)
