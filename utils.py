@@ -15,13 +15,10 @@ QUERY_COUNT = 0
 
 #retrieves information from the 4 panels under headlines (cpu and memory utilisation data)
 header_queries = {
-	# 'CPU Utilisation (from requests)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
-	'CPU Utilisation (from requests)':'label_replace(sum by(pod, node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}),"node", "$1", "pod", "(.*)") / sum by(pod, node) (kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
-	# 'CPU Utilisation (from requests)': 'rate(container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
-	# 'CPU Utilisation (from requests)': 'sum(container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"}[' + DEFAULT_DURATION+ '])',
+	'CPU Utilisation (from requests)': 'rate(container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[12h])',
 	'CPU Utilisation (from limits)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
 	'Memory Utilisation (from requests)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '",container!="", image!=""}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="memory"})',
-	'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="memory"})',
+	'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="memory"})'
 }
 
 #generates a list of all pods being shown
@@ -40,6 +37,9 @@ def get_pods_list():
 #generates a dictionary of the 4 headers and their values
 def find_header_values(query_dict=header_queries):
 	query_values = {}
+	# printc(query_api_site(header_queries.items()))
+
+
 	for query_title, query in query_dict.items():
 		#get data
 		res_list = get_result_list(query_api_site(query))
@@ -55,11 +55,11 @@ def find_header_values(query_dict=header_queries):
 
 #print the values of the 4 header panels
 def print_header_values(as_percentages=False):
-	#get query values
+		#get query values
 	query_values = find_header_values()
 
 	#print out values
-	for query_title, value in query_values.items():
+	for query_title, value in query_values['CPU Utilisation (from requests)']:
 		
 		#check if value is empty
 		if (str(value)[0] == "N"):
