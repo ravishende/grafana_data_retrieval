@@ -68,7 +68,7 @@ class DataTable():
 
 
 	#returns a table with data from cpu_quota
-	def cpu_quota(self, as_json_data=False):
+	def cpu_quota(self):
 		#dictionary storing all queries besides percentages and pods
 		queries_dict = {
 			'CPU Usage':'sum by(pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"})',
@@ -84,7 +84,6 @@ class DataTable():
 		for col_title, query in queries_dict.items():
 			# response_dict[col_title] = get_result_list(query_api_site(query))
 			queried_data = query_api_site(query)
-			printc(col_title, "\n", queried_data, "\n")
 			response_dict[col_title] = get_result_list(queried_data)
 
 		#get a list of all pods and create a row to be added to the database later

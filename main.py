@@ -13,7 +13,7 @@ pd.set_option('display.max_columns', 8)
 table_retreiver = DataTable()
 cpu_df = table_retreiver.cpu_quota()
 mem_df = table_retreiver.mem_quota()
-network_df = table_retreiver.network_usage("1h")
+network_df = table_retreiver.network_usage()
 storage_io_df = table_retreiver.storage_io()
 
 # #generate pickle
@@ -29,7 +29,7 @@ storage_io_df = table_retreiver.storage_io()
 
 #print collected data
 print(f'\n\n\n\n{colored("Header:", "magenta")}')
-print_header_values()
+print_header_values(as_percentages=True)
 
 print(f'\n\n\n\n{colored("CPU Quota:", "magenta")}')
 print(cpu_df.to_string())
@@ -47,5 +47,5 @@ print("\n\n\n\n")
 
 
 
-print("Total API pings: ", get_query_count())
+print("Total API pings:", get_query_count())
 
