@@ -17,24 +17,28 @@ def print_graphs(graph_class, only_worker_pods=False, by_pod_group=True):
 			print(graph)
 			return
 
-		#split data by pod
-		graph = graph.query('get_worker_id(Pod) != None')
-		printc("=============================================\n"graph)
+		#edit Pod column to be the worker_id for each datapoint or None if not a bp3d worker
+		for i in range(len(graph)):
+			graph.at[i, 'Pod'] = get_worker_id(graph.at[i, 'Pod'])
 
-		graph_groups = graph.groupby('Pod')
-		#print out graph of each pod
-		for pod in graph['Pod'].unique():
-			pod_graph = graph_groups.get_group(pod)
-			# worker_id = get_worker_id(pod)
-			# if only_print_worker_pods:
-			# 	if worker_id != None:
-			# 		print("\n\n\n")
-			# 		printc(pod_graph)
-			# else:
-			# 	print("\n\n\n")
-			# 	printc(pod_graph)
-			print("\n\n\n")
-			printc(pod_graph)
+		#filter out all the None values in the Pod column, leaving only the worker pods in the graph. 
+		graph = graph.query('Pod == None')
+		printc(graph)
+
+		# graph_groups = graph.groupby('Pod')
+		# #print out graph of each pod
+		# for pod in graph['Pod'].unique():
+		# 	pod_graph = graph_groups.get_group(pod)
+		# 	# worker_id = get_worker_id(pod)
+		# 	# if only_print_worker_pods:
+		# 	# 	if worker_id != None:
+		# 	# 		print("\n\n\n")
+		# 	# 		printc(pod_graph)
+		# 	# else:
+		# 	# 	print("\n\n\n")
+		# 	# 	printc(pod_graph)
+		# 	print("\n\n\n")
+		# 	printc(pod_graph)
 
 def display_graphs(graphs, only_worker_pods=False):
 	graphs = graph_class.get_graphs(only_worker_pods=only_worker_pods)
