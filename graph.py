@@ -165,6 +165,7 @@ class Graph():
 		graphs = []
 		#get all of the initial graphs from the normal queries
 		for query_title, query in self.queries_dict.items():
+			print("\n", query_title, "\n")
 			#collect graph data
 			times, values, pods = self._generate_graph_data(query)
 			#make and populate dataframe, then add to graphs
@@ -175,6 +176,7 @@ class Graph():
 			graphs.append(graph_df)
 		#get graphs from partial queries
 		for query_title, query_pair in self.partial_queries_dict.items():
+			print("\n", query_title, "\n")
 			#store the two queries' values
 			times, read_values, pods = self._generate_graph_data(query_pair[0])
 			write_values = self._generate_graph_data(query_pair[1])[1]
@@ -190,13 +192,26 @@ class Graph():
 
 
 
-	def get_graphs(self, display_time_as_timestamp=True):
+	def get_graphs(self, display_time_as_timestamp=True, only_worker_pods=False):
 		graphs = self._generate_graphs()
 		for graph in graphs:
+			print("before if")
+			# loop through graph df and delete each row containing a non bp3d_worker pod
+			if(only_worker_pods):
+				for i in range(len(graph['Pod'])):
+					if get_worker_id(graph['Pod'][i]) == None:
+						# remove row
+						graph = graph.drop(i)
+
+			print("after if")
 			#update graphs with correct time columns
 			if display_time_as_timestamp:
 				graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-			#after time is in correct format, set it to be the index.
-			graph.set_index('Time', inplace=True)
+			#after time is in correct format, set it to be the index. 
+			#This is especially important if only_worker_pods==True because otherwise dropped index values aren't filled in. Ex: indices might be 0, 1, 3 
+			# graph.set_index('Time', inplace=True)
+			print("****************************************", graph, "****************************************")
+			graph.reset_index()
+			print("-----------------------------------------", graph, "---------------------------------------")
 		return graphs
 

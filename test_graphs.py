@@ -8,34 +8,52 @@ import matplotlib.pyplot as plt
 import time
 
 
-def print_graphs(graphs, only_print_worker_pods=False):
+def print_graphs(graph_class, only_worker_pods=False, by_pod_group=True):
+	graphs = graph_class.get_graphs(only_worker_pods=only_worker_pods)
 	for graph in graphs:
-		#split data by pod
 		print("\n\n\n\n")
-		graph_groups = graph.groupby('Pod')
 
+		if not by_pod_group:
+			print(graph)
+			return
+
+		#split data by pod
+		graph = graph.query('get_worker_id(Pod) != None')
+		printc("=============================================\n"graph)
+
+		graph_groups = graph.groupby('Pod')
 		#print out graph of each pod
 		for pod in graph['Pod'].unique():
-			worker_id = get_worker_id(pod)
 			pod_graph = graph_groups.get_group(pod)
-			if only_print_worker_pods:
-				if worker_id != None:
-					print("\n\n\n")
-					printc(pod_graph)
-			else:
-				print("\n\n\n")
-				printc(pod_graph)
+			# worker_id = get_worker_id(pod)
+			# if only_print_worker_pods:
+			# 	if worker_id != None:
+			# 		print("\n\n\n")
+			# 		printc(pod_graph)
+			# else:
+			# 	print("\n\n\n")
+			# 	printc(pod_graph)
+			print("\n\n\n")
+			printc(pod_graph)
 
-def display_graphs(graphs, display_time_as_timestamp=False):
+def display_graphs(graphs, only_worker_pods=False):
+	graphs = graph_class.get_graphs(only_worker_pods=only_worker_pods)
+	#loop through graphs, displaying them one at a time
 	for graph in graphs:
 		graph_groups = graph.groupby('Pod')
 
-		#print out graph of each pod
+		#split graph by pods to create a new df per pod
 		for pod in graph['Pod'].unique():
 			pod_graph = graph_groups.get_group(pod)
 
-			plt.plot(pod_graph["Time"],pod_graph["Value"], label = pod_json["metric"]["pod"])
+			#plot the x and y data of a pod.
+			plt.plot(pod_graph["Time"], pod_graph[pod_graph.keys()[2]], label = pod)
 			plt.xticks(df["time"],rotation=80)
+
+		#for showing the next graph after the user closes the current one
+		time.sleep(0.2)
+		plt.close()
+
 	#display graphs
 
 	# 	#collect the data from the graph
@@ -62,5 +80,4 @@ def display_graphs(graphs, display_time_as_timestamp=False):
 
 #Either run display_graphs(graph_class) or graph_class.print_graphs() depending on if you want data visualized or just printed
 graph_class = Graph()
-graphs = graph_class.get_graphs()
-print_graphs(graphs, only_print_worker_pods=False)
+print_graphs(graph_class, only_worker_pods=True)
