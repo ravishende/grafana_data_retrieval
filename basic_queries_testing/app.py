@@ -3,5 +3,6 @@ from termcolor import cprint, colored
 
 
 print(f'\n\n\n\n{colored("Header:", "magenta")}')
-print_header_json()
+header_class = Header()
+header_class.print_header_json()
 
