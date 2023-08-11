@@ -46,14 +46,14 @@ class Graph():
 
 
 
-	#given a datetime object (end) and a string (time_offset) (e.g. "12h5m30s"), return a new date_time object time_offset away from the end time
-	def _find_time_from_offset(self, end_time, offset):
-		#get the offset in a usable form
-		time_dict = get_time_dict_from_str(offset)
+	#given an end_time (datetime object) and an offset_str (string) (e.g. "12h5m30s"), return a new datetime object offset away from the end_time
+	def _find_time_from_offset(self, end_time, offset_str):
+		#get the offset in a usable form: {..., 'hours':____, 'minutes':___, 'seconds':____}
+		time_dict = get_time_dict_from_str(offset_str)
 		#create new datetime timedelta to represent the time offset and pass in parameters as values from time_dict
-		t_offset = timedelta(**time_dict)
+		time_offset = timedelta(**time_dict)
 		#return the start time
-		return end_time-t_offset
+		return end_time-time_offset
 
 
 
@@ -135,7 +135,8 @@ class Graph():
 	def _generate_graphs(self):
 		graphs = []
 		#get all of the initial graphs from the normal queries
-		for query_title, query in self.queries_dict.items():
+		for query_title, query in tqdm(self.queries_dict.items()):
+		# for query_title, query in self.queries_dict.items():
 			#collect graph data
 			times, values, pods = self._generate_graph_data(query)
 			print("\n", colored(query_title, "green"), "data queried\n")
@@ -146,7 +147,8 @@ class Graph():
 			graph_df[query_title] = values
 			graphs.append(graph_df)
 		#get graphs from partial queries
-		for query_title, query_pair in self.partial_queries_dict.items():
+		for query_title, query_pair in tqdm(self.partial_queries_dict.items()):
+		# for query_title, query_pair in self.partial_queries_dict.items():
 			#store the two queries' values
 			times, read_values, pods = self._generate_graph_data(query_pair[0])
 			write_values = self._generate_graph_data(query_pair[1])[1]
