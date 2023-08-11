@@ -12,17 +12,16 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('max_colwidth', None)
 
-def print_graphs(graph_class, only_worker_pods=False, group_by_pod=False):
-	graphs = graph_class.get_graphs(only_worker_pods=only_worker_pods)
+def print_graphs(graphs, group_by_pod=False):
 	for graph in graphs:
 
-		if only_worker_pods:
-			#edit Pod column to be the worker_id for each datapoint or None if not a bp3d worker
-			for i in range(len(graph)):
-				graph.at[i, 'Pod'] = get_worker_id(graph.at[i, 'Pod'])
 
-			#filter out all the None values in the Pod column, leaving only the worker pods in the graph. 
-			graph = graph.query('Pod == None')
+			# #edit Pod column to be the worker_id for each datapoint or None if not a bp3d worker
+			# for i in range(len(graph)):
+			# 	graph.at[i, 'Pod'] = get_worker_id(graph.at[i, 'Pod'])
+
+			# #filter out all the None values in the Pod column, leaving only the worker pods in the graph. 
+			# graph = graph.query('Pod == None')
 
 		
 		if group_by_pod:
@@ -38,12 +37,11 @@ def print_graphs(graph_class, only_worker_pods=False, group_by_pod=False):
 				printc(pod_graph)
 
 		# code for group_by_pod already prints out a graph of each pod.
-		if not group_by_pod:
+		else:
 			print("\n\n\n\n")
 			printc(graph)
 
-def display_graphs(graph_class, only_worker_pods=False):
-	graphs = graph_class.get_graphs(only_worker_pods=only_worker_pods)
+def display_graphs(graphs):
 	#loop through graphs, displaying them one at a time
 	for graph in graphs:
 		graph_groups = graph.groupby('Pod')
@@ -53,7 +51,7 @@ def display_graphs(graph_class, only_worker_pods=False):
 			pod_graph = graph_groups.get_group(pod)
 
 			#plot the x and y data of a pod.
-			plt.plot(pod_graph["Time"], pod_graph[pod_graph.keys()[2]], label = pod)
+			plt.plot(pod_graph["Time"], pod_graph.loc[2], label = pod)
 			plt.xticks(pod_graph["Time"],rotation=80)
 
 		#for showing the next graph after the user closes the current one
@@ -86,6 +84,8 @@ def display_graphs(graph_class, only_worker_pods=False):
 
 #Either run display_graphs(graph_class) or graph_class.print_graphs() depending on if you want data visualized or just printed
 graph_class = Graph()
-print_graphs(graph_class, only_worker_pods=False, group_by_pod=False)
+graphs = graph_class.get_graphs(only_worker_pods=False)
+
+print_graphs(graphs, group_by_pod=False)
 # display_graphs(graph_class, only_worker_pods=False)
 

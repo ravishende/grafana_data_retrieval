@@ -5,6 +5,7 @@ from pprint import pprint
 from rich import print as printc
 from datetime import datetime, timedelta
 from pyfiglet import Figlet
+from tqdm import tqdm
 
 
 class Graph():
@@ -43,10 +44,6 @@ class Graph():
 			]
 		}
 
-		#dataframe storing all the data for the graphs
-		# self.graphs_df = pd.DataFrame(data={}, columns=self.queries_dict.keys().join(self.partial_queries_dict.keys()))
-		self.graphs_df = pd.DataFrame()
-
 
 
 	#given a datetime object (end) and a string (time_offset) (e.g. "12h5m30s"), return a new date_time object time_offset away from the end time
@@ -74,7 +71,7 @@ class Graph():
 
 
 
-	#get a list of all the values and add a column for timestamps
+	#get 3 lists: times, values, and pods for a given graph query
 	def _generate_graph_data(self, query):
 		#create time filter to then generate list of all datapoints for the graph
 		time_filter = self._assemble_time_filter()
@@ -141,7 +138,7 @@ class Graph():
 		for query_title, query in self.queries_dict.items():
 			#collect graph data
 			times, values, pods = self._generate_graph_data(query)
-			print("\n", colored(query_title, "green"), "queried\n")
+			print("\n", colored(query_title, "green"), "data queried\n")
 			#make and populate dataframe, then add to graphs
 			graph_df = pd.DataFrame()
 			graph_df['Time'] = times
@@ -153,7 +150,7 @@ class Graph():
 			#store the two queries' values
 			times, read_values, pods = self._generate_graph_data(query_pair[0])
 			write_values = self._generate_graph_data(query_pair[1])[1]
-			print("\n", colored(query_title, "green"), "queried\n")
+			print("\n", colored(query_title, "green"), "data queried\n")
 			graph_df = pd.DataFrame()
 
 			graph_df['Time'] = times
@@ -169,21 +166,14 @@ class Graph():
 	def get_graphs(self, display_time_as_timestamp=True, only_worker_pods=False):
 		graphs = self._generate_graphs()
 		for graph in graphs:
-			# loop through graph df and delete each row containing a non bp3d_worker pod
+			# for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
 			if(only_worker_pods):
-				for i in range(len(graph['Pod'])):
-					if get_worker_id(graph['Pod'][i]) == None:
-						# remove row
-						graph = graph.drop(i)
-				#dropped index values aren't replaced. (graph's indices might look like 0, 1, 4 if rows 2, 3 are dropped)
-				graph.reset_index()
+				graph = graph.apply(lambda row: get_worker_id(row["Pod"]))
+				graph = graph.dropna(columns=["Pod"])
 
 			#update graphs with correct time columns
 			if display_time_as_timestamp:
 				graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-			#after time is in correct format, set it to be the index. 
-			# graph.set_index('Time', inplace=True)
-			# print("****************************************\n", graph, "****************************************\n")
-			# print("\n-----------------------------------------\n", graph, "\n---------------------------------------\n")
+
 		return graphs
 
