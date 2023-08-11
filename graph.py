@@ -4,6 +4,7 @@ import pandas as pd
 from pprint import pprint
 from rich import print as printc
 from datetime import datetime, timedelta
+from pyfiglet import Figlet
 
 
 class Graph():
@@ -103,33 +104,6 @@ class Graph():
 			df_graph_values_list.extend(df_values_list)
 			df_graph_pods_list.extend(df_pod_list)
 
-			
-			# #go through the values list of each pod and clean up time and value
-			# for j in range(len(times_values_list)):
-			# 	#round values
-			# 	times_values_list[j][1] = clean_round(float(times_values_list[j][1]))
-
-			# 	#display the time in each datapoint how the user specified.
-			# 	#the time is queried in seconds since the epoch (01/01/1970) so if user wants to display as seconds, do nothing.
-			# 	if display_time_as != "seconds":
-			# 		#get seconds to a datetime that can be used 
-			# 		date_time = datetime.fromtimestamp(times_values_list[j][0])
-					
-			# 		if display_time_as == "datetime":
-			# 			#Display timestamps as datetimes
-			# 			times_values_list[j][0] = date_time
-
-			# 		elif display_time_as == "timestamp":
-			# 			#formats the time as a string for printing in a more readable way
-			# 			times_values_list[j][0] = (date_time.strftime("%Y-%m-%d %H:%M:%S.%f"))
-
-			# 		else:
-			# 			#input was not one of the options. 
-			# 			raise ValueError('display_time_as can only be set to one of the following: "datetime", "timestamp", or "seconds".')
-
-			# # make sure the result list that is returned has the new updates
-			# result_list[i]['values'] = times_values_list
-
 		return df_graph_times_list, df_graph_values_list, df_graph_pods_list
 
 
@@ -165,9 +139,9 @@ class Graph():
 		graphs = []
 		#get all of the initial graphs from the normal queries
 		for query_title, query in self.queries_dict.items():
-			print("\n", query_title, "\n")
 			#collect graph data
 			times, values, pods = self._generate_graph_data(query)
+			print("\n", colored(query_title, "green"), "queried\n")
 			#make and populate dataframe, then add to graphs
 			graph_df = pd.DataFrame()
 			graph_df['Time'] = times
@@ -176,12 +150,12 @@ class Graph():
 			graphs.append(graph_df)
 		#get graphs from partial queries
 		for query_title, query_pair in self.partial_queries_dict.items():
-			print("\n", query_title, "\n")
 			#store the two queries' values
 			times, read_values, pods = self._generate_graph_data(query_pair[0])
 			write_values = self._generate_graph_data(query_pair[1])[1]
-			
+			print("\n", colored(query_title, "green"), "queried\n")
 			graph_df = pd.DataFrame()
+
 			graph_df['Time'] = times
 			graph_df['Pod'] = pods
 			graph_df[query_title] = [read_vals + write_vals for read_vals, write_vals in zip(read_values, write_values)]
@@ -195,23 +169,21 @@ class Graph():
 	def get_graphs(self, display_time_as_timestamp=True, only_worker_pods=False):
 		graphs = self._generate_graphs()
 		for graph in graphs:
-			print("before if")
 			# loop through graph df and delete each row containing a non bp3d_worker pod
 			if(only_worker_pods):
 				for i in range(len(graph['Pod'])):
 					if get_worker_id(graph['Pod'][i]) == None:
 						# remove row
 						graph = graph.drop(i)
+				#dropped index values aren't replaced. (graph's indices might look like 0, 1, 4 if rows 2, 3 are dropped)
+				graph.reset_index()
 
-			print("after if")
 			#update graphs with correct time columns
 			if display_time_as_timestamp:
 				graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
 			#after time is in correct format, set it to be the index. 
-			#This is especially important if only_worker_pods==True because otherwise dropped index values aren't filled in. Ex: indices might be 0, 1, 3 
 			# graph.set_index('Time', inplace=True)
-			print("****************************************", graph, "****************************************")
-			graph.reset_index()
-			print("-----------------------------------------", graph, "---------------------------------------")
+			# print("****************************************\n", graph, "****************************************\n")
+			# print("\n-----------------------------------------\n", graph, "\n---------------------------------------\n")
 		return graphs
 
