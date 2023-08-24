@@ -150,8 +150,7 @@ class Graphs():
 			graphs.append(graph_df)
 		return graphs
 
-
-
+	#generate and return a list of all the graphs
 	def get_graphs(self, display_time_as_timestamp=True, only_worker_pods=False):
 		graphs = self._generate_graphs()
 		for graph in graphs:
@@ -166,20 +165,14 @@ class Graphs():
 
 		return graphs
 
+	#print each graph
 	def print_graph_data(self, display_time_as_timestamp=True, only_worker_pods=False):
-		graphs = self._generate_graphs()
-		for graph in graphs:
-			# for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
-			if(only_worker_pods):
-				graph = graph.apply(lambda row: get_worker_id(row["Pod"]))
-				graph = graph.dropna(columns=["Pod"])
+		graphs = self.get_graphs(display_time_as_timestamp=display_time_as_timestamp, only_worker_pods=only_worker_pods)
 
-			#update graphs with correct time columns
-			if display_time_as_timestamp:
-				graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-
+		for graph_df in graphs:
 			print("\n\n\n")
-			print(graph)
+			print(colored(graph_df.columns[len(graph_df.columns)-1], "green"), "\n")
+			print(graph_df)
 			print("\n\n\n")
 
 		
