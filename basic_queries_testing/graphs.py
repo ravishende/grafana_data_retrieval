@@ -14,6 +14,7 @@ from rich import print as printc
 from datetime import datetime, timedelta
 from pyfiglet import Figlet
 from tqdm import tqdm
+import time
 
 
 class Graphs():
@@ -81,8 +82,13 @@ class Graphs():
 	def _generate_graph_data(self, query):
 		#create time filter to then generate list of all datapoints for the graph
 		time_filter = self._assemble_time_filter()
-		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
 		
+		start=time.time()
+		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
+		end=time.time()
+
+		print("\ntime elapsed for querying:", colored(end-start, "green"))
+
 		df_graph_times_list = []
 		df_graph_values_list = []
 		df_graph_pods_list = []
@@ -120,10 +126,11 @@ class Graphs():
 		#get all of the initial graphs from the normal queries
 		for query_title, query in tqdm(self.queries_dict.items()):
 		# for query_title, query in self.queries_dict.items():
+			start_time = time.time()
 			#collect graph data
 			times, values, nodes, pods = self._generate_graph_data(query)
 			# times, values, pods = self._generate_graph_data(query)
-			print("\n", colored(query_title, "green"), "data queried\n")
+			# print("\n", colored(query_title, "green"), "data queried\n")
 			#make and populate dataframe, then add to graphs
 			graph_df = pd.DataFrame()
 			graph_df['Time'] = times
@@ -131,14 +138,17 @@ class Graphs():
 			graph_df['Pod'] = pods
 			graph_df[query_title] = values
 			graphs.append(graph_df)
+			end_time=time.time()
+			print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 		#get graphs from partial queries
 		for query_title, query_pair in tqdm(self.partial_queries_dict.items()):
 		# for query_title, query_pair in self.partial_queries_dict.items():
+			start_time=time.time()
 			#store the two queries' values
 			times, read_values, nodes, pods = self._generate_graph_data(query_pair[0])
 			# times, read_values, pods = self._generate_graph_data(query_pair[0])
 			write_values = self._generate_graph_data(query_pair[1])[1]
-			print("\n", colored(query_title, "green"), "data queried\n")
+			# print("\n", colored(query_title, "green"), "data queried\n")
 			graph_df = pd.DataFrame()
 
 			graph_df['Time'] = times
@@ -148,6 +158,9 @@ class Graphs():
 			
 			#put the newly modified read_data (which is now read+write data) into graphs_dict.
 			graphs.append(graph_df)
+			end_time=time.time()
+			print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
+
 		return graphs
 
 	#generate and return a list of all the graphs
