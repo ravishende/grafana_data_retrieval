@@ -113,7 +113,7 @@ class Header():
 			json_data = query_api_site(query)
 
 			print("\n\n\n\n______________________________________________________________________________\n")
-			print("\t\t", colored(query_title, "magenta"))
+			print("\t\t", colored(query_title, "green"))
 			print("______________________________________________________________________________")
 			
 			#handle if there is no data

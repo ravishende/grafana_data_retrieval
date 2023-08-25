@@ -47,6 +47,30 @@ class Tables():
 		}
 
 
+	'''
+	_______________________________________________________________________________
+	
+	Private Methods
+	_______________________________________________________________________________
+
+	'''
+
+
+	#return a dataframe of pods, nodes, and values for a given json_data for a column in a table (e.g. CPUQuota: CPU usage) 
+	def _generate_df(self, col_title, raw_json_data):
+		#initialize dataframe and filter json data
+		df = pd.DataFrame(columns = ['Node', 'Pod', col_title])
+		res_list = get_result_list(raw_json_data)
+		#fill in dataframe
+		for datapoint in res_list:
+			#each datapoint in parsed_data is a dictionary with node (str), pod (str), (int)
+			node = datapoint['metric']['node']
+			pod = datapoint['metric']['pod']
+			value = datapoint['value'][1] #data_point['value'][0] is the timestamp
+			#add a row to the end of the dataframe containing a node, pod, and value
+			df.loc[len(df.index)] = [node, pod, value]
+		return df
+
 
 	#returns an updated dataframe by filling in data queried from the columns in a passed in dataframe
 	def _fill_df_by_queries(self, table_df):
@@ -68,59 +92,15 @@ class Tables():
 					table_df[column] = new_df[column]
 		return table_df
 
-	#returns a filtered version of json data as a list of dictionaries containing pod, node, and value
-	def _parse_json_data(self, json_data):
-		res_list = get_result_list(json_data)
-		parsed_data = []
-		for data_dict in res_list:
-			pod = data_dict['metric']['pod']
-			node = data_dict['metric']['node']
-			value = data_dict['value'][1] #data_dict['value'][0] is the timestamp
-			assembled_data = {'node':node, 'pod':pod, 'value':value}
-			parsed_data.append(assembled_data)
-		return parsed_data
+	
+	'''
+	_______________________________________________________________________________
+	
+	Public Methods
+	_______________________________________________________________________________
 
-
-	#return a dataframe of pods, nodes, and values for a given json_data for a column in a table (e.g. CPUQuota: CPU usage) 
-	def _generate_df(self, col_title, raw_json_data):
-		#parse data and initialize dataframe
-		parsed_data = self._parse_json_data(raw_json_data)
-		df = pd.DataFrame(columns = ['Node', 'Pod', col_title])
-		#fill in dataframe
-		for datapoint in parsed_data:
-			#each datapoint in parsed_data is a dictionary with node (str), pod (str), (int)
-			node = datapoint['node']
-			pod = datapoint['pod']
-			value = datapoint['value']
-			#add a row to the end of the dataframe containing a node, pod, and value
-			df.loc[len(df.index)] = [node, pod, value]
-		return df
-
-	# #make sure each query returns more than one value. This means it has more than one node.
-	# def check_success(self):
-	# 	for query_title, query in self.queries.items():
-	# 		queried_data = query_api_site(query)
-	# 		if len(get_result_list(queried_data)) > 0:
-	# 			print(colored(query_title, "green"), "\n")
-	# 			print(self._generate_df(query_title, queried_data))
-	# 			print("\n\n")
-	# 		else:
-	# 			print(colored(query_title, "red"), "\n")
-	# 			pprint(queried_data)
-	# 			print("\n\n")
-
-	# 	for query_title, query in self.partial_queries.items():
-	# 		queried_data = query_api_site(query)
-	# 		if len(get_result_list(queried_data)) > 0:
-	# 			print(colored(query_title, "green"), "\n")
-	# 			print(self._generate_df(query_title, queried_data))
-	# 			print("\n\n")
-	# 		else:
-	# 			print(colored(query_title, "red"), "\n")
-	# 			pprint(queried_data)
-	# 			print("\n\n")
-
-	#TODO: Also, add mem_quota and other tables.
+	'''
+	
 	def get_cpu_quota(self):
 		#check if the table has been filled in
 		if len(self.cpu_quota.index) > 0:
@@ -184,8 +164,14 @@ class Tables():
 	def print_tables(self):
 		tables_dict = self.get_tables_dict()
 		for title, table in tables_dict.items():
-			print("\n\n", colored(title, "green"), "\n")
-			print(table, "\n\n")
+			print("\n\n______________________________________________________________________________\n")
+			print("            ", colored(title, "green"))
+			print("______________________________________________________________________________\n")
+			if len(table.index) > 0:
+				print(table, "\n\n")
+			else:
+				print("        No Data\n\n")
+
 
 
 
