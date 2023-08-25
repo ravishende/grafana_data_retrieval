@@ -16,6 +16,10 @@ class Tables():
 	def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
 		self.namespace = namespace
 		self.duration = duration
+		self.cpu_quota = pd.DataFrame(columns = ["Pod", "Node", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"])
+		self.mem_quota = pd.DataFrame(columns = ["Pod", "Node", "Memory Usage","Memory Requests",  "Memory Requests %",  "Memory Limits", "Memory Limits %", "Memory Usage (RSS)", "Memory Usage (Cache)"])
+		self.network_usage = pd.DataFrame(columns = ["Pod", "Node", "Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"])
+		self.storage_io = pd.DataFrame(columns = ["Pod", "Node", "IOPS(Reads)", "IOPS(Writes)", "IOPS(Reads + Writes)", "Throughput(Read)", "Throughput(Write)", "Throughput(Read + Write)"])
 		self.queries = {
 			#CPU Quota
 			'CPU Usage':'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"})',
@@ -27,7 +31,6 @@ class Tables():
 			'Memory Limits':'sum by(node, pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_limits{cluster="", namespace="' + self.namespace + '"})', 
 			'Memory Usage (RSS)':'sum by(node, pod) (container_memory_rss{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + self.namespace + '",container!=""})', 
 			'Memory Usage (Cache)':'sum by(node, pod) (container_memory_cache{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + self.namespace + '",container!=""})', 
-			'Memory Usage':'sum by(node, pod) (container_memory_swap{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + self.namespace + '",container!=""})',
 			#Network Usage
 			'Current Receive Bandwidth':'sum by(node, pod) (irate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
 			'Current Transmit Bandwidth':'sum by(node, pod) (irate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
@@ -43,41 +46,27 @@ class Tables():
 			'Throughput(Write)':'sum by(node, pod) (rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))'
 		}
 
-	#TODO: Figure out how you want to represent these value lists in a df table now that there's more than one node and pod per cell.
-	#TODO: Also, add mem_quota and other tables.
-	def cpu_quota(self):
-		#create a final dictionary for storing columns and their titles
-		col_names = ["Pod", "Node", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"]
-		response_dict = {}
 
-		#store json data from querying the api
-		for col_title, query in self.queries.items():
+
+	#returns an updated dataframe by filling in data queried from the columns in a passed in dataframe
+	def _fill_df_by_queries(self, table_df):
+		#update the columns of the database with 
+		for col_title in table_df.columns:
+			#get the corresponding query for each column
+			query = self.queries.get(col_title)
+			if query == None:
+				continue
+			#update the table with the new column information
 			queried_data = query_api_site(query)
-			response_dict[col_title] = get_result_list(queried_data)
-
-		#get a list of all pods and create a row to be added to the database later
-		pods = self._get_pods(response_dict)
-		row = {title:None for title in col_names}
-		df = pd.DataFrame({i:[] for i in col_names})
-
-		#assemble row
-		i = 0
-		for pod in pods:
-			#get pod
-			row['Pod'] = pod
-
-			#get queried columns
-			self._fill_in_queried_cells(row, pod, response_dict)
-
-			row['CPU Requests %'] = self._get_percent(row['CPU Usage'], row['CPU Requests'])
-			row['CPU Limits %'] = self._get_percent(row['CPU Usage'], row['CPU Limits'])
-
-			#add row to database
-			df.loc[i] = row 
-			i += 1
-
-		return df
-
+			new_df = self._generate_df(col_title, queried_data)
+			# table_df.merge(new_df, how='left')
+			if len(table_df.index) > 0:
+				final_col = new_df.columns[-1]
+				table_df[final_col] = new_df[final_col]
+			else:
+				for column in new_df.columns:
+					table_df[column] = new_df[column]
+		return table_df
 
 	#returns a filtered version of json data as a list of dictionaries containing pod, node, and value
 	def _parse_json_data(self, json_data):
@@ -91,14 +80,6 @@ class Tables():
 			parsed_data.append(assembled_data)
 		return parsed_data
 
-	#calculate the percentages manually to avoid unnecessary querying
-	def _get_percent(self, numerator, divisor):
-		#Handle None's
-		if numerator == None or divisor == None:
-			return None
-
-		#if both have values, calculate percent
-		return clean_round(float(numerator)/float(divisor)*100)
 
 	#return a dataframe of pods, nodes, and values for a given json_data for a column in a table (e.g. CPUQuota: CPU usage) 
 	def _generate_df(self, col_title, raw_json_data):
@@ -107,7 +88,7 @@ class Tables():
 		df = pd.DataFrame(columns = ['Node', 'Pod', col_title])
 		#fill in dataframe
 		for datapoint in parsed_data:
-			#each triplet is a dictionary with node (str), pod (str), values (list)
+			#each datapoint in parsed_data is a dictionary with node (str), pod (str), (int)
 			node = datapoint['node']
 			pod = datapoint['pod']
 			value = datapoint['value']
@@ -115,26 +96,97 @@ class Tables():
 			df.loc[len(df.index)] = [node, pod, value]
 		return df
 
-	#make sure each query returns more than one value. This means it has more than one node.
-	def check_success(self):
-		for query_title, query in self.queries.items():
-			queried_data = query_api_site(query)
-			if len(get_result_list(queried_data)) > 0:
-				print(colored(query_title, "green"), "\n")
-				print(self._generate_df(query_title, queried_data))
-				print("\n\n")
-			else:
-				print(colored(query_title, "red"), "\n")
-				pprint(queried_data)
-				print("\n\n")
+	# #make sure each query returns more than one value. This means it has more than one node.
+	# def check_success(self):
+	# 	for query_title, query in self.queries.items():
+	# 		queried_data = query_api_site(query)
+	# 		if len(get_result_list(queried_data)) > 0:
+	# 			print(colored(query_title, "green"), "\n")
+	# 			print(self._generate_df(query_title, queried_data))
+	# 			print("\n\n")
+	# 		else:
+	# 			print(colored(query_title, "red"), "\n")
+	# 			pprint(queried_data)
+	# 			print("\n\n")
 
-		for query_title, query in self.partial_queries.items():
-			queried_data = query_api_site(query)
-			if len(get_result_list(queried_data)) > 0:
-				print(colored(query_title, "green"), "\n")
-				print(self._generate_df(query_title, queried_data))
-				print("\n\n")
-			else:
-				print(colored(query_title, "red"), "\n")
-				pprint(queried_data)
-				print("\n\n")
+	# 	for query_title, query in self.partial_queries.items():
+	# 		queried_data = query_api_site(query)
+	# 		if len(get_result_list(queried_data)) > 0:
+	# 			print(colored(query_title, "green"), "\n")
+	# 			print(self._generate_df(query_title, queried_data))
+	# 			print("\n\n")
+	# 		else:
+	# 			print(colored(query_title, "red"), "\n")
+	# 			pprint(queried_data)
+	# 			print("\n\n")
+
+	#TODO: Also, add mem_quota and other tables.
+	def get_cpu_quota(self):
+		#check if the table has been filled in
+		if len(self.cpu_quota.index) > 0:
+			return self.cpu_quota
+
+		#if not, fill in the table then return it
+		self.cpu_quota = self._fill_df_by_queries(self.cpu_quota)
+		#calculate each percent column by dividing the two columns responsible for it
+		self.cpu_quota['CPU Requests %'] = self.cpu_quota['CPU Usage'].astype(float).div(self.cpu_quota['CPU Requests'].astype(float))
+		self.cpu_quota['CPU Limits %'] = self.cpu_quota['CPU Usage'].astype(float).div(self.cpu_quota['CPU Limits'].astype(float))
+		return self.cpu_quota
+
+
+	def get_mem_quota(self):
+		#check if the table has been filled in
+		if len(self.mem_quota.index) > 0:
+			return self.mem_quota
+
+		#if not, fill in the table then return it
+		self.mem_quota = self._fill_df_by_queries(self.mem_quota)
+		#calculate each percent column by dividing the two columns responsible for it
+		self.mem_quota['Memory Requests %'] = self.mem_quota['Memory Usage'].astype(float).div(self.mem_quota['Memory Requests'].astype(float))
+		self.mem_quota['Memory Limits %'] = self.mem_quota['Memory Usage'].astype(float).div(self.mem_quota['Memory Limits'].astype(float))
+		return self.mem_quota
+
+
+	def get_network_usage(self):
+		#check if the table has been filled in
+		if len(self.network_usage.index) > 0:
+			return self.network_usage
+
+		#if not, fill in the table then return it
+		self.network_usage = self._fill_df_by_queries(self.network_usage)
+		return self.network_usage
+
+
+	def get_storage_io(self):
+		#check if the table has been filled in
+		if len(self.storage_io.index) > 0:
+			return self.storage_io
+
+		#if not, fill in the table then return it
+		self.storage_io = self._fill_df_by_queries(self.storage_io)
+		#calculate each sum column by adding the two columns responsible for it
+		self.storage_io['IOPS(Reads + Writes)'] = self.storage_io['IOPS(Reads)'].astype(float) + self.storage_io['IOPS(Writes)'].astype(float)
+		self.storage_io['Throughput(Read + Write)'] = self.storage_io['Throughput(Read)'].astype(float) + self.storage_io['Throughput(Write)'].astype(float)
+		return self.storage_io
+
+
+
+	def get_tables_dict(self):
+		tables_dict = {
+			'CPU Quota':self.get_cpu_quota(),
+			'Memory Quota':self.get_mem_quota(),
+			'Current Network Usage':self.get_network_usage(),
+			'Current Storage IO':self.get_storage_io()
+		}
+		return tables_dict
+
+
+	def print_tables(self):
+		tables_dict = self.get_tables_dict()
+		for title, table in tables_dict.items():
+			print("\n\n", colored(title, "green"), "\n")
+			print(table, "\n\n")
+
+
+
+
