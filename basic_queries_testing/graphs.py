@@ -184,7 +184,9 @@ class Graphs():
 
 		for graph_df in graphs:
 			print("\n\n\n")
+			print("______________________________________________________________________________")
 			print(colored(graph_df.columns[len(graph_df.columns)-1], "green"), "\n")
+			print("______________________________________________________________________________")
 			print(graph_df)
 			print("\n\n\n")
 
