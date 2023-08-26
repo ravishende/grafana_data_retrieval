@@ -103,7 +103,7 @@ class Header():
 			#each triplet is a dictionary with node (str), pod (str), values (list)
 			node = datapoint['node']
 			pod = datapoint['pod']
-			value = datapoint['value']
+			value = float(datapoint['value'])*100 #multiply by 100 to get it in % form instead of decimal form.
 			#add a row to the end of the dataframe containing a node, pod, and value
 			df.loc[len(df.index)] = [node, pod, value]
 		return df
@@ -113,7 +113,7 @@ class Header():
 			json_data = query_api_site(query)
 
 			print("\n\n\n\n______________________________________________________________________________\n")
-			print("\t\t", colored(query_title, "green"))
+			print("\t\t", colored(query_title + " %", "green"))
 			print("______________________________________________________________________________")
 			
 			#handle if there is no data
