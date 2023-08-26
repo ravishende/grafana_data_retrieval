@@ -73,11 +73,13 @@ class Tables():
 
 
 	#returns an updated dataframe by filling in data queried from the columns in a passed in dataframe
-	def _fill_df_by_queries(self, table_df):
+	def _fill_df_by_queries(self, table_df, queries=None):
+		if queries == None:
+			queries = self.queries
 		#update the columns of the database with 
 		for col_title in table_df.columns:
 			#get the corresponding query for each column
-			query = self.queries.get(col_title)
+			query = queries.get(col_title)
 			if query == None:
 				continue
 			#update the table with the new column information
@@ -108,9 +110,9 @@ class Tables():
 
 		#if not, fill in the table then return it
 		self.cpu_quota = self._fill_df_by_queries(self.cpu_quota)
-		#calculate each percent column by dividing the two columns responsible for it
-		self.cpu_quota['CPU Requests %'] = self.cpu_quota['CPU Usage'].astype(float).div(self.cpu_quota['CPU Requests'].astype(float))
-		self.cpu_quota['CPU Limits %'] = self.cpu_quota['CPU Usage'].astype(float).div(self.cpu_quota['CPU Limits'].astype(float))
+		#calculate each percent column by dividing the two columns responsible for it then multiplying by 100
+		self.cpu_quota['CPU Requests %'] = self.cpu_quota['CPU Usage'].astype(float).div(self.cpu_quota['CPU Requests'].astype(float)).multiply(100)
+		self.cpu_quota['CPU Limits %'] = self.cpu_quota['CPU Usage'].astype(float).div(self.cpu_quota['CPU Limits'].astype(float)).multiply(100)
 		return self.cpu_quota
 
 
@@ -122,8 +124,8 @@ class Tables():
 		#if not, fill in the table then return it
 		self.mem_quota = self._fill_df_by_queries(self.mem_quota)
 		#calculate each percent column by dividing the two columns responsible for it
-		self.mem_quota['Memory Requests %'] = self.mem_quota['Memory Usage'].astype(float).div(self.mem_quota['Memory Requests'].astype(float))
-		self.mem_quota['Memory Limits %'] = self.mem_quota['Memory Usage'].astype(float).div(self.mem_quota['Memory Limits'].astype(float))
+		self.mem_quota['Memory Requests %'] = self.mem_quota['Memory Usage'].astype(float).div(self.mem_quota['Memory Requests'].astype(float)).multiply(100)
+		self.mem_quota['Memory Limits %'] = self.mem_quota['Memory Usage'].astype(float).div(self.mem_quota['Memory Limits'].astype(float)).multiply(100)
 		return self.mem_quota
 
 
@@ -143,7 +145,7 @@ class Tables():
 			return self.storage_io
 
 		#if not, fill in the table then return it
-		self.storage_io = self._fill_df_by_queries(self.storage_io)
+		self.storage_io = self._fill_df_by_queries(self.storage_io, queries=self.partial_queries)
 		#calculate each sum column by adding the two columns responsible for it
 		self.storage_io['IOPS(Reads + Writes)'] = self.storage_io['IOPS(Reads)'].astype(float) + self.storage_io['IOPS(Writes)'].astype(float)
 		self.storage_io['Throughput(Read + Write)'] = self.storage_io['Throughput(Read)'].astype(float) + self.storage_io['Throughput(Write)'].astype(float)
@@ -168,9 +170,10 @@ class Tables():
 			print("            ", colored(title, "green"))
 			print("______________________________________________________________________________\n")
 			if len(table.index) > 0:
-				print(table, "\n\n")
+				print(table)
 			else:
-				print("        No Data\n\n")
+				print("        No Data")
+			print("\n\n")
 
 
 
