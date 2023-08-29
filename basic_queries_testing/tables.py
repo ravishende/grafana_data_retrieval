@@ -47,15 +47,6 @@ class Tables():
 		}
 
 
-	'''
-	_______________________________________________________________________________
-	
-	Private Methods
-	_______________________________________________________________________________
-
-	'''
-
-
 	#return a dataframe of pods, nodes, and values for a given json_data for a column in a table (e.g. CPUQuota: CPU usage) 
 	def _generate_df(self, col_title, raw_json_data):
 		#initialize dataframe and filter json data
@@ -95,16 +86,8 @@ class Tables():
 		return table_df
 
 	
-	'''
-	_______________________________________________________________________________
-	
-	Public Methods
-	_______________________________________________________________________________
-
-	'''
-	
-	def get_cpu_quota(self):
-		#check if the table has been filled in
+	def _get_cpu_quota(self):
+		#check if the table has been filled in. If it has, return it
 		if len(self.cpu_quota.index) > 0:
 			return self.cpu_quota
 
@@ -116,8 +99,8 @@ class Tables():
 		return self.cpu_quota
 
 
-	def get_mem_quota(self):
-		#check if the table has been filled in
+	def _get_mem_quota(self):
+		#check if the table has been filled in. If it has, return it
 		if len(self.mem_quota.index) > 0:
 			return self.mem_quota
 
@@ -129,8 +112,8 @@ class Tables():
 		return self.mem_quota
 
 
-	def get_network_usage(self):
-		#check if the table has been filled in
+	def _get_network_usage(self):
+		#check if the table has been filled in. If it has, return it
 		if len(self.network_usage.index) > 0:
 			return self.network_usage
 
@@ -139,8 +122,8 @@ class Tables():
 		return self.network_usage
 
 
-	def get_storage_io(self):
-		#check if the table has been filled in
+	def _get_storage_io(self):
+		#check if the table has been filled in. If it has, return it
 		if len(self.storage_io.index) > 0:
 			return self.storage_io
 
@@ -155,26 +138,12 @@ class Tables():
 
 	def get_tables_dict(self):
 		tables_dict = {
-			'CPU Quota':self.get_cpu_quota(),
-			'Memory Quota':self.get_mem_quota(),
-			'Current Network Usage':self.get_network_usage(),
-			'Current Storage IO':self.get_storage_io()
+			'CPU Quota':self._get_cpu_quota(),
+			'Memory Quota':self._get_mem_quota(),
+			'Current Network Usage':self._get_network_usage(),
+			'Current Storage IO':self._get_storage_io()
 		}
 		return tables_dict
-
-
-	def print_tables(self):
-		tables_dict = self.get_tables_dict()
-		for title, table in tables_dict.items():
-			print("\n\n______________________________________________________________________________\n")
-			print("            ", colored(title, "green"))
-			print("______________________________________________________________________________\n")
-			if len(table.index) > 0:
-				print(table)
-			else:
-				print("        No Data")
-			print("\n\n")
-
 
 
 
