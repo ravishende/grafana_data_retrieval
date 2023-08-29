@@ -48,17 +48,4 @@ class Header():
 			header_dict[query_title] = self._generate_df(query_title, json_data)
 		return header_dict
 
-	def print_header_data(self):
-		header_dict = self.get_header_dict()
-		for header_title, header_df in header_dict.items():
-			print("\n\n\n\n______________________________________________________________________________\n")
-			print("\t\t", colored(header_title + " %", "green"))
-			print("______________________________________________________________________________")
-			
-			#handle if there is no data
-			if len(header_df.index) == 0:
-				print(colored("No data", "red"))
-			else:
-				print(header_df)
-
 
