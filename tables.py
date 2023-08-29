@@ -1,12 +1,3 @@
-import sys
-import os
-#get set up to be able to import files from parent directory (grafana_data_retrieval)
-#for example, utils.py not in this current directory and instead in the parent
-sys.path.append("../grafana_data_retrieval")
-current = os.path.dirname(os.path.realpath("header.py"))
-parent = os.path.dirname(current)
-sys.path.append(parent)
-#imports used in file
 import pandas as pd
 from utils import *
 from termcolor import cprint, colored
