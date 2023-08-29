@@ -87,7 +87,7 @@ class Graphs():
 		df_graph_pods_list = []
 		df_graph_nodes_list = []
 
-		#loop through each unique node/pod combo
+		#loop through each unique pod
 		for datapoint in result_list:
 			#prepare data to be extracted
 			times_values_list = datapoint['values']	
