@@ -79,15 +79,18 @@ class Graphs():
 #TODO: get this working for nodes and pods
 
 	#get 3 lists: times, values, and pods for a given graph query
-	def _generate_graph_data(self, query):
+	def _generate_graph_data(self, query, show_runtimes=False):
 		#create time filter to then generate list of all datapoints for the graph
 		time_filter = self._assemble_time_filter()
 		
-		start=time.time()
+		if show_runtimes:
+			start=time.time()
+		
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
-		end=time.time()
-
-		print("\ntime elapsed for querying:", colored(end-start, "green"))
+		
+		if show_runtimes:
+			end=time.time()
+			print("\ntime elapsed for querying:", colored(end-start, "green"))
 
 		df_graph_times_list = []
 		df_graph_values_list = []
@@ -121,71 +124,77 @@ class Graphs():
 
 
 	#get a dictionary in the form of {graph titles: list of graph data}
-	def _generate_graphs(self):
-		graphs = []
+	def _generate_graphs(self, show_runtimes=False):
+		graphs = {}
 		#get all of the initial graphs from the normal queries
 		for query_title, query in tqdm(self.queries_dict.items()):
-		# for query_title, query in self.queries_dict.items():
-			start_time = time.time()
+			if show_runtimes:
+				start_time = time.time()
+
 			#collect graph data
-			times, values, nodes, pods = self._generate_graph_data(query)
-			# times, values, pods = self._generate_graph_data(query)
-			# print("\n", colored(query_title, "green"), "data queried\n")
+			times, values, nodes, pods = self._generate_graph_data(query, show_runtimes=show_runtimes)
 			#make and populate dataframe, then add to graphs
 			graph_df = pd.DataFrame()
 			graph_df['Time'] = times
 			graph_df['Node'] = nodes
 			graph_df['Pod'] = pods
 			graph_df[query_title] = values
-			graphs.append(graph_df)
-			end_time=time.time()
-			print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
+			graphs[query_title] = graph_df
+			
+			if show_runtimes:
+				#print run times for 
+				end_time=time.time()
+				print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
+		
 		#get graphs from partial queries
 		for query_title, query_pair in tqdm(self.partial_queries_dict.items()):
-		# for query_title, query_pair in self.partial_queries_dict.items():
-			start_time=time.time()
+			if show_runtimes:
+				start_time=time.time()
+			
 			#store the two queries' values
-			times, read_values, nodes, pods = self._generate_graph_data(query_pair[0])
-			# times, read_values, pods = self._generate_graph_data(query_pair[0])
-			write_values = self._generate_graph_data(query_pair[1])[1]
-			# print("\n", colored(query_title, "green"), "data queried\n")
+			times, read_values, nodes, pods = self._generate_graph_data(query_pair[0], show_runtimes=show_runtimes)
+			write_values = self._generate_graph_data(query_pair[1], show_runtimes=show_runtimes)[1]
+			#make and populate dataframe, then add to graphs
 			graph_df = pd.DataFrame()
-
 			graph_df['Time'] = times
 			graph_df['Node'] = nodes
 			graph_df['Pod'] = pods
 			graph_df[query_title] = [read_vals + write_vals for read_vals, write_vals in zip(read_values, write_values)]
 			
 			#put the newly modified read_data (which is now read+write data) into graphs_dict.
-			graphs.append(graph_df)
-			end_time=time.time()
-			print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
+			graphs[query_title] = graph_df
+
+			if show_runtimes:
+				end_time=time.time()
+				print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 
 		return graphs
 
 	#generate and return a list of all the graphs
-	def get_graphs(self, display_time_as_timestamp=True, only_worker_pods=False):
-		graphs = self._generate_graphs()
-		for graph in graphs:
+	def get_graphs_dict(self, display_time_as_timestamp=True, only_include_worker_pods=False, show_runtimes=False):
+		graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
+		for graph_title, graph in graphs_dict.items():
 			# for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
-			if(only_worker_pods):
+			if(only_include_worker_pods):
 				graph = graph.apply(lambda row: get_worker_id(row["Pod"]))
 				graph = graph.dropna(columns=["Pod"])
+				graphs_dict[graph_title] = graph
 
 			#update graphs with correct time columns
 			if display_time_as_timestamp:
 				graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
+				graphs_dict[graph_title] = graph
 
-		return graphs
+		return graphs_dict
 
 	#print each graph
-	def print_graph_data(self, display_time_as_timestamp=True, only_worker_pods=False):
-		graphs = self.get_graphs(display_time_as_timestamp=display_time_as_timestamp, only_worker_pods=only_worker_pods)
+	def print_graph_data(self, display_time_as_timestamp=True, only_include_worker_pods=False, show_runtimes=False):
+		graphs_dict = self.get_graphs_dict(display_time_as_timestamp=display_time_as_timestamp, only_include_worker_pods=only_include_worker_pods, show_runtimes=show_runtimes)
 
-		for graph_df in graphs:
+		for graph_title, graph_df in graphs_dict.items():
 			print("\n\n\n")
 			print("______________________________________________________________________________")
-			print("\n", colored(graph_df.columns[len(graph_df.columns)-1], "green"))
+			print("\n", colored(graph_title, "green"))
 			print("______________________________________________________________________________")
 			print(graph_df)
 			print("\n\n\n")
