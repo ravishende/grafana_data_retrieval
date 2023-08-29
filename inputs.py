@@ -1,15 +1,10 @@
 # namespace
-# NAMESPACE = 'wifire-quicfire'
-NAMESPACE = 'alto'
+NAMESPACE = 'wifire-quicfire'
+# NAMESPACE = 'alto'  # used for testing when no data in wifire-quicfire
 
-# duration for current_network_usage table and graphs
+# duration for all 3 data types: Header, tables, graphs
 DEFAULT_DURATION = '10m'
-
-# rounding
-DEFAULT_ROUND_TO = 3
-ROUND_TABLES_TO = 5
 
 # graphs
 DEFAULT_GRAPH_STEP = '1m'
 DEFAULT_GRAPH_TIME_OFFSET = '30m'
-DEFAULT_GRAPH_DISPLAY_TIME = 'datetime'

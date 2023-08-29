@@ -48,7 +48,8 @@ class Tables():
             # each datapoint in parsed_data is a dictionary with node (str), pod (str), (int)
             node = datapoint['metric']['node']
             pod = datapoint['metric']['pod']
-            value = datapoint['value'][1]  # data_point['value'][0] is the timestamp
+            value = datapoint['value'][1] 
+            # timestamp = data_point['value'][0]
             # add a row to the end of the dataframe containing a node, pod, and value
             df.loc[len(df.index)] = [node, pod, value]
         return df
