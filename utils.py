@@ -13,82 +13,10 @@ from rich import print as printc
 #reset total query count
 QUERY_COUNT = 0
 
-#retrieves information from the 4 panels under headlines (cpu and memory utilisation data)
-header_queries = {
-	'CPU Utilisation (from requests)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", namespace="' + NAMESPACE + '", resource="cpu"})',
-	'CPU Utilisation (from limits)': 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="cpu"})',
-	'Memory Utilisation (from requests)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '",container!="", image!=""}) / sum(kube_pod_container_resource_requests{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="memory"})',
-	'Memory Utilisation (from limits)': 'sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + NAMESPACE + '",container!="", image!=""}) / sum(kube_pod_container_resource_limits{job="kube-state-metrics", cluster="", namespace="' + NAMESPACE + '", resource="memory"})'
-}
-
-#generates a list of all pods being shown
-def get_pods_list():
-	data = query_api_site('rate(container_cpu_usage_seconds_total{namespace="' + NAMESPACE + '"}[3h])')
-	try:
-		pods = data["data"]["result"]
-		pods_list = []
-		for pod in pods:
-			pods_list.append(pod["metric"]["pod"])
-	except KeyError as e:
-		return ["Error retrieving pods"]
-	return pods_list
-
-
-#generates a dictionary of the 4 headers and their values
-def find_header_values(query_dict=header_queries):
-	query_values = {}
-	# printc(query_api_site(header_queries.items()))
-
-
-	for query_title, query in query_dict.items():
-		#get data
-		res_list = get_result_list(query_api_site(query))
-		#handle if there isn't data
-		if len(res_list) == 0:
-			query_values[query_title] = "No data"
-		else:
-			#add data to dictionary
-			query_values[query_title] = clean_round(float(res_list[0]['value'][1]),3)
-
-	return query_values
-
-
-#print the values of the 4 header panels
-def print_header_values(as_percentages=False):
-		#get query values
-	query_values = find_header_values()
-
-	#print out values
-	for query_title, value in query_values.items():
-		
-		#check if value is empty
-		if (str(value)[0] == "N"):
-			print(f'{query_title}: \n\t{colored(value,"red")}')
-		else:
-			# print the percentage sign if requested
-			if(as_percentages):
-				print(f'{query_title}: \n\t{colored(round(value*100, 1), "green")}{colored("%", "green")}')
-			else:
-				print(f'{query_title}: \n\t{colored(value,"green")}')
-
-
-# #using for trying to figure out how to include nodes data - will be deleted later
-# def get_header_json(query_dict=header_queries):
-# 	query_data = {}
-# 	for query_title, query in query_dict.items():
-# 		api_response = query_api_site(query)
-# 		query_data[query_title] = api_response
-# 	return query_data
-
-# #using for trying to figure out how to include nodes data - will be deleted later
-# def print_header_json():
-# 	#get the json data of each query
-# 	json_data = get_header_json()
-
-# 	#print out the data
-# 	for query_title, data in json_data.items():
-# 		print(f'{query_title}: \n\t{colored(data,"green")}')
-
+#retrieves global variable for total number of querries since the start of the program
+def get_query_count():
+	global QUERY_COUNT
+	return QUERY_COUNT
 
 # Use url and a given query to request data from the website
 def query_api_site(query, handle_fail=True):
@@ -153,20 +81,6 @@ def get_result_list(api_response):
 	return api_response['data']['result']
 
 
-#retrieves global variable for total number of querries since the start of the program
-def get_query_count():
-	global QUERY_COUNT
-	return QUERY_COUNT
-
-#given a number and X decimal places, if there are fewer than X decimal places, return it, otherwise round to X decimal places 
-def clean_round(number, place=DEFAULT_ROUND_TO):
-	#find the number of decimal places kept in the string
-	current_places = str(number)[::-1].find(".")
-	#if it has fewer places than the specified number, return it, otherwise round it to the specified number of places
-	if(current_places > place):
-		return float(round(Decimal(number), place))
-	return number
-
 #given a string in the form 5w3d6h30m5s, save the times to a dict accesible by the unit as their key. The int times can be any length (500m160s is allowed)
 #works given as many or few of the time units. (e.g. 12h also works and sets everything but h to None)
 def get_time_dict_from_str(time_str):
@@ -190,16 +104,12 @@ def get_time_dict_from_str(time_str):
 	
 	return time_dict
 
-def print_by_pod(json_data_list):
-	for pod_data_pair in json_data_list:
-		print("\n\nPod:", colored(pod_data_pair['metric']['pod'], "blue"))
-		printc(pod_data_pair['values'])
-
 def get_worker_id(pod_name):
 	worker_title = 'bp3d-worker-k8s-'
 	#if pod_name is a bp3d worker, return the ensemble
-	if(pod_name[0:len(worker_title)] == worker_title):
-		return pod_name[16:-1]
+	title_len = len(worker_title)
+	if(pod_name[0:title_len] == worker_title):
+		return pod_name[title_len:-1]
 	#otherwise, return None
 	return None
 
