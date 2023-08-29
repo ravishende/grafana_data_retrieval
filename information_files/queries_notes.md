@@ -2,14 +2,14 @@
 These queries can be found in the json data which can be accessed by this site:
 	https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=default&var-cluster=&var-namespace=wifire-quicfire&from=1690454188000&to=1690472188000
 ## Getting the json information and rough queries (they have since been modified in the code):
-	1. In the navbar, click on the share icon: titled "Share dashboard or panel"
-	2. In the new popup, click on Export
-	3. Then click on either "View JSON" or "Save to File"
-	4. Once viewing the JSON file, these queries can be found under panels
-	5. the id number for each query in this file is in parentheses after its name. EX: CPU Utilisation (from requests) (1) has id 1
-	6. Under the id, the query can be found with `targets` -> some target id (0 to n) -> `expr`
+1. In the navbar, click on the share icon: titled "Share dashboard or panel"
+2. In the new popup, click on Export
+3. Then click on either "View JSON" or "Save to File"
+4. Once viewing the JSON file, these queries can be found under panels
+5. the id number for each query in this file is in parentheses after its name. EX: CPU Utilisation (from requests) (1) has id 1
+6. Under the id, the query can be found with `targets` -> some target id (0 to n) -> `expr`
 ## modifying the queries:
-	- the `$` symbol in any query represents a variable. For example, `$namespace` could be replaced with `"wifire-quicfire"`
+- the `$` symbol in any query represents a variable. For example, `$namespace` could be replaced with `"wifire-quicfire"`
 
 ___
 # All Queries:
