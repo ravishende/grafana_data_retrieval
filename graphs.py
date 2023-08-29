@@ -20,7 +20,7 @@ class Graphs():
 
 		#dict storing titles and their queries
 		self.queries_dict = {
-			'CPU Usage':'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})',
+			'CPU Usage':'sum by(node, pod) (node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})',
 			'Memory Usage (w/o cache)':'sum by(node, pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""})',
 			'Receive Bandwidth':'sum by(node, pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
 			'Transmit Bandwidth':'sum by(node, pod) (irate(container_network_transmit_bytes_total{namespace="' + self.namespace + '"}[' + self.duration +']))',
@@ -69,7 +69,7 @@ class Graphs():
 
 
 	#get 4 lists: times, values, nodes, and pods for a given graph query
-	def _generate_graph_data(self, query, show_runtimes=False):
+	def _generate_graph_df(self, query_title, query, show_runtimes=False):
 		#create time filter to then generate list of all datapoints for the graph
 		time_filter = self._assemble_time_filter()
 		
@@ -82,35 +82,40 @@ class Graphs():
 			end=time.time()
 			print("\ntime elapsed for querying:", colored(end-start, "green"))
 
-		df_graph_times_list = []
-		df_graph_values_list = []
-		df_graph_pods_list = []
-		df_graph_nodes_list = []
+		times_column = []
+		values_column = []
+		pods_column = []
+		nodes_column = []
 
-		#loop through each unique node/pod combo
+		#loop through the data for each pod. The data has: node, pod, values, timestamps
 		for datapoint in result_list:
-			#prepare data to be extracted
-			times_values_list = datapoint['values']	
-			
-			df_values_list = []
-			df_times_list = []
-			df_nodes_list = []
+			#prepare data to be extracted	
+			values_list = []
+			times_list = []
 			
 			#fill in lists
-			for time_value_pair in times_values_list:
-				df_times_list.append(time_value_pair[0])
-				df_values_list.append(float(time_value_pair[1]))
-			df_nodes_list = [datapoint['metric']['node']]*len(df_times_list)
-			df_pod_list = [datapoint['metric']['pod']]*len(df_times_list)
+			for time_value_pair in datapoint['values']:
+				times_list.append(time_value_pair[0])
+				values_list.append(float(time_value_pair[1]))
+			#There is only one node and pod per pod, so these columns will be constant for each pod.
+			node_list = [datapoint['metric']['node']]*len(times_list)
+			pod_list = [datapoint['metric']['pod']]*len(times_list)
 			
 			#add pod's lists to the whole graph's lists
-			df_graph_times_list.extend(df_times_list)
-			df_graph_values_list.extend(df_values_list)
-			df_graph_nodes_list.extend(df_nodes_list)
-			df_graph_pods_list.extend(df_pod_list)
+			times_column.extend(times_list)
+			values_column.extend(values_list)
+			nodes_column.extend(node_list)
+			pods_column.extend(pod_list)
 
-		return df_graph_times_list, df_graph_values_list, df_graph_nodes_list, df_graph_pods_list
 
+		#make and populate graph dataframe
+		graph_df = pd.DataFrame()
+		graph_df['Time'] = times_column
+		graph_df['Node'] = nodes_column
+		graph_df['Pod'] = pods_column
+		graph_df[query_title] = values_column
+
+		return graph_df
 
 	#get a dictionary in the form of {graph titles: list of graph data}
 	def _generate_graphs(self, show_runtimes=False):
@@ -121,18 +126,9 @@ class Graphs():
 				start_time = time.time()
 
 			#collect graph data
-			times, values, nodes, pods = self._generate_graph_data(query, show_runtimes=show_runtimes)
-			#make and populate graph dataframe
-			graph_df = pd.DataFrame()
-			graph_df['Time'] = times
-			graph_df['Node'] = nodes
-			graph_df['Pod'] = pods
-			graph_df[query_title] = values
-			#add graph dataframe to graphs_dict
-			graphs_dict[query_title] = graph_df
-			
+			graph_df = self._generate_graph_df(query_title, query, show_runtimes=show_runtimes)
+
 			if show_runtimes:
-				#print run times for 
 				end_time=time.time()
 				print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 		
@@ -141,16 +137,12 @@ class Graphs():
 			if show_runtimes:
 				start_time=time.time()
 			
-			#store the two queries' values
-			times, read_values, nodes, pods = self._generate_graph_data(query_pair[0], show_runtimes=show_runtimes)
-			write_values = self._generate_graph_data(query_pair[1], show_runtimes=show_runtimes)[1]
-			#make and populate graph dataframe
-			graph_df = pd.DataFrame()
-			graph_df['Time'] = times
-			graph_df['Node'] = nodes
-			graph_df['Pod'] = pods
+			#store the two queries' values. Originally graph_df only stores read values instead of read+write. Later, it is updated to store both.
+			graph_df = self._generate_graph_df(query_title, query_pair[0], show_runtimes=show_runtimes)
+			graph_df_write = self._generate_graph_df(query_title, query_pair[1], show_runtimes=show_runtimes)
+
 			#calculate read + write column by adding read values and write values
-			graph_df[query_title] = [read_vals + write_vals for read_vals, write_vals in zip(read_values, write_values)]
+			graph_df[query_title] = graph_df[query_title] + graph_df_write[query_title]
 			#add graph dataframe to graphs_dict
 			graphs_dict[query_title] = graph_df
 
@@ -159,6 +151,7 @@ class Graphs():
 				print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 
 		return graphs_dict
+
 
 	#generate and return a list of all the graphs
 	def get_graphs_dict(self, display_time_as_timestamp=True, only_include_worker_pods=False, show_runtimes=False):
