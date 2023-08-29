@@ -7,11 +7,9 @@ It collects all of the information that can be found at the following grafana we
 
 It displays each statistic by Node and Pod, rather than a sum of all pods like Grafana does.
 
-## Data Collected
+___
 
-![Header](example_header.png)  
-![Tables](example_table.png)  
-![Graphs](example_graph.png)  
+## Data Collected
 
 There are 3 main types of data collected:
 1. Header data: 
@@ -22,4 +20,18 @@ There are 3 main types of data collected:
 
 3. Graphs:
 	A table of datapoints containing several times and values per pod that can be displayed with a graph containing several colored lines (one line per pod).
+
+### Header:
+![Header](extras/example_header.png)
+
+### Table:
+![Tables](extras/example_table.png)  
+
+### Graph:
+![Graphs](extras/example_graph.png)  
+
+___
+
+## Inputs
+There are 3 main inputs that specify what information will be returned
 
