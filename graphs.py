@@ -3,6 +3,7 @@ from utils import query_api_site_for_graph, get_result_list, get_time_dict_from_
 from inputs import NAMESPACE, DEFAULT_DURATION, DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP
 from termcolor import colored
 from datetime import datetime, timedelta
+from pprint import pprint
 from tqdm import tqdm
 import time
 
@@ -159,3 +160,55 @@ class Graphs():
             graphs_dict[graph_title] = graph
 
         return graphs_dict
+
+
+    def _check_graph_loss(self, query_title='Rate of Transmitted Packets'):
+        # get graphs dict
+        query = self.queries_dict[query_title]
+        graph = self._generate_graph_df(query_title, query, show_runtimes=True)
+        # for each graph in graphs dict
+            # check for a 0 sandwich...
+        previous_value = 0
+        previous_pod = None
+        drop_indeces = []
+        back_online_indeces = []
+        drop_values = []
+        pods_dropped = []
+        pods_back_online = []
+        for index in graph.index:
+            current_value = graph[query_title][index]
+            current_pod = graph["Pod"][index]
+            #2 times to note: 
+                # 1. previous == 0, current != 0 --> back online
+                # 2. previous != 0, current == 0 --> potential drop
+            if previous_pod != current_pod:
+                continue
+
+            if previous_value == 0 and current_value != 0:
+                drop_indeces.append(index)
+                drop_values.append(current_value)
+                pods_dropped.append(current_pod)
+
+            if previous_value != 0 and current_value == 0:
+                back_online_indeces.append(index)
+                pods_back_online.append(current_pod)
+
+            previous_value = current_value
+            previous_pod = current_pod
+
+        print("Drop Indices:")
+        pprint(drop_indeces)
+        print("\n\nBack Online Indices:")
+        pprint(back_online_indeces)
+       
+
+    # def _check_for_losses(self):
+        # for graph_title in graphs_dict.keys():
+            # self._check_graph_loss(graph_title)
+
+        # check if there is a datapoint with a 0
+        # check if there is a nonzero datapoint to the left of it
+            # if there is, requery between the nonzero and the zero with a *10 graph step
+        # check if there is a nonzero datapoint to the right of it
+            # if there is, requery between the nonzero and the zero with a *10 graph step
+
