@@ -41,7 +41,7 @@ class Graphs():
         }
 
     # given an end_time (datetime) and an offset_str (string) (e.g. "12h5m30s"),
-    #  return a new datetime offset away from the end_time
+    # return a new datetime object offset away from the end_time
     def _find_time_from_offset(self, end_time, offset_str):
         # get the offset in a usable form: {..., 'hours':____, 'minutes':___, 'seconds':____}
         time_dict = get_time_dict_from_str(offset_str)
@@ -49,7 +49,7 @@ class Graphs():
         # offset and pass in parameters as values from time_dict
         time_offset = timedelta(**time_dict)
         # return the start time
-        return end_time - time_offset
+        return end_time-time_offset
 
     # assembles string for the time filter to be passed into query_api_site_for_graph()
     def _assemble_time_filter(self):
@@ -132,8 +132,8 @@ class Graphs():
             if show_runtimes:
                 start_time = time.time()
 
-            # store the two queries' values. Originally graph_df only stores
-            # read values instead of read+write. Later, it is updated to store both.
+            # store the two queries' values. Originally graph_df only stores read 
+            # values instead of read+write. Later, it is updated to store both.
             graph_df = self._generate_graph_df(query_title, query_pair[0], show_runtimes=show_runtimes)
             graph_df_write = self._generate_graph_df(query_title, query_pair[1], show_runtimes=show_runtimes)
 
@@ -149,7 +149,7 @@ class Graphs():
         return graphs_dict
 
     # generate and return a list of all the graphs
-    def get_graphs_dict(self, display_time_as_timestamp=True, only_include_worker_pods=False, show_runtimes=False):
+    def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
         for graph_title, graph in graphs_dict.items():
             # for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
