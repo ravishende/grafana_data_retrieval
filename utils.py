@@ -103,7 +103,7 @@ def get_time_dict_from_str(time_str):
 
     return time_dict
 
-
+#gets the worker id for a given pod or returns none if it is not a bp3d-worker
 def get_worker_id(pod_name):
     worker_title = 'bp3d-worker-k8s-'
     # if pod_name is a bp3d worker, return the ensemble
@@ -112,6 +112,13 @@ def get_worker_id(pod_name):
         return pod_name[title_len:-1]
     # otherwise, return None
     return None
+
+# for every worker pod in a given df, change pod's value to just be the worker id, 
+# drop all non-worker pods, then return that new, filtered dataframe
+def filter_df_for_workers(dataframe):
+    dataframe = dataframe.apply(lambda row: get_worker_id(row["Pod"]))
+    dataframe = dataframe.dropna(columns=["Pod"])
+    return dataframe
 
 
 # writes json data to a file
