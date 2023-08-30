@@ -9,6 +9,7 @@ import pandas as pd
 # set pandas display dataframe options to display all columns
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
+# pd.set_option('display.max_rows', None)
 
 # create variables for classes
 header_class = Header()
@@ -83,4 +84,7 @@ def print_all_data(data_dict=None):
 # run all code
 result_dict = get_all_data(only_include_worker_pods=False)
 print_all_data(result_dict)
-# graphs_class._check_for_losses()
+graphs_dict = result_dict['graphs']
+graphs_class.check_for_losses(graphs_dict)
+
+
