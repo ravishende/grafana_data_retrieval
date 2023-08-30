@@ -4,7 +4,7 @@ from graphs import Graphs
 from termcolor import colored
 import pandas as pd
 
-# set pandas display dataframe options
+# set pandas display dataframe options to display all columns
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
@@ -30,7 +30,12 @@ def get_all_data():
 		show_runtimes=False
 	)
 
-	return header_dict, tables_dict, graphs_dict
+	return_dict = {
+		'header':header_dict, 
+		'tables':tables_dict, 
+		'graphs':graphs_dict
+	}
+	return return_dict
 
 
 # Helper Function: for a given dictionary in the form {titles:dataframes}
@@ -48,25 +53,26 @@ def print_dict(dictionary):
 
 
 # prints data for headers, tables, and graphs.
-def print_all_data(header_dict=None, tables_dict=None, graphs_dict=None):
-	if header_dict is None or tables_dict is None or graphs_dict is None:
-		header_dict, tables_dict, graphs_dict = get_all_data()
+def print_all_data(data_dict=None):
+	if data_dict is None:
+		data_dict = get_all_data()
 
 	print("\n\n\n\n", "*"*100)
 	print(colored("                Header:", "magenta"))
 	print("*" * 100)
-	print_dict(header_dict)
+	print_dict(data_dict['header'])
 
 	print("\n\n\n\n", "*"*100)
 	print(colored("                Tables:", "magenta"))
 	print("*" * 100)
-	print_dict(tables_dict)
+	print_dict(data_dict['tables'])
 
 	print("\n\n\n\n", "*"*100)
 	print(colored("                Graphs:", "magenta"))
 	print("*" * 100)
-	print_dict(graphs_dict)
+	print_dict(data_dict['graphs'])
 
 
-header, tables, graphs = get_all_data()
-print_all_data(header, tables, graphs)
+#run all code
+result_dict = get_all_data()
+print_all_data(result_dict)
