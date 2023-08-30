@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 import pandas as pd
 from utils import query_api_site_for_graph, get_result_list, get_time_dict_from_str, filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION, DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP

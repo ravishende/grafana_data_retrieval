@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 from header import Header
 from tables import Tables
 from graphs import Graphs
