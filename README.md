@@ -7,21 +7,21 @@ It collects all of the information that can be found on the following [grafana](
 
 It displays each statistic by Node and Pod, rather than a sum of all pods like Grafana does.
 
-To run the code to collect all information for the header, tables, and graphs, simply run main.py
+Running main.py will collect and print all information for the header, tables, and graphs.
 
 ___
 
 ## Data Collected
 
 There are 3 main types of data collected:
-1. Header data: 
-	Singular datapoints (per pod) on CPU and Memory Utilization
+1. **Header data**: 
+	- Singular datapoints (per pod) on CPU and Memory Utilization
 
-2. Tables: 
-	Data tables containing several columns of statistics about related topics 
+2. **Tables**: 
+	- Data tables containing several columns of statistics about related topics 
 
-3. Graphs:
-	A table of datapoints containing several times and values per pod that can be displayed with a graph containing several colored lines (one line per pod).
+3. **Graphs**:
+	- A table of datapoints containing several times and values per pod that can be displayed with a graph containing several colored lines (one line per pod).
 
 ### Header:
 ![Header](extras/example_header.png)
