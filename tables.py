@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 import pandas as pd
 from utils import query_api_site, get_result_list, filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION
@@ -143,7 +145,7 @@ class Tables():
             'Current Storage IO': self._get_storage_io()
         }
 
-        #filter by worker pods if requested
+        # filter by worker pods if requested
         if only_include_worker_pods:
             for title, table in tables_dict.items():
                 tables_dict[title] = filter_df_for_workers(table)
