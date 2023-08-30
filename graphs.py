@@ -176,6 +176,7 @@ class Graphs():
         drop_indeces = []
         back_online_indeces = []
         drop_prev_values = []
+        back_online_values = []
         pods_dropped = []
         pods_back_online = []
         #loop through looking for losses and back online
@@ -200,6 +201,7 @@ class Graphs():
             if previous_value == 0 and current_value != 0:
                 if current_pod in pods_dropped:
                     back_online_indeces.append(index)
+                    back_online_values.append(current_value)
                     pods_back_online.append(current_pod)
 
             #update old pod and value for next iteration
@@ -212,6 +214,8 @@ class Graphs():
         pprint(back_online_indeces)
         print("\nValues Before Drop:")
         pprint(drop_prev_values)
+        print("\nValues Back Online")
+        pprint(back_online_values)
         print("\nPods Dropped:")
         pprint(pods_dropped)
         print("\nPods Back Online:")
