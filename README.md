@@ -2,10 +2,12 @@
 
 This code base uses Python and PromQL querying to collect data from PromQL databases about analytics of wifire-quicfire runs.
 
-It collects all of the information that can be found at the following grafana website:
-	https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=default&var-cluster=&var-namespace=wifire-quicfire&from=1690454188000&to=1690472188000
+It collects all of the information that can be found on the following [grafana](https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=default&var-cluster=&var-namespace=wifire-quicfire&from=1690454188000&to=1690472188000) website.
+	
 
 It displays each statistic by Node and Pod, rather than a sum of all pods like Grafana does.
+
+To run the code to collect all information for the header, tables, and graphs, simply run main.py
 
 ___
 
@@ -38,7 +40,10 @@ There are 3 main inputs (defined in inputs.py) that specify what information wil
 2. DEFAULT_GRAPH_STEP
 3. DEFAULT_GRAPH_TIME_OFFSET
 
+You can also specify specific inputs in the parameters when calling a class in main.py
+
+Furthermore, you can see how inputs affect a specific query [here](https://thanos.nrp-nautilus.io/).
 
 
-For more information on the code base and data collected, look at extras/data_retrieval.pptx
+For more information on the code base, inputs, and data collected, look at extras/data_retrieval.pptx
 

@@ -79,7 +79,7 @@ class Tables():
 
     def _calc_percent(self, numerator_col, divisor_col):
         # divide the two columns, then multiply by 100 to get the percentage
-        result = numerator_col.astype(float).div(divisor_col).astype(float)
+        result = numerator_col.astype(float).div(divisor_col.astype(float))
         return result.multiply(100)
 
     def _get_cpu_quota(self):
