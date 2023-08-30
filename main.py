@@ -18,10 +18,10 @@ graphs_class = Graphs()
 # one with all tables, and one with all graph data
 def get_all_data():
 	print("    Retrieving Header Data")
-	header_dict = header_class.get_header_dict()
+	header_dict = header_class.get_header_dict(only_include_worker_pods=False)
 
 	print("    Retrieving Tables Data")
-	tables_dict = tables_class.get_tables_dict()
+	tables_dict = tables_class.get_tables_dict(only_include_worker_pods=False)
 
 	print("    Retrieving Graphs Data")
 	graphs_dict = graphs_class.get_graphs_dict(
