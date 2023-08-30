@@ -42,7 +42,7 @@ def get_all_data():
 # print the title and dataframe of each item in the dict
 def print_dict(dictionary):
     for title, dataframe in dictionary.items():
-        print("\n\n", "-"*100, "\n")
+        print("\n\n" + "-"*100, "\n")
         print("            ", colored(title, "green"))
         print("-" * 100, "\n")
         if len(dataframe.index) > 0:
@@ -57,17 +57,17 @@ def print_all_data(data_dict=None):
     if data_dict is None:
         data_dict = get_all_data()
 
-    print("\n\n\n\n", "*"*100)
+    print("\n\n\n\n" + "*"*100)
     print(colored("                Header:", "magenta"))
     print("*" * 100)
     print_dict(data_dict['header'])
 
-    print("\n\n\n\n", "*"*100)
+    print("\n\n\n\n" + "*"*100)
     print(colored("                Tables:", "magenta"))
     print("*" * 100)
     print_dict(data_dict['tables'])
 
-    print("\n\n\n\n", "*"*100)
+    print("\n\n\n\n" + "*"*100)
     print(colored("                Graphs:", "magenta"))
     print("*" * 100)
     print_dict(data_dict['graphs'])

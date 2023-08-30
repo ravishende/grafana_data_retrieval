@@ -61,10 +61,19 @@ class Graphs():
 
         return time_filter
 
-    # get 4 lists: times, values, nodes, and pods for a given graph query
-    def _generate_graph_df(self, query_title, query, show_runtimes=False):
-        # create time filter to then generate list of all datapoints for the graph
-        time_filter = self._assemble_time_filter()
+	# get 4 lists: times, values, nodes, and pods for a given graph query
+	def _generate_graph_df(self, query_title, query, show_runtimes=False):
+		# create time filter to then generate list of all datapoints for the graph
+		time_filter = self._assemble_time_filter()
+		
+		if show_runtimes:
+			start=time.time()
+
+		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
+		
+		if show_runtimes:
+			end=time.time()
+			print("\ntime elapsed for querying:", colored(end-start, "green"))
 
         if show_runtimes:
             start = time.time()
