@@ -168,53 +168,71 @@ class Graphs():
         return graphs_dict
 
 
-    def _check_graph_loss(self, query_title='Rate of Transmitted Packets'):
-        # get graphs dict
-        query = self.queries_dict[query_title]
-        graph = self._generate_graph_df(query_title, query, show_runtimes=True)
-        # for each graph in graphs dict
-            # check for a 0 sandwich...
+    def _check_graph_loss(self, graph_title, graph_df):
+        #variables
         previous_value = 0
         previous_pod = None
+        #data to print
         drop_indeces = []
         back_online_indeces = []
-        drop_values = []
+        drop_prev_values = []
         pods_dropped = []
         pods_back_online = []
-        for index in graph.index:
-            current_value = graph[query_title][index]
-            current_pod = graph["Pod"][index]
-            #2 times to note: 
-                # 1. previous == 0, current != 0 --> back online
-                # 2. previous != 0, current == 0 --> potential drop
+        #loop through looking for losses and back online
+        for index in range(len(graph_df)):
+            #store new pod and value
+            current_value = graph_df[graph_title][index]
+            current_pod = graph_df["Pod"][index]
+
+            #during a switch btwn two pods, it doesn't matter if values change
             if previous_pod != current_pod:
+                previous_value = current_value
+                previous_pod = current_pod
                 continue
 
-            if previous_value == 0 and current_value != 0:
+            #pod dropped
+            if previous_value != 0 and current_value == 0:
                 drop_indeces.append(index)
-                drop_values.append(current_value)
+                drop_prev_values.append(previous_value)
                 pods_dropped.append(current_pod)
 
-            if previous_value != 0 and current_value == 0:
-                back_online_indeces.append(index)
-                pods_back_online.append(current_pod)
+            #pod recovered
+            if previous_value == 0 and current_value != 0:
+                if current_pod in pods_dropped:
+                    back_online_indeces.append(index)
+                    pods_back_online.append(current_pod)
 
+            #update old pod and value for next iteration
             previous_value = current_value
             previous_pod = current_pod
 
         print("Drop Indices:")
         pprint(drop_indeces)
-        print("\n\nBack Online Indices:")
+        print("\nBack Online Indices:")
         pprint(back_online_indeces)
+        print("\nValues Before Drop:")
+        pprint(drop_prev_values)
+        print("\nPods Dropped:")
+        pprint(pods_dropped)
+        print("\nPods Back Online:")
+        pprint(pods_back_online)
+
        
 
-    # def _check_for_losses(self):
-        # for graph_title in graphs_dict.keys():
-            # self._check_graph_loss(graph_title)
+    def check_for_losses(self, graphs_dict=None):
+        if graphs_dict is None:
+            graphs_dict = self.get_graphs_dict()
+        print("*"*100)
+        print(colored("Check For Dropped Pods:", "magenta"))
+        print("*"*100)
+        for graph_title, graph in graphs_dict.items():
+            print("\n\n", colored(graph_title, "green"), "\n")
+            self._check_graph_loss(graph_title, graph)
+            print("\n\n")
 
-        # check if there is a datapoint with a 0
-        # check if there is a nonzero datapoint to the left of it
-            # if there is, requery between the nonzero and the zero with a *10 graph step
+
+
+        # For dropped indeces, requery between the nonzero (Time @ prev index) and the zero (Time @ dropped index) with a *10 graph step
         # check if there is a nonzero datapoint to the right of it
             # if there is, requery between the nonzero and the zero with a *10 graph step
 
