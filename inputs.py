@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 # namespace
 NAMESPACE = 'wifire-quicfire'
 # NAMESPACE = 'alto'  # used for testing when no data in wifire-quicfire

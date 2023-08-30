@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 import pandas as pd
 from utils import query_api_site, get_result_list, filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION
@@ -40,11 +42,11 @@ class Header():
 
         # generate a dataframe for each header item, then add it to header_dict
         for query_title, query in self.queries.items():
-            #generate dataframe
+            # generate dataframe
             json_data = query_api_site(query)
             header_item = self._generate_df(query_title, json_data)
 
-            #filter by worker pods if requested
+            # filter by worker pods if requested
             if only_include_worker_pods:
                 header_item = filter_df_for_workers(header_item)
 

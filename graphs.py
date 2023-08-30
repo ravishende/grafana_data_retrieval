@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 import pandas as pd
 from utils import query_api_site_for_graph, get_result_list, get_time_dict_from_str, filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION, DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP
@@ -29,7 +31,8 @@ class Graphs():
             'Rate of Transmitted Packets Dropped': 'sum by(node, pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
         }
         self.partial_queries_dict = {
-            # These two graphs need 2 queries each to calculate them. It didn't work to get everything with one query
+            # These two graphs need 2 queries each to calculate them.
+            # It didn't work to get everything with one query
             'IOPS(Read+Write)': [
                 'ceil(sum by(node, pod) (rate(container_fs_reads_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + ']) + ))',
                 'ceil(sum by(node, pod) (rate(container_fs_writes_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + '])))'
@@ -40,11 +43,13 @@ class Graphs():
             ]
         }
 
-    # given an end_time (datetime object) and an offset_str (string) (e.g. "12h5m30s"), return a new datetime object offset away from the end_time
+    # given an end_time (datetime) and an offset_str (string) (e.g. "12h5m30s"),
+    # return a new datetime object offset away from the end_time
     def _find_time_from_offset(self, end_time, offset_str):
         # get the offset in a usable form: {..., 'hours':____, 'minutes':___, 'seconds':____}
         time_dict = get_time_dict_from_str(offset_str)
-        # create new datetime timedelta to represent the time offset and pass in parameters as values from time_dict
+        # create new datetime timedelta to represent the time
+        # offset and pass in parameters as values from time_dict
         time_offset = timedelta(**time_dict)
         # return the start time
         return end_time-time_offset
@@ -130,7 +135,8 @@ class Graphs():
             if show_runtimes:
                 start_time = time.time()
 
-            # store the two queries' values. Originally graph_df only stores read values instead of read+write. Later, it is updated to store both.
+            # store the two queries' values. Originally graph_df only stores read
+            # values instead of read+write. Later, it is updated to store both.
             graph_df = self._generate_graph_df(query_title, query_pair[0], show_runtimes=show_runtimes)
             graph_df_write = self._generate_graph_df(query_title, query_pair[1], show_runtimes=show_runtimes)
 
