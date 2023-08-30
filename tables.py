@@ -48,7 +48,7 @@ class Tables():
             # each datapoint in parsed_data is a dictionary with node (str), pod (str), (int)
             node = datapoint['metric']['node']
             pod = datapoint['metric']['pod']
-            value = datapoint['value'][1] 
+            value = datapoint['value'][1]
             # timestamp = data_point['value'][0]
             # add a row to the end of the dataframe containing a node, pod, and value
             df.loc[len(df.index)] = [node, pod, value]
@@ -89,7 +89,8 @@ class Tables():
 
         # if not, fill in the table then return it
         self.cpu_quota = self._fill_df_by_queries(self.cpu_quota)
-        # calculate each percent column by dividing the two columns responsible for it then multiplying by 100
+        # calculate each percent column by dividing the two columns
+        # responsible for it then multiplying by 100
         self.cpu_quota['CPU Requests %'] = \
             self._calc_percent(self.cpu_quota['CPU Usage'], self.cpu_quota['CPU Requests'])
         self.cpu_quota['CPU Limits %'] = \
@@ -103,7 +104,8 @@ class Tables():
 
         # if not, fill in the table then return it
         self.mem_quota = self._fill_df_by_queries(self.mem_quota)
-        # calculate each percent column by dividing the two columns responsible for it
+        # calculate each percent column by dividing the two columns
+        # responsible for it
         self.mem_quota['Memory Requests %'] = \
             self._calc_percent(self.mem_quota['Memory Usage'], self.mem_quota['Memory Requests'])
         self.mem_quota['Memory Limits %'] = \
