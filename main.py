@@ -81,3 +81,4 @@ def print_all_data(data_dict=None):
 #run all code
 result_dict = get_all_data(only_include_worker_pods=False)
 print_all_data(result_dict)
+# graphs_class._check_for_losses()
