@@ -151,12 +151,13 @@ class Graphs():
 		for graph_title, graph in graphs_dict.items():
 			# for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
 			if(only_include_worker_pods):
-				graphs_dict[graph_title] = filter_df_for_workers(dataframe)
+				graph = filter_df_for_workers(graph)
 
 			# update graphs with correct time columns
 			if display_time_as_timestamp:
 				graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-				graphs_dict[graph_title] = graph
+				
+			graphs_dict[graph_title] = graph
 
 		return graphs_dict
 
