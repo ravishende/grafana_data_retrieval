@@ -37,7 +37,7 @@ def get_all_data(only_include_worker_pods=False):
     return_dict = {
         'header': header_dict,
         'tables': tables_dict,
-        'graphs': graphs_dict        
+        'graphs': graphs_dict
     }
 
     return return_dict
@@ -78,6 +78,6 @@ def print_all_data(data_dict=None):
     print_dict(data_dict['graphs'])
 
 
-#run all code
+# run all code
 result_dict = get_all_data(only_include_worker_pods=False)
 print_all_data(result_dict)

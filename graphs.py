@@ -132,7 +132,7 @@ class Graphs():
             if show_runtimes:
                 start_time = time.time()
 
-            # store the two queries' values. Originally graph_df only stores read 
+            # store the two queries' values. Originally graph_df only stores read
             # values instead of read+write. Later, it is updated to store both.
             graph_df = self._generate_graph_df(query_title, query_pair[0], show_runtimes=show_runtimes)
             graph_df_write = self._generate_graph_df(query_title, query_pair[1], show_runtimes=show_runtimes)
