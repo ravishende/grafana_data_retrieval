@@ -67,7 +67,7 @@ class Graphs():
 		
 		if show_runtimes:
 			start=time.time()
-		
+
 		result_list = get_result_list(query_api_site_for_graph(query, time_filter))
 		
 		if show_runtimes:
@@ -119,6 +119,7 @@ class Graphs():
 
 			# collect graph data
 			graph_df = self._generate_graph_df(query_title, query, show_runtimes=show_runtimes)
+			graphs_dict[query_title] = graph_df
 
 			if show_runtimes:
 				end_time=time.time()
