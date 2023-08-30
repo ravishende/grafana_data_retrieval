@@ -33,5 +33,12 @@ There are 3 main types of data collected:
 ___
 
 ## Inputs
-There are 3 main inputs that specify what information will be returned
+There are 3 main inputs (defined in inputs.py) that specify what information will be returned:
+1. DEFAULT_DURATION
+2. DEFAULT_GRAPH_STEP
+3. DEFAULT_GRAPH_TIME_OFFSET
+
+
+
+For more information on the code base and data collected, look at extras/data_retrieval.pptx
 
