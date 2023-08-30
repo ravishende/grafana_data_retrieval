@@ -1,5 +1,5 @@
 import pandas as pd
-from utils import query_api_site_for_graph, get_result_list, get_worker_id, get_time_dict_from_str
+from utils import query_api_site_for_graph, get_result_list, get_time_dict_from_str, filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION, DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP
 from termcolor import colored
 from datetime import datetime, timedelta
@@ -28,7 +28,8 @@ class Graphs():
             'Rate of Transmitted Packets Dropped': 'sum by(node, pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
         }
         self.partial_queries_dict = {
-            # These two graphs need 2 queries each to calculate them. It didn't work to get everything with one query
+            # These two graphs need 2 queries each to calculate them.
+            # It didn't work to get everything with one query
             'IOPS(Read+Write)': [
                 'ceil(sum by(node, pod) (rate(container_fs_reads_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + ']) + ))',
                 'ceil(sum by(node, pod) (rate(container_fs_writes_total{container!="", namespace="' + self.namespace + '"}[' + self.duration + '])))'
@@ -39,12 +40,13 @@ class Graphs():
             ]
         }
 
-    # given an end_time (datetime object) and an offset_str (string) (e.g. "12h5m30s"),
-    #  return a new datetime object offset away from the end_time
+    # given an end_time (datetime) and an offset_str (string) (e.g. "12h5m30s"),
+    #  return a new datetime offset away from the end_time
     def _find_time_from_offset(self, end_time, offset_str):
         # get the offset in a usable form: {..., 'hours':____, 'minutes':___, 'seconds':____}
         time_dict = get_time_dict_from_str(offset_str)
-        # create new datetime timedelta to represent the time offset and pass in parameters as values from time_dict
+        # create new datetime timedelta to represent the time
+        # offset and pass in parameters as values from time_dict
         time_offset = timedelta(**time_dict)
         # return the start time
         return end_time - time_offset
@@ -65,14 +67,14 @@ class Graphs():
     def _generate_graph_df(self, query_title, query, show_runtimes=False):
         # create time filter to then generate list of all datapoints for the graph
         time_filter = self._assemble_time_filter()
-        
+
         if show_runtimes:
-            start=time.time()
+            start = time.time()
 
         result_list = get_result_list(query_api_site_for_graph(query, time_filter))
-        
+
         if show_runtimes:
-            end=time.time()
+            end = time.time()
             print("\ntime elapsed for querying:", colored(end-start, "green"))
 
         times_column = []
@@ -82,10 +84,10 @@ class Graphs():
 
         # loop through the data for each pod. The data has: node, pod, values, timestamps
         for datapoint in result_list:
-            # prepare data to be extracted  
+            # prepare data to be extracted
             values_list = []
             times_list = []
-            
+
             # fill in lists
             for time_value_pair in datapoint['values']:
                 times_list.append(time_value_pair[0])
@@ -93,13 +95,12 @@ class Graphs():
             # There is only one node and pod per pod, so these columns will be constant for each pod.
             node_list = [datapoint['metric']['node']]*len(times_list)
             pod_list = [datapoint['metric']['pod']]*len(times_list)
-            
+
             # add pod's lists to the whole graph's lists
             times_column.extend(times_list)
             values_column.extend(values_list)
             nodes_column.extend(node_list)
             pods_column.extend(pod_list)
-
 
         # make and populate graph dataframe
         graph_df = pd.DataFrame()
@@ -123,15 +124,16 @@ class Graphs():
             graphs_dict[query_title] = graph_df
 
             if show_runtimes:
-                end_time=time.time()
+                end_time = time.time()
                 print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
-        
+
         # get graphs from partial queries
         for query_title, query_pair in tqdm(self.partial_queries_dict.items()):
             if show_runtimes:
-                start_time=time.time()
-            
-            # store the two queries' values. Originally graph_df only stores read values instead of read+write. Later, it is updated to store both.
+                start_time = time.time()
+
+            # store the two queries' values. Originally graph_df only stores
+            # read values instead of read+write. Later, it is updated to store both.
             graph_df = self._generate_graph_df(query_title, query_pair[0], show_runtimes=show_runtimes)
             graph_df_write = self._generate_graph_df(query_title, query_pair[1], show_runtimes=show_runtimes)
 
@@ -141,7 +143,7 @@ class Graphs():
             graphs_dict[query_title] = graph_df
 
             if show_runtimes:
-                end_time=time.time()
+                end_time = time.time()
                 print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 
         return graphs_dict
@@ -151,14 +153,13 @@ class Graphs():
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
         for graph_title, graph in graphs_dict.items():
             # for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
-            if(only_include_worker_pods):
+            if only_include_worker_pods:
                 graph = filter_df_for_workers(graph)
 
             # update graphs with correct time columns
             if display_time_as_timestamp:
                 graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-                
+
             graphs_dict[graph_title] = graph
 
         return graphs_dict
-
