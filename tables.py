@@ -135,11 +135,17 @@ class Tables():
             self.storage_io['Throughput(Read)'].astype(float) + self.storage_io['Throughput(Write)'].astype(float)
         return self.storage_io
 
-    def get_tables_dict(self):
+    def get_tables_dict(self, only_include_worker_pods=False):
         tables_dict = {
             'CPU Quota': self._get_cpu_quota(),
             'Memory Quota': self._get_mem_quota(),
             'Current Network Usage': self._get_network_usage(),
             'Current Storage IO': self._get_storage_io()
         }
+
+        #filter by worker pods if requested
+        if only_include_worker_pods:
+            for title, table in tables_dict.items():
+                tables_dict[title] = filter_df_for_workers(table)
+
         return tables_dict

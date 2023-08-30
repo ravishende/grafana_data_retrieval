@@ -35,11 +35,19 @@ class Header():
 
     # returns a dict in the form {header_title:dataframe}
     # where the dataframe contains header values per node, pod
-    def get_header_dict(self):
+    def get_header_dict(self, only_include_worker_pods=False):
         header_dict = {}
 
         # generate a dataframe for each header item, then add it to header_dict
         for query_title, query in self.queries.items():
+            #generate dataframe
             json_data = query_api_site(query)
-            header_dict[query_title] = self._generate_df(query_title, json_data)
+            header_item = self._generate_df(query_title, json_data)
+
+            #filter by worker pods if requested
+            if only_include_worker_pods:
+                header_item = filter_df_for_workers(header_item)
+
+            header_dict[query_title] = header_item
+
         return header_dict
