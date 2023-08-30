@@ -146,7 +146,7 @@ class Graphs():
 		return graphs_dict
 
 	# generate and return a list of all the graphs
-	def get_graphs_dict(self, display_time_as_timestamp=True, only_include_worker_pods=False, show_runtimes=False):
+	def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
 		graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
 		for graph_title, graph in graphs_dict.items():
 			# for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
@@ -156,10 +156,7 @@ class Graphs():
 			# update graphs with correct time columns
 			if display_time_as_timestamp:
 				graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-				
+
 			graphs_dict[graph_title] = graph
 
 		return graphs_dict
-
-
-		
