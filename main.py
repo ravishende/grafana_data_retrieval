@@ -85,6 +85,6 @@ def print_all_data(data_dict=None):
 result_dict = get_all_data(only_include_worker_pods=False)
 print_all_data(result_dict)
 graphs_dict = result_dict['graphs']
-graphs_class.check_for_losses(graphs_dict)
-
+graphs_losses_dict = graphs_class.check_for_losses(graphs_dict, print_info=True)
+requeried_graphs_dict = graphs_class.requery_losses(graphs_losses_dict)
 
