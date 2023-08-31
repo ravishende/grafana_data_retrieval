@@ -170,19 +170,13 @@ class Graphs():
     # returns a dict in the form: {'dropped': {pod: index_dropped, ...}, 'recovered':{pod: index_recovered, ...} }
     # returns none if no losses
     def _check_graph_loss(self, graph_title, graph_df, print_info=False):
-        #variables
+        # variables
         previous_value = 0
         previous_pod = None
-        #data to return
-        # graph_losses = {
-        #     'drop_prev_values': [],
-        #     'back_online_values': [],
-        #     'pods_dropped':[],
-        #     'pods_back_online':[]
-        # }
+        # data to return
         pods_dropped_indeces = {}
         pods_recovered_indeces = {}
-        #loop through looking for lost and/or recovered pods
+        # loop through looking for lost and/or recovered pods
         for index in range(len(graph_df)):
             # store new pod and value
             current_value = graph_df[graph_title][index]
@@ -197,16 +191,11 @@ class Graphs():
             # pod dropped
             if previous_value != 0 and current_value == 0:
                 pods_dropped_indeces[current_pod] = index
-                # graph_losses[drop_prev_values].append(previous_value)
-                # graph_losses[pods_dropped].append(current_pod)
-
 
             # pod recovered
             if previous_value == 0 and current_value != 0:
                 if current_pod in pods_dropped_indeces.keys():
                     pods_recovered_indeces[current_pod] = index
-                    # back_online_values.append(graph_losses[current_value])
-                    # pods_back_online.append(graph_losses[current_pod])
 
             #update old pod and value for next iteration
             previous_value = current_value
@@ -233,7 +222,6 @@ class Graphs():
             for pod, ind in pods_recovered_indeces.items():
                 recovered_val = graph_df[graph_title][ind]
                 print(f'{pod} || {ind} || {recovered_val}')
-
 
         return {'dropped': pods_dropped_indeces, 'recovered': pods_recovered_indeces}
 
