@@ -167,76 +167,129 @@ class Graphs():
 
         return graphs_dict
 
-
-    def _check_graph_loss(self, graph_title, graph_df):
+    # returns a dict in the form: {'dropped': {pod: index_dropped, ...}, 'recovered':{pod: index_recovered, ...} }
+    # returns none if no losses
+    def _check_graph_loss(self, graph_title, graph_df, print_info=False):
         #variables
         previous_value = 0
         previous_pod = None
-        #data to print
-        drop_indeces = []
-        back_online_indeces = []
-        drop_prev_values = []
-        back_online_values = []
-        pods_dropped = []
-        pods_back_online = []
-        #loop through looking for losses and back online
+        #data to return
+        # graph_losses = {
+        #     'drop_prev_values': [],
+        #     'back_online_values': [],
+        #     'pods_dropped':[],
+        #     'pods_back_online':[]
+        # }
+        pods_dropped_indeces = {}
+        pods_recovered_indeces = {}
+        #loop through looking for lost and/or recovered pods
         for index in range(len(graph_df)):
-            #store new pod and value
+            # store new pod and value
             current_value = graph_df[graph_title][index]
             current_pod = graph_df["Pod"][index]
 
-            #during a switch btwn two pods, it doesn't matter if values change
+            # when switching between pods, it doesn't matter if values change
             if previous_pod != current_pod:
                 previous_value = current_value
                 previous_pod = current_pod
                 continue
 
-            #pod dropped
+            # pod dropped
             if previous_value != 0 and current_value == 0:
-                drop_indeces.append(index)
-                drop_prev_values.append(previous_value)
-                pods_dropped.append(current_pod)
+                pods_dropped_indeces[current_pod] = index
+                # graph_losses[drop_prev_values].append(previous_value)
+                # graph_losses[pods_dropped].append(current_pod)
 
-            #pod recovered
+
+            # pod recovered
             if previous_value == 0 and current_value != 0:
-                if current_pod in pods_dropped:
-                    back_online_indeces.append(index)
-                    back_online_values.append(current_value)
-                    pods_back_online.append(current_pod)
+                if current_pod in pods_dropped_indeces.keys():
+                    pods_recovered_indeces[current_pod] = index
+                    # back_online_values.append(graph_losses[current_value])
+                    # pods_back_online.append(graph_losses[current_pod])
 
             #update old pod and value for next iteration
             previous_value = current_value
             previous_pod = current_pod
 
-        print("Drop Indices:")
-        pprint(drop_indeces)
-        print("\nBack Online Indices:")
-        pprint(back_online_indeces)
-        print("\nValues Before Drop:")
-        pprint(drop_prev_values)
-        print("\nValues Back Online")
-        pprint(back_online_values)
-        print("\nPods Dropped:")
-        pprint(pods_dropped)
-        print("\nPods Back Online:")
-        pprint(pods_back_online)
+        # cannot have recoverd pods if none were dropped.
+        # if both are dropped and recovered are empty, return None
+        if len(pods_dropped_indeces) == 0:
+            return None
+
+        # print collected statistics
+        if print_info:
+            # Print Info for Pods Dropped: pod, index dropped, previous value
+            print("\n\n" + '='*30)
+            print(colored(graph_title, "blue"), "\n" + '='*30)
+            print(colored("Pods Dropped || Index || Previous Value", "green"))
+            for pod, ind in pods_dropped_indeces.items():
+                prev_val = graph_df[graph_title][ind-1]
+                print(f'{pod} || {ind} || {prev_val}')
+
+            # Print Info for Pods Recovered: pod, index recovered, recovered value
+            print("\n")
+            print(colored("Pods Recovered || Index || Recovered Value", "green"))
+            for pod, ind in pods_recovered_indeces.items():
+                recovered_val = graph_df[graph_title][ind]
+                print(f'{pod} || {ind} || {recovered_val}')
+
+
+        return {'dropped': pods_dropped_indeces, 'recovered': pods_recovered_indeces}
 
        
 
-    def check_for_losses(self, graphs_dict=None):
+    def check_for_losses(self, graphs_dict=None, print_info=False):
+        # generate graphs_dict if it isn't passed in
         if graphs_dict is None:
             graphs_dict = self.get_graphs_dict()
+
+        graphs_losses_dict = {}
+
         print("*"*100)
         print(colored("Check For Dropped Pods:", "magenta"))
         print("*"*100)
+
         for graph_title, graph in graphs_dict.items():
-            print("\n\n", colored(graph_title, "green"), "\n")
-            self._check_graph_loss(graph_title, graph)
-            print("\n\n")
+            #collect and store loss data
+            graph_loss_data = self._check_graph_loss(graph_title, graph, print_info=print_info)
+            graphs_losses_dict[graph_title] = graph_loss_data
+
+        return graphs_losses_dict
+
+    def _requery_graph_loss(self, graph, graph_loss_dict):
+        graph_losses = {'dropped': [], 'recovered': []}
+        # for each drop index
 
 
+        # for category, losses in graph_loss_dict:
+            # look up graph timestamp for drop index and the prior index
+            #check if timestamp is in seconds or not, then run the assemble_time_stamp on it
+            # requery with those two timestamps as end_time and start_time respectively with graph_step *10
+            # append to graph_loss['dropped'] 
+        # repeat process for each recovery index, appending to graph_loss['recovered'] instead
+        return graph_losses
 
-        # For dropped indeces, requery between the nonzero (Time @ prev index) and the zero (Time @ dropped index) with a *10 graph step
-        # check if there is a nonzero datapoint to the right of it
-            # if there is, requery between the nonzero and the zero with a *10 graph step
+    def requery_losses(self, graphs_dict):
+        requeried_graphs_dict = {}
+        # example structure: 
+        '''
+        requeried_graphs_dict = {
+            'Received Bandwidth':{
+                'dropped':[graph_df_1, graph_df_2, graph_df_3], 
+                'recovered':[graph_df_1, graph_df_2]
+            }, 
+            'Transmit Bandwidth':{
+                'dropped':[...], 
+                'recovered':[...]
+            } 
+        }
+        '''
+        # code:
+        # for each graph in graphs_losses
+        return requeried_graphs_dict
+
+    def print_requeried_graphs(self, requeried_graphs_dict=None):
+        if requeried_graphs_dict is None:
+            requeried_graphs_dict = self.requery_losses()
 
