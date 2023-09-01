@@ -54,12 +54,37 @@ class Graphs():
         # return the start time
         return end_time-time_offset
 
+    # takes in a time in seconds since epoch (float or int), pandas Timestamp(), or datetime object formats
+    # returns the time as a datetime object
+    def _convert_to_datetime(time):
+        # check if time is a pandas Timestamp()
+        # technically this counts as an instance of type datetime but is not the same
+        # so we must check if time is a pandas Timestamp() before checking if it's a datetime object
+        if isinstance(time, pd.Timestamp):
+            return time.to_pydatetime()
+        #check if time is a float (seconds since the epoch: 01/01/1970)
+        if isinstance(time, float) or isinstance(time, int):
+            return datetime.fromtimestamp(time)
+        #check if time is a datetime object
+        if isinstance(time, datetime):
+            return time
+        # if time is of unsupported type, raise error
+        raise TypeError("argument for _convert_to_datetime() must be of type float, int, pandas.Timestamp, or datetime.datetime")
+
+    # TODO: handle if just one of start or end are passed in
     # assembles string for the time filter to be passed into query_api_site_for_graph()
-    def _assemble_time_filter(self):
-        # calculate start time
-        start = self._find_time_from_offset(self.end, self.time_offset)
+    def _assemble_time_filter(self, start=None, end=None):
+        if start is None and end is None:
+            # calculate start time
+            start = self._find_time_from_offset(self.end, self.time_offset)
+            end = self.end
+        else:
+            # make sure both start and end are datetime objects
+            start = self._convert_to_datetime(start)
+            end = self._convert_to_datetime(end)
+        
         # assemble strings
-        end_str = self.end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        end_str = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         start_str = start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         # combine strings into time filter format
         time_filter = f'start={start_str}&end={end_str}&step={self.time_step}'
@@ -167,7 +192,9 @@ class Graphs():
 
         return graphs_dict
 
-    # returns a dict in the form: {'dropped': {pod: index_dropped, ...}, 'recovered':{pod: index_recovered, ...} }
+    # returns a dict in the form: 
+    # {'dropped': {pod1:index_dropped1, pod2:indexdropped2, ...}, 
+    #  'recovered': {pod1:index_dropped1, pod2:indexdropped2, ...} }
     # returns none if no losses
     def _check_graph_loss(self, graph_title, graph_df, print_info=False):
         # variables
@@ -223,9 +250,7 @@ class Graphs():
                 recovered_val = graph_df[graph_title][ind]
                 print(f'{pod} || {ind} || {recovered_val}')
 
-        return {'dropped': pods_dropped_indeces, 'recovered': pods_recovered_indeces}
-
-       
+        return {'dropped': pods_dropped_indeces, 'recovered': pods_recovered_indeces}       
 
     def check_for_losses(self, graphs_dict=None, print_info=False):
         # generate graphs_dict if it isn't passed in
@@ -245,8 +270,8 @@ class Graphs():
 
         return graphs_losses_dict
 
-    def _requery_graph_loss(self, graph, graph_loss_dict):
-        graph_losses = {'dropped': [], 'recovered': []}
+    def _requery_graph_loss(self, graph, graph_loss_data):
+        graph_df_losses = {'dropped': [], 'recovered': []}
         # for each drop index
 
 
