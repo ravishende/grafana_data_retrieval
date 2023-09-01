@@ -125,6 +125,21 @@ def filter_df_for_workers(dataframe):
     dataframe = dataframe.dropna(columns=["Pod"])
     return dataframe
 
+def print_heading(heading):
+    indented_heading = " "*15 + heading + ":"
+    print("\n\n\n\n" + "*"*100)
+    print(colored(indented_heading, "magenta"))
+    print("*" * 100)
+    
+def print_title(title):
+    print("\n\n" + "-"*100, "\n")
+    print("            ", colored(title, "green"))
+    print("-" * 100, "\n")
+
+def print_sub_title(sub_title):
+    print("\n\n" + '='*30)
+    print(colored(sub_title, "blue"))
+    print('='*30)
 
 # writes json data to a file
 def write_json(data):
