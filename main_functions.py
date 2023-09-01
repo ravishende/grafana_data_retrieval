@@ -11,7 +11,7 @@ graphs_class = Graphs()
 
 # returns three dicts: one containing all header data,
 # one with all tables, and one with all graph data
-def get_all_data(only_include_worker_pods=False):
+def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False):
     print("    Retrieving Header Data")
     header_dict = header_class.get_header_dict(
         only_include_worker_pods=only_include_worker_pods
@@ -25,8 +25,8 @@ def get_all_data(only_include_worker_pods=False):
     print("    Retrieving Graphs Data")
     graphs_dict = graphs_class.get_graphs_dict(
         only_include_worker_pods=only_include_worker_pods,
-        display_time_as_timestamp=True,
-        show_runtimes=False
+        display_time_as_timestamp=display_time_as_timestamp,
+        show_runtimes=show_graph_runtimes
     )
 
     return_dict = {
