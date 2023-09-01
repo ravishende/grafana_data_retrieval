@@ -19,8 +19,8 @@ class Graphs():
         self.time_offset = time_offset
         self.time_step = time_step
 
-        # dict storing titles and their queries
-        self.queries_dict = {
+        # dict storing titles and their queries.
+        self.queries_dict = { # Note: Do not change the white space in 'sum by(node, pod) ' because _update_query_for_requery() relies on it
             'CPU Usage': 'sum by(node, pod) (node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})',
             'Memory Usage (w/o cache)': 'sum by(node, pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""})',
             'Receive Bandwidth': 'sum by(node, pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
@@ -270,18 +270,31 @@ class Graphs():
 
         return graphs_losses_dict
 
+    # change a query to only query for the given pod
+    def _update_query_for_requery(query, pod):
+        # change 'sum by(node, pod) ' to just be 'sum' so we only get data for the specified pod
+        str_to_delete = ' by(node, pod) '
+        query = query.replace(str_to_delete, '')
+
+        # add specific pod to query
+        namespace_index = query.find('namespace="')
+        pod_str = f'pod="{pod}", '
+        updated_query = query[:namespace_index] + pod_str + query[namespace_index:]
+
+        return updated_query
+
     def _requery_graph_loss(self, graph, graph_loss_data):
         graph_df_losses = {'dropped': [], 'recovered': []}
         # for each drop index
-
-
-        # for category, losses in graph_loss_dict:
+        for category, losses in graph_loss_dict:
+            
+            graph['Time'][index]
             # look up graph timestamp for drop index and the prior index
             #check if timestamp is in seconds or not, then run the assemble_time_stamp on it
             # requery with those two timestamps as end_time and start_time respectively with graph_step *10
             # append to graph_loss['dropped'] 
         # repeat process for each recovery index, appending to graph_loss['recovered'] instead
-        return graph_losses
+        return graph_df_losses
 
     def requery_losses(self, graphs_dict):
         requeried_graphs_dict = {}
