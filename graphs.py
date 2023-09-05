@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
-from utils import query_api_site_for_graph, get_result_list, get_time_dict_from_str, filter_df_for_workers
+from utils import query_api_site_for_graph, get_result_list, get_time_dict_from_str, filter_df_for_workers, print_heading, print_title, print_sub_title
 from inputs import NAMESPACE, DEFAULT_DURATION, DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP
 from termcolor import colored
 from datetime import datetime, timedelta
@@ -139,11 +139,23 @@ class Graphs():
 
         return graph_df
 
+    # TODO: handle if only one of queries_dict or partial_queries_dict is None
     # get a dictionary in the form of {graph titles: list of graph data}
-    def _generate_graphs(self, show_runtimes=False):
+    def _generate_graphs(self, show_runtimes=False, graphs_dict=None):
+        queries_dict = self.queries_dict
+        partial_queries_dict = self.partial_queries_dict
+        start_end_times = None
+
+        if graphs_dict is not None:
+            # reset queries dicts to be with the new updated requerying 
+            graphs_losses_dict = self._generate_
+            queries_dict, partial_queries_dict = self._generate_queries_dicts(graphs_losses_dict)
+            start_end_times = self._generate_start_end_times(graphs_dict, graphs_losses_dict)
+            self.check_for_losses()
+        
         graphs_dict = {}
         # get all of the initial graphs from the normal queries
-        for query_title, query in tqdm(self.queries_dict.items()):
+        for query_title, query in tqdm(queries_dict.items()):
             if show_runtimes:
                 start_time = time.time()
 
@@ -156,7 +168,7 @@ class Graphs():
                 print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 
         # get graphs from partial queries
-        for query_title, query_pair in tqdm(self.partial_queries_dict.items()):
+        for query_title, query_pair in tqdm(partial_queries_dict.items()):
             if show_runtimes:
                 start_time = time.time()
 
@@ -178,6 +190,7 @@ class Graphs():
 
     # generate and return a list of all the graphs
     def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
+        requeried_graphs_list = []
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
         for graph_title, graph in graphs_dict.items():
             # for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
@@ -192,6 +205,11 @@ class Graphs():
 
         return graphs_dict
 
+# _________________________________________
+#
+#           Requery Methods
+#__________________________________________
+
     # returns a dict in the form: 
     # {'dropped': {pod1:index_dropped1, pod2:indexdropped2, ...}, 
     #  'recovered': {pod1:index_dropped1, pod2:indexdropped2, ...} }
@@ -201,8 +219,8 @@ class Graphs():
         previous_value = 0
         previous_pod = None
         # data to return
-        pods_dropped_indeces = {}
-        pods_recovered_indeces = {}
+        pods_dropped = {}
+        pods_recovered = {}
         # loop through looking for lost and/or recovered pods
         for index in range(len(graph_df)):
             # store new pod and value
@@ -215,14 +233,19 @@ class Graphs():
                 previous_pod = current_pod
                 continue
 
-            # pod dropped
+            # pod dropped - was nonzero, now is zero
             if previous_value != 0 and current_value == 0:
-                pods_dropped_indeces[current_pod] = index
+                pods_dropped['pod'] = current_pod
+                pods_dropped['start'] = graph_df['Time'][index-1]
+                pods_dropped['end'] = graph_df['Time'][index]
 
-            # pod recovered
+            # pod recovered - was zero, now is nonzero
             if previous_value == 0 and current_value != 0:
-                if current_pod in pods_dropped_indeces.keys():
-                    pods_recovered_indeces[current_pod] = index
+                # check that pod was dropped in order for it to be recovered
+                if current_pod in pods_dropped.values():
+                    pods_recovered['pod'] = current_pod
+                    pods_recovered['start'] = graph_df['Time'][index-1]
+                    pods_recovered['end'] = graph_df['Time'][index]
 
             #update old pod and value for next iteration
             previous_value = current_value
@@ -236,21 +259,19 @@ class Graphs():
         # print collected statistics
         if print_info:
             # Print Info for Pods Dropped: pod, index dropped, previous value
-            print("\n\n" + '='*30)
-            print(colored(graph_title, "blue"), "\n" + '='*30)
-            print(colored("Pods Dropped || Index || Previous Value", "green"))
+            print_sub_title(graph_title)
+            print(colored("Pods Dropped || Time of Previous Value || Time Dropped || Previous Value", "green"))
             for pod, ind in pods_dropped_indeces.items():
                 prev_val = graph_df[graph_title][ind-1]
                 print(f'{pod} || {ind} || {prev_val}')
 
             # Print Info for Pods Recovered: pod, index recovered, recovered value
-            print("\n")
-            print(colored("Pods Recovered || Index || Recovered Value", "green"))
+            print(colored("\nPods Recovered || Time of Previous 0 || Time Recovered || Recovered Value", "green"))
             for pod, ind in pods_recovered_indeces.items():
                 recovered_val = graph_df[graph_title][ind]
                 print(f'{pod} || {ind} || {recovered_val}')
 
-        return {'dropped': pods_dropped_indeces, 'recovered': pods_recovered_indeces}       
+        return {'dropped': pods_dropped, 'recovered': pods_recovered}       
 
     def check_for_losses(self, graphs_dict=None, print_info=False):
         # generate graphs_dict if it isn't passed in
@@ -259,16 +280,24 @@ class Graphs():
 
         graphs_losses_dict = {}
 
-        print("*"*100)
-        print(colored("Check For Dropped Pods:", "magenta"))
-        print("*"*100)
-
         for graph_title, graph in graphs_dict.items():
-            #collect and store loss data
+            # collect and store loss data
             graph_loss_data = self._check_graph_loss(graph_title, graph, print_info=print_info)
             graphs_losses_dict[graph_title] = graph_loss_data
 
         return graphs_losses_dict
+        # graphs_losses_dict is in the form
+        # graphs_losses = {
+        #     'Received Bandwidth':{
+        #         'dropped':[{pod:pod_1, start:time_1, end:time_2}, {pod:pod_2, start:time_3, end:time_4}, {...}], 
+        #         'recovered':[{pod:pod_1, start:time_1, end:time_2}, {...}], 
+        #     }, 
+        #     'Transmit Bandwidth':{
+        #         'dropped':[{pod:pod_1, start:time_1, end:time_2}, {pod:pod_2, start:time_3, end:time_4}, {...}], 
+        #         'recovered':[{pod:pod_1, start:time_1, end:time_2}, {...}], 
+        #     },
+        #     ...
+        # }
 
     # change a query to only query for the given pod
     def _update_query_for_requery(query, pod):
@@ -283,21 +312,10 @@ class Graphs():
 
         return updated_query
 
-    def _requery_graph_loss(self, graph, graph_loss_data):
-        graph_df_losses = {'dropped': [], 'recovered': []}
-        # for each drop index
-        for category, losses in graph_loss_dict:
-            
-            graph['Time'][index]
-            # look up graph timestamp for drop index and the prior index
-            #check if timestamp is in seconds or not, then run the assemble_time_stamp on it
-            # requery with those two timestamps as end_time and start_time respectively with graph_step *10
-            # append to graph_loss['dropped'] 
-        # repeat process for each recovery index, appending to graph_loss['recovered'] instead
-        return graph_df_losses
-
-    def requery_losses(self, graphs_dict):
-        requeried_graphs_dict = {}
+    def requery_losses(self, graphs_dict, graphs_losses_dict, show_runtimes=False):
+        # Get new queries
+        
+        self._generate_graphs(show_runtimes=show_runtimes, graphs_losses_dict)
         # example structure: 
         '''
         requeried_graphs_dict = {
@@ -312,10 +330,37 @@ class Graphs():
         }
         '''
         # code:
-        # for each graph in graphs_losses
+        # for graph_title, graph in graphs_losses.items():
+        #     graph_loss_data = 
+        #     self._requery_graph_loss(graph_title, graph, graph_loss_data)
         return requeried_graphs_dict
 
-    def print_requeried_graphs(self, requeried_graphs_dict=None):
+    # returns 2 new dicts: each one with updated queries for requerying graphs
+    def _generate_queries_dicts(graphs_losses_dict):
+        queries = {}
+        partial_queries = {}
+        # fill in queries and partial queries with updated queries
+        for graph_title in graphs_losses_dict.keys(): 
+            if graph_title in self.queries_dict.keys():
+                updated_query = self._update_query_for_requery(self.queries_dict[graph_title])
+                queries[graph_title] = updated_query
+            else: 
+                #graph_title in self.partial_queries_dict
+                updated_query = self._update_query_for_requery(self.partial_queries_dict[graph_title])
+                partial_queries[graph_title] = updated_query
+
+        return queries, partial_queries
+
+    # generate requeried graphs dict if there is none, then print them
+    def print_requeried_graphs(self, graphs_dict=None, requeried_graphs_dict=None, show_runtimes=False):
         if requeried_graphs_dict is None:
-            requeried_graphs_dict = self.requery_losses()
+            if graphs_dict is None:
+                # raise error
+            requeried_graphs_dict = self.requery_losses(graphs_dict, graphs_losses_dict, show_runtimes)
+        print_heading("Requeried Graphs")
+        # for graph_title, graph_list in requeried_graphs_dict.items():
+        #     print_title(graph_title)
+        #     for graph in graph_lsit:
+        #         print(graph)
+        #         print("\n\n")
 
