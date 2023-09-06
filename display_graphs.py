@@ -1,6 +1,6 @@
 from utils import *
 from inputs import *
-from graph import *
+from graphs import *
 from pprint import pprint
 from rich import print as printc
 from datetime import datetime, timedelta
