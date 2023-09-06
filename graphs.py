@@ -92,9 +92,9 @@ class Graphs():
         return time_filter
 
     # get 4 lists: times, values, nodes, and pods for a given graph query
-    def _generate_graph_df(self, query_title, query, show_runtimes=False):
+    def _generate_graph_df(self, query_title, query, start=None, end=None, show_runtimes=False):
         # create time filter to then generate list of all datapoints for the graph
-        time_filter = self._assemble_time_filter()
+        time_filter = self._assemble_time_filter(start=start, end=end)
 
         if show_runtimes:
             start = time.time()
@@ -141,19 +141,11 @@ class Graphs():
 
     # TODO: handle if only one of queries_dict or partial_queries_dict is None
     # get a dictionary in the form of {graph titles: list of graph data}
-    def _generate_graphs(self, show_runtimes=False, graphs_dict=None):
+    def _generate_graphs(self, show_runtimes=False):
         queries_dict = self.queries_dict
         partial_queries_dict = self.partial_queries_dict
-        start_end_times = None
-
-        if graphs_dict is not None:
-            # reset queries dicts to be with the new updated requerying 
-            graphs_losses_dict = self._generate_
-            queries_dict, partial_queries_dict = self._generate_queries_dicts(graphs_losses_dict)
-            start_end_times = self._generate_start_end_times(graphs_dict, graphs_losses_dict)
-            self.check_for_losses()
-        
         graphs_dict = {}
+
         # get all of the initial graphs from the normal queries
         for query_title, query in tqdm(queries_dict.items()):
             if show_runtimes:
@@ -164,8 +156,8 @@ class Graphs():
             graphs_dict[query_title] = graph_df
 
             if show_runtimes:
-                end_time = time.time()
-                print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
+                    end_time = time.time()
+                    print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 
         # get graphs from partial queries
         for query_title, query_pair in tqdm(partial_queries_dict.items()):
@@ -211,16 +203,16 @@ class Graphs():
 #__________________________________________
 
     # returns a dict in the form: 
-    # {'dropped': {pod1:index_dropped1, pod2:indexdropped2, ...}, 
-    #  'recovered': {pod1:index_dropped1, pod2:indexdropped2, ...} }
+    # {'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+    #  'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]}
     # returns none if no losses
     def _check_graph_loss(self, graph_title, graph_df, print_info=False):
         # variables
         previous_value = 0
         previous_pod = None
         # data to return
-        pods_dropped = {}
-        pods_recovered = {}
+        pods_dropped = []
+        pods_recovered = []
         # loop through looking for lost and/or recovered pods
         for index in range(len(graph_df)):
             # store new pod and value
@@ -235,17 +227,25 @@ class Graphs():
 
             # pod dropped - was nonzero, now is zero
             if previous_value != 0 and current_value == 0:
-                pods_dropped['pod'] = current_pod
-                pods_dropped['start'] = graph_df['Time'][index-1]
-                pods_dropped['end'] = graph_df['Time'][index]
+                drop = {
+                    'pod': current_pod,
+                    'start': graph_df['Time'][index-1],
+                    'end': graph_df['Time'][index],
+                    'prev val': previous_value
+                }
+                pods_dropped.append(drop)
 
             # pod recovered - was zero, now is nonzero
             if previous_value == 0 and current_value != 0:
                 # check that pod was dropped in order for it to be recovered
-                if current_pod in pods_dropped.values():
-                    pods_recovered['pod'] = current_pod
-                    pods_recovered['start'] = graph_df['Time'][index-1]
-                    pods_recovered['end'] = graph_df['Time'][index]
+                if any(pod_dict['pod'] == current_pod for pod_dict in pods_dropped):
+                    recovery = {
+                        'pod': current_pod,
+                        'start': graph_df['Time'][index-1],
+                        'end': graph_df['Time'][index],
+                        'val': current_value
+                    }
+                    pods_recovered.append(recovery)
 
             #update old pod and value for next iteration
             previous_value = current_value
@@ -258,21 +258,45 @@ class Graphs():
 
         # print collected statistics
         if print_info:
-            # Print Info for Pods Dropped: pod, index dropped, previous value
             print_sub_title(graph_title)
-            print(colored("Pods Dropped || Time of Previous Value || Time Dropped || Previous Value", "green"))
-            for pod, ind in pods_dropped_indeces.items():
-                prev_val = graph_df[graph_title][ind-1]
-                print(f'{pod} || {ind} || {prev_val}')
+            # Print Info for Pods Dropped: pod, previous value, time of last value, time dropped,
+            print(colored("Pods Dropped || Previous Value || Time of Previous Value || Time Dropped", "green"))
+            for pod in pods_dropped:
+                print(f'{pod["pod"]} || {pod["prev val"]} || {pod["start"]} || {pod["end"]}')
 
-            # Print Info for Pods Recovered: pod, index recovered, recovered value
-            print(colored("\nPods Recovered || Time of Previous 0 || Time Recovered || Recovered Value", "green"))
-            for pod, ind in pods_recovered_indeces.items():
-                recovered_val = graph_df[graph_title][ind]
-                print(f'{pod} || {ind} || {recovered_val}')
+            # Print Info for Pods Recovered: pod, value, time of last 0, time recovered
+            print(colored("\nPods Recovered || Recovered Value || Time of Previous 0 || Time Recovered", "green"))
+            for pod in pods_recovered:
+                print(f'{pod["pod"]} || {pod["val"]} || {pod["start"]} || {pod["end"]}')
 
         return {'dropped': pods_dropped, 'recovered': pods_recovered}       
+    
+    # change a query to only query for the given pod
+    def _update_query_for_requery(query, pod):
+        # change 'sum by(node, pod) ' to just be 'sum by(node) ' so we retain the node information while only requesting one pod 
+        str_to_delete = ' by(node, pod) '
+        query = query.replace(str_to_delete, ' by(node) ')
 
+        # add specific pod to query so only the one specific pod is queried instead of all pods
+        namespace_index = query.find('namespace="')
+        pod_str = f'pod="{pod}", '
+        updated_query = query[:namespace_index] + pod_str + query[namespace_index:]
+
+        return updated_query
+
+    # returns a dictionary containing all potential dropped or recovered pods with information about them
+    # the returned dictionary (graphs_losses_dict) is in the form
+        # graphs_losses = {
+        #     graph_title_1: {
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]
+        #     }, 
+        #     graph_title_2: {
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...] 
+        #     },
+        #     ...
+        # }
     def check_for_losses(self, graphs_dict=None, print_info=False):
         # generate graphs_dict if it isn't passed in
         if graphs_dict is None:
@@ -286,81 +310,130 @@ class Graphs():
             graphs_losses_dict[graph_title] = graph_loss_data
 
         return graphs_losses_dict
-        # graphs_losses_dict is in the form
+
+    # returns a dictionary of graph titles with each title containing two categories: dropped and retrieved
+    # in each category, there is a list of graph dataframes. Each df corresponds to a pod that was dropped/recovered 
+    # the returned dictionary (requiered_graph_dict) is in the form
         # graphs_losses = {
-        #     'Received Bandwidth':{
-        #         'dropped':[{pod:pod_1, start:time_1, end:time_2}, {pod:pod_2, start:time_3, end:time_4}, {...}], 
-        #         'recovered':[{pod:pod_1, start:time_1, end:time_2}, {...}], 
+        #     graph_title_1: {
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]
         #     }, 
-        #     'Transmit Bandwidth':{
-        #         'dropped':[{pod:pod_1, start:time_1, end:time_2}, {pod:pod_2, start:time_3, end:time_4}, {...}], 
-        #         'recovered':[{pod:pod_1, start:time_1, end:time_2}, {...}], 
+        #     graph_title_2: {
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...] 
         #     },
         #     ...
         # }
+    def requery_graphs(partial_queries_dict):
+        # declare variables
+        requeried_graphs_dict = {'dropped':[], 'retrieved':[]}
+        query = ''
+        query_pair = []
+        partial_query = False
 
-    # change a query to only query for the given pod
-    def _update_query_for_requery(query, pod):
-        # change 'sum by(node, pod) ' to just be 'sum' so we only get data for the specified pod
-        str_to_delete = ' by(node, pod) '
-        query = query.replace(str_to_delete, '')
-
-        # add specific pod to query
-        namespace_index = query.find('namespace="')
-        pod_str = f'pod="{pod}", '
-        updated_query = query[:namespace_index] + pod_str + query[namespace_index:]
-
-        return updated_query
-
-    def requery_losses(self, graphs_dict, graphs_losses_dict, show_runtimes=False):
-        # Get new queries
-        
-        self._generate_graphs(show_runtimes=show_runtimes, graphs_losses_dict)
-        # example structure: 
-        '''
-        requeried_graphs_dict = {
-            'Received Bandwidth':{
-                'dropped':[graph_df_1, graph_df_2, graph_df_3], 
-                'recovered':[graph_df_1, graph_df_2]
-            }, 
-            'Transmit Bandwidth':{
-                'dropped':[...], 
-                'recovered':[...]
-            } 
-        }
-        '''
-        # code:
-        # for graph_title, graph in graphs_losses.items():
-        #     graph_loss_data = 
-        #     self._requery_graph_loss(graph_title, graph, graph_loss_data)
-        return requeried_graphs_dict
-
-    # returns 2 new dicts: each one with updated queries for requerying graphs
-    def _generate_queries_dicts(graphs_losses_dict):
-        queries = {}
-        partial_queries = {}
-        # fill in queries and partial queries with updated queries
-        for graph_title in graphs_losses_dict.keys(): 
+        # get graph titles and category (dropped or retrieved)
+        for graph_title, category in graphs_losses_dict.items():
+            
+            # get query (not updated for specific pod)
             if graph_title in self.queries_dict.keys():
-                updated_query = self._update_query_for_requery(self.queries_dict[graph_title])
-                queries[graph_title] = updated_query
-            else: 
-                #graph_title in self.partial_queries_dict
-                updated_query = self._update_query_for_requery(self.partial_queries_dict[graph_title])
-                partial_queries[graph_title] = updated_query
+                query = self.queries_dict[graph_title]
+                partial_query = False
+            else:
+                # partial query --> 2 queries per graph
+                query_pair = self.partial_queries_dict[graph_title]
+                partial_query = True
+            
+            # loop through the pods for each graph
+            for pod_dict in category:
+                # assemble arguments for self._generate_graph_df
+                pod = pod_dict['pod']
+                start = pod_dict['start']
+                end = pod_dict['end']
+                graph_df = None
 
-        return queries, partial_queries
+                # graph is defined by 1 query --> query graph
+                if not partial_query:
+                    updated_query = self._update_query_for_requery(query, pod)
+                    graph_df = self._generate_graph_df(
+                        graph_title, updated_query, start=start, end=end, show_runtimes=show_runtimes
+                    )
 
-    # generate requeried graphs dict if there is none, then print them
-    def print_requeried_graphs(self, graphs_dict=None, requeried_graphs_dict=None, show_runtimes=False):
-        if requeried_graphs_dict is None:
-            if graphs_dict is None:
-                # raise error
-            requeried_graphs_dict = self.requery_losses(graphs_dict, graphs_losses_dict, show_runtimes)
-        print_heading("Requeried Graphs")
-        # for graph_title, graph_list in requeried_graphs_dict.items():
-        #     print_title(graph_title)
-        #     for graph in graph_lsit:
-        #         print(graph)
-        #         print("\n\n")
+                
+                # graph is defined by 2 queries --> query both, add both partial graphs to get the final graph
+                else: 
+                    updated_read_query = self._update_query_for_requery(query_pair[0], pod)
+                    updated_write_query = self._update_query_for_requery(query_pair[1], pod)
+                    
+                    read_graph = self._generate_graph_df(
+                        graph_title, updated_read_query, start=start, end=end, show_runtimes=show_runtimes
+                    )
+                    write_graph = self._generate_graph_df(
+                        graph_title, updated_write_query, start=start, end=end, show_runtimes=show_runtimes
+                    )
+                    graph_df = read_graph + write_graph
+
+                # add graph to requeried_graphs_dict
+                requeried_graphs_dict[category].append(graph_df)
+
+    # def requery_losses(self, graphs_dict, graphs_losses_dict, show_runtimes=False):
+    #     # Get new queries
+        
+    #     self._generate_graphs(show_runtimes=show_runtimes, graphs_losses_dict)
+    #     # example structure: 
+    #     '''
+    #     requeried_graphs_dict = {
+    #         'Received Bandwidth':{
+    #             'dropped':[graph_df_1, graph_df_2, graph_df_3], 
+    #             'recovered':[graph_df_1, graph_df_2]
+    #         }, 
+    #         'Transmit Bandwidth':{
+    #             'dropped':[...], 
+    #             'recovered':[...]
+    #         } 
+    #     }
+    #     '''
+    #     # code:
+    #     # for graph_title, graph in graphs_losses.items():
+    #     #     graph_loss_data = 
+    #     #     self._requery_graph_loss(graph_title, graph, graph_loss_data)
+    #     return requeried_graphs_dict
+
+    # # returns 2 new dicts: each one with updated queries for requerying graphs
+    # def _generate_queries_dicts(graphs_losses_dict):
+    #     queries = {}
+    #     partial_queries = {}
+    #     # fill in queries and partial queries with updated queries
+    #     for graph_title, category in graphs_losses_dict.keys(): 
+    #         #TODO: figure out how to only request the certain pod that we want
+    #         queries_list = []
+    #         partial_queries_list = []
+    #         if graph_title in self.queries_dict.keys():
+    #             for pod in category['pod']:
+    #                 query = self.queries_dict[graph_title]
+    #                 updated_query = self._update_query_for_requery(pod=pod, query=query)
+    #                 queries_list.append(updated_query)
+    #             queries[graph_title] = queries_list
+    #         else:
+    #             # graph_title is in self.partial_queries_dict
+    #             for pod in category['pod']:
+    #                 query = self.partial_queries_dict[graph_title]
+    #                 updated_query = self._update_query_for_requery(pod=pod, query=query)
+    #                 partial_queries_list.append(updated_query)
+    #             partial_queries[graph_title] = partial_queries_list
+
+    #     return queries, partial_queries
+
+    # # generate requeried graphs dict if there is none, then print them
+    # def print_requeried_graphs(self, graphs_dict=None, requeried_graphs_dict=None, show_runtimes=False):
+    #     if requeried_graphs_dict is None:
+    #         if graphs_dict is None:
+    #             # raise error
+    #         requeried_graphs_dict = self.requery_losses(graphs_dict, graphs_losses_dict, show_runtimes)
+    #     print_heading("Requeried Graphs")
+    #     # for graph_title, graph_list in requeried_graphs_dict.items():
+    #     #     print_title(graph_title)
+    #     #     for graph in graph_lsit:
+    #     #         print(graph)
+    #     #         print("\n\n")
 
