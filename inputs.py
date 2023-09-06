@@ -11,4 +11,4 @@ DEFAULT_DURATION = '10m'
 # graphs
 DEFAULT_GRAPH_STEP = '1m'
 DEFAULT_GRAPH_TIME_OFFSET = '30m'
-# REQUERY_GRAPH_STEP = DEFAULT_GRAPH_STEP/10 #TODO: make sure you can do this; does it understand '0.2h'?
+REQUERY_GRAPH_STEP_DIVISOR = 10  # a value of 10 means there will be 10x the number of datapoints for a given timeframe

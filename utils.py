@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import requests
 import json
-import re
 from termcolor import colored
 
 # reset total query count
@@ -77,34 +76,6 @@ def query_api_site_for_graph(query, time_filter, handle_fail=True):
 # of the query as a list of two floats
 def get_result_list(api_response):
     return api_response['data']['result']
-
-
-# given a string in the form 5w3d6h30m5s, save the times to a dict accesible
-# by the unit as their key. The int times can be any length (500m160s is allowed)
-# works given as many or few of the time units. (e.g. 12h also works and sets everything but h to None)
-def get_time_dict_from_str(time_str):
-    # define regex pattern (groups by optional int+unit but only keeps the int)
-    pattern = "(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?"
-    feedback = re.search(pattern, time_str)
-
-    # save time variables (if not in time_str they will be set to None)
-    w, d, h, m, s = feedback.groups()
-    # put time variables into a dictionary
-    time_dict = {
-        'weeks': w,
-        'days': d,
-        'hours': h,
-        'minutes': m,
-        'seconds': s
-    }
-
-    # get rid of null values in time_dict
-    time_dict = {
-        unit: float(value) for unit, value
-        in time_dict.items() if value is not None
-    }
-
-    return time_dict
 
 
 # gets the worker id for a given pod or returns none if it is not a bp3d-worker

@@ -9,6 +9,7 @@ header_class = Header()
 tables_class = Tables()
 graphs_class = Graphs()
 
+
 # returns three dicts: one containing all header data,
 # one with all tables, and one with all graph data
 def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False):
@@ -51,6 +52,7 @@ def print_all_data(data_dict=None):
 
     print_heading('Graphs')
     print_dataframe_dict(data_dict['graphs'])
+
 
 def check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtimes=False, display_time_as_timestamp=False):
     # get losses
