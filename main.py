@@ -20,4 +20,10 @@ graphs_dict = result_dict['graphs']
 # if requery is set to none, it will prompt the user in the terminal
 # if they would like to requery after the code is finished
 losses_and_requeried_graphs = \
-    check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtimes=False)
+    check_graphs_losses(\
+        graphs_dict=graphs_dict,
+        print_info=True,
+        requery=None,
+        show_runtimes=False,
+        display_time_as_timestamp=True
+        )
