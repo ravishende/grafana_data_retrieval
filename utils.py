@@ -147,10 +147,10 @@ def print_sub_title(sub_title):
 def print_dataframe_dict(dictionary):
     for title, dataframe in dictionary.items():
         print_title(title)
-        if len(dataframe.index) > 0:
-            print(dataframe)
-        else:
+        if dataframe is None:
             print(colored("No Data", "red"))
+        else:
+            print(dataframe)
         print("\n\n")
 
 # writes json data to a file

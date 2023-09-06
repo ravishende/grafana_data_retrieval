@@ -52,7 +52,7 @@ def print_all_data(data_dict=None):
     print_heading('Graphs')
     print_dataframe_dict(data_dict['graphs'])
 
-def check_graphs_losses(graphs_dict, print_info=True, requery=None):
+def check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtimes=False):
     # get losses
     graphs_losses_dict = graphs_class.check_for_losses(graphs_dict, print_info=print_info)
 
@@ -69,7 +69,7 @@ def check_graphs_losses(graphs_dict, print_info=True, requery=None):
         return {"losses":graphs_losses_dict, "requeried":None}
     
     # requery is True
-    requeried_graphs_dict = graphs_class.requery_losses(graphs_dict, graphs_losses_dict)
+    requeried_graphs_dict = graphs_class.requery_graphs(graphs_losses_dict, show_runtimes=show_runtimes)
     print_heading('Requeried Graphs')
     #loop through requeried_graphs_dict and print all requeried graphs
     for graph_title, loss_dict in requeried_graphs_dict.items():
