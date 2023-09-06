@@ -11,3 +11,4 @@ DEFAULT_DURATION = '10m'
 # graphs
 DEFAULT_GRAPH_STEP = '1m'
 DEFAULT_GRAPH_TIME_OFFSET = '30m'
+# REQUERY_GRAPH_STEP = DEFAULT_GRAPH_STEP/10 #TODO: make sure you can do this; does it understand '0.2h'?
