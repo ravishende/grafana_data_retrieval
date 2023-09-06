@@ -23,7 +23,7 @@ losses_and_requeried_graphs = \
     check_graphs_losses(\
         graphs_dict=graphs_dict,
         print_info=True,
-        requery=None,
+        requery=True,
         show_runtimes=False,
         display_time_as_timestamp=True
         )
