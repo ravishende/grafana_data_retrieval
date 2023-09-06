@@ -9,7 +9,7 @@ These queries can be found in the json data which can be accessed by this site:
 5. the id number for each query in this file is in parentheses after its name. EX: CPU Utilisation (from requests) (1) has id 1
 6. Under the id, the query can be found with `targets` -> some target id (0 to n) -> `expr`
 ## modifying the queries:
-- the `$` symbol in any query represents a variable. For example, `$namespace` could be replaced with `"wifire-quicfire"`
+- the `$` symbol in any query represents a variable. For example, `$namespace` could be replaced with `"wifire-quicfire"`. In the code, they are replaced with `self.namespace`, which is default set to `NAMESPACE` which is defined in [inputs.py](inputs.py)
 
 ___
 # All Queries:
