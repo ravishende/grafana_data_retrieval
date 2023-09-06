@@ -108,7 +108,6 @@ class Graphs():
         # if time is of unsupported type, raise error
         raise TypeError("argument for _convert_to_datetime() must be of type float, int, pandas.Timestamp, or datetime.datetime")
 
-    # TODO: handle if just one of start or end are passed in
     # assembles string for the time filter to be passed into query_api_site_for_graph()
     def _assemble_time_filter(self, start=None, end=None, time_step=None):
         # set default values if not given
@@ -118,6 +117,8 @@ class Graphs():
             # calculate start time
             start = self._find_time_from_offset(self.end, self.time_offset)
             end = self.end
+        elif start is None or end is None:  # one is none but not both
+            raise ValueError("start and end must either be both defined or both None")
         else:
             # make sure both start and end are datetime objects
             start = self._convert_to_datetime(start)
@@ -182,7 +183,6 @@ class Graphs():
 
         return graph_df
 
-    # TODO: handle if only one of queries_dict or partial_queries_dict is None
     # get a dictionary in the form of {graph titles: list of graph data}
     def _generate_graphs(self, show_runtimes=False):
         queries_dict = self.queries_dict
