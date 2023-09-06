@@ -61,7 +61,7 @@ def check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtime
     # prompt the user so requery can be set to True or False
     if requery is None:
         #Prompt if the user would like to requery the graphs
-        user_response = input("Would you like to requery the graphs for zoomed in views of the pod drops and recoveries?\n(y/n)\n")
+        user_response = input("\n\nWould you like to requery the graphs for zoomed in views of the pod drops and recoveries?\nThis can help determine if data was truly dropped or if the graph just went to zero.\n(y/n)\n")
         if user_response in ['y', 'yes', 'Y', 'Yes']:
             requery = True
         else:
