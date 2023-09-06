@@ -52,7 +52,7 @@ def print_all_data(data_dict=None):
     print_heading('Graphs')
     print_dataframe_dict(data_dict['graphs'])
 
-def check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtimes=False):
+def check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtimes=False, display_time_as_timestamp=False):
     # get losses
     graphs_losses_dict = graphs_class.check_for_losses(graphs_dict, print_info=print_info)
 
@@ -81,6 +81,9 @@ def check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtime
             print_sub_title(category)
             # Print graphs
             for graph in graphs_list:
+                # update graphs with correct time columns
+                if display_time_as_timestamp:
+                    graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
                 print(graph, "\n\n")
         
     return {"losses":graphs_losses_dict, "requeried":requeried_graphs_dict}

@@ -61,7 +61,7 @@ class Graphs():
         # technically this counts as an instance of type datetime but is not the same
         # so we must check if time is a pandas Timestamp() before checking if it's a datetime object
         if isinstance(time, pd.Timestamp):
-            return time.to_pydatetime()
+            return time.to_pydatetime(warn=False)
         #check if time is a float (seconds since the epoch: 01/01/1970)
         if isinstance(time, float) or isinstance(time, int):
             return datetime.fromtimestamp(time)
@@ -339,21 +339,19 @@ class Graphs():
         #     ...
         # }
     def requery_graphs(self, graphs_losses_dict, show_runtimes=False):
-        print_title("graphs_losses_dict")
-        pprint(graphs_losses_dict)
         # declare variables
         requeried_graphs_dict = {}
         query = ''
         query_pair = []
         partial_query = False
 
-        # get graph titles and lable_dict (looks like {'dropped':[{pod},...], 'retrieved:[{pod},...]'})
-        for graph_title, label_dict in graphs_losses_dict.items():
+        # get graph titles and lable_dict (label_dict looks like {'dropped':[{pod},...], 'retrieved:[{pod},...]'})
+        for graph_title, label_dict in tqdm(graphs_losses_dict.items()):
             if label_dict is None:
                 continue
+            requeried_graphs_dict[graph_title] = {}
             # get category (dropped or retrieved) and list of pod_dicts (containing pod, start, end (also 'val' or 'prev val' which we don't use here))
             for category, pods_list in label_dict.items():
-                requeried_graphs_dict[graph_title] = {}
                 requeried_graphs_dict[graph_title][category] = []
                 # get query (not updated for specific pod)
                 if graph_title in self.queries_dict.keys():
