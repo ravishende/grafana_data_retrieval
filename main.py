@@ -12,18 +12,19 @@ pd.set_option('display.expand_frame_repr', False)
 result_dict = get_all_data(
     only_include_worker_pods=False,
     display_time_as_timestamp=True, 
-    show_graph_runtimes=False
+    show_graph_runtimes=False,
+    get_graphs_as_one_df=True
 )
 
 print_all_data(result_dict)
-graphs_dict = result_dict['graphs']
+graphs = result_dict['graphs']
 # if requery is set to none, it will prompt the user in the terminal
 # if they would like to requery after the code is finished
 losses_and_requeried_graphs = \
-    check_graphs_losses(\
-        graphs_dict=graphs_dict,
+    check_graphs_losses(
+        graphs=graphs,
         print_info=True,
         requery=None,
         show_runtimes=False,
         display_time_as_timestamp=True
-        )
+    )

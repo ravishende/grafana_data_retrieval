@@ -1,4 +1,5 @@
 from utils import print_heading, print_title, print_sub_title, print_dataframe_dict
+from termcolor import colored
 from header import Header
 from tables import Tables
 from graphs import Graphs
@@ -12,7 +13,7 @@ graphs_class = Graphs()
 
 # returns three dicts: one containing all header data,
 # one with all tables, and one with all graph data
-def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False):
+def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False, get_graphs_as_one_df=False):
     print("    Retrieving Header Data")
     header_dict = header_class.get_header_dict(
         only_include_worker_pods=only_include_worker_pods
@@ -36,6 +37,10 @@ def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True,
         'graphs': graphs_dict
     }
 
+    if get_graphs_as_one_df:
+        graphs_df = graphs_class.get_graphs_as_one_df(graphs_dict)
+        return_dict['graphs'] = graphs_df
+
     return return_dict
 
 
@@ -51,12 +56,32 @@ def print_all_data(data_dict=None):
     print_dataframe_dict(data_dict['tables'])
 
     print_heading('Graphs')
-    print_dataframe_dict(data_dict['graphs'])
+    # check if graphs is a dictionary
+    graphs = data_dict['graphs']
+    if isinstance(graphs, dict):
+        print_dataframe_dict(graphs)
+    else:  # graphs is a single df
+        print(graphs)
 
 
-def check_graphs_losses(graphs_dict, print_info=True, requery=None, show_runtimes=False, display_time_as_timestamp=False):
+
+
+def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=False, display_time_as_timestamp=False):
+    # check for if graphs was input as single dataframe instead of graph
+    if isinstance(graphs, pd.DataFrame):
+        # check if there is data in the dataframe
+        if len(graphs.index) == 0:
+            return {"Losses":None, "requeried":None}
+    # graphs is a dict. check if graphs has data
+    elif all(value is None for value in graphs.values()):
+        return {"Losses":None, "requeried":None}
+
+
     # get losses
-    graphs_losses_dict = graphs_class.check_for_losses(graphs_dict, print_info=print_info)
+    graphs_losses_dict = graphs_class.check_for_losses(graphs, print_info=print_info)
+    if all(value is None for value in graphs_losses_dict.values()):
+        print(colored("No pods were dropped, so no need for requerying.", "green"))
+        return {"Losses":None, "requeried":None}
 
     # prompt the user so requery can be set to True or False
     if requery is None:

@@ -211,9 +211,11 @@ class Graphs():
             # values instead of read+write. Later, it is updated to store both.
             graph_df = self._generate_graph_df(query_title, query_pair[0], show_runtimes=show_runtimes)
             graph_df_write = self._generate_graph_df(query_title, query_pair[1], show_runtimes=show_runtimes)
-
-            # calculate read + write column by adding read values and write values
-            graph_df[query_title] = graph_df[query_title] + graph_df_write[query_title]
+            
+            if graph_df is not None and graph_df_write is not None:
+                # calculate read + write column by adding read values and write values
+                graph_df[query_title] = graph_df[query_title] + graph_df_write[query_title]
+            
             # add graph dataframe to graphs_dict
             graphs_dict[query_title] = graph_df
 
@@ -225,8 +227,8 @@ class Graphs():
 
     # generate and return a list of all the graphs
     def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
-        requeried_graphs_list = []
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
+        #loop through graphs
         for graph_title, graph in graphs_dict.items():
             if graph is None:
                 continue
@@ -243,10 +245,58 @@ class Graphs():
 
         return graphs_dict
 
+    def get_graphs_as_one_df(self, graphs_dict=None, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
+        total_df = pd.DataFrame(data={})
+
+        # Generate graphs if none given
+        if graphs_dict is None:
+            graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
+
+        # Fill in Node and Pod columns with the first non-empty graph
+        for graph_df in graphs_dict.values():
+            if graph_df is not None:
+                total_df['Time'] = graph_df['Time']
+                total_df['Node'] = graph_df['Node']
+                total_df['Pod'] = graph_df['Pod']
+                break
+
+        # Fill in graphs columns
+        for title, graph_df in graphs_dict.items():
+            if graph_df is None:
+                total_df[title] = None
+                continue
+            total_df[title] = graph_df[title]
+
+        return total_df
+
+
 # _________________________________________
 #
 #           Requery Methods
 #__________________________________________
+
+    # convert a dataframe containing all graphs data into a dictionary with several graphs
+    # used when a graphs_df is passed in instead of a graphs_dict in check_for_losses
+    # this can happen when a user requests the graph data to be a single df, then passes that df back into check_for_losses
+    def convert_graphs_df_to_dict(self, graphs_df):
+        if not isinstance(graphs_df, pd.DataFrame):
+            raise TypeError("Input must be a pandas DataFrame")
+            return
+        graphs_dict = {}
+        for col_title in graphs_df.columns:
+            if col_title == 'Node' or col_title == 'Pod' or col_title == 'Time':
+                pass
+
+            # assemble new df
+            graph_data = {
+                'Time': graphs_df['Time'],
+                'Node': graphs_df['Node'],
+                'Pod': graphs_df['Pod'],
+                col_title: graphs_df[col_title]
+            }
+            graph_df = pd.DataFrame(data=graph_data)
+            graphs_dict[col_title] = graph_df
+        return graphs_dict
 
     # change a query to only query for the given pod
     def _update_query_for_requery(self, query, pod):
@@ -348,6 +398,14 @@ class Graphs():
         if graphs_dict is None:
             graphs_dict = self.get_graphs_dict()
 
+        # check for if graphs_dict was input as single dataframe instead
+        if isinstance(graphs_dict, pd.DataFrame):
+            graphs_dict = self.convert_graphs_df_to_dict(graphs_dict)
+
+        # check if graphs_dict has data
+        elif all(value is None for value in graphs_dict.values()):
+                raise ValueError("graphs_dict has no data; can't check for losses of no data")
+                return
         graphs_losses_dict = {}
 
         for graph_title, graph in graphs_dict.items():
