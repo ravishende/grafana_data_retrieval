@@ -6,7 +6,11 @@ from graphs import Graphs
 from datetime import datetime as dt
 
 graphs_class = Graphs()
-graphs_dict = graphs_class.get_graphs_dict(display_time_as_timestamp=False)
+graphs_dict = graphs_class.get_graphs_dict(
+    only_include_worker_pods=False,
+    display_time_as_timestamp=False,  # unimportant; either way the program converts times to datetime object
+    show_runtimes=False
+    )
 
 for graph_title, graph_df in graphs_dict.items():
 # graph_df = pd.read_csv("cpu_usage.csv")
