@@ -65,7 +65,7 @@ def print_all_data(data_dict=None):
 
 
 
-
+# get information on dropped/recovered pods and requery if requested. Then return a dict of 'losses' (dropped/recovered pods) and 'requeried' graphs
 def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=False, display_time_as_timestamp=False):
     # check for if graphs was input as single dataframe instead of graph
     if isinstance(graphs, pd.DataFrame):

@@ -27,6 +27,6 @@ losses_and_requeried_graphs = \
         graphs=graphs,  # if this is not passed in, it will automatically be regenerated. This may take time
         print_info=False,  # prints information on pods dropped/recovered: pod, values dropped/recovered, previous time, time of drop/recovery
         requery=False,  # requeries pods dropped/recovered at higher resolution if True, doesn't if False. When None, prompts user if it should requery after collecting info
-        show_runtimes=False, # for displaying in the terminal how long each query and graph creation takes
-        display_time_as_timestamp=True # displays time in readable format instead of seconds since epoch (01/01/1970)
+        show_runtimes=False,  # for displaying in the terminal how long each query and graph creation takes
+        display_time_as_timestamp=True  # displays time in readable format instead of seconds since epoch (01/01/1970)
     )
