@@ -7,18 +7,17 @@ from datetime import datetime as dt
 
 graphs_class = Graphs()
 graphs_dict = graphs_class.get_graphs_dict(
-    only_include_worker_pods=False,
+    only_include_worker_pods=False,  # filters graphs to only include bpd3-worker pods. displays the worker ensemble
     display_time_as_timestamp=False,  # unimportant; either way the program converts times to datetime object
-    show_runtimes=False
+    show_runtimes=False  # for displaying in the terminal how long each query and graph creation takes
     )
 
 for graph_title, graph_df in graphs_dict.items():
-# graph_df = pd.read_csv("cpu_usage.csv")
-
-    tick_spacing = 1
-
+    # skip empty graphs
     if graph_df is None:
         continue
+
+    tick_spacing = 1
     time_0 = graph_df["Time"][0]
     graph_df["Time"] = graph_df.apply(lambda row: row["Time"]-time_0, axis=1)
     my_datetime = dt.fromtimestamp(time_0)
