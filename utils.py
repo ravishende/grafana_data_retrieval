@@ -125,13 +125,15 @@ def print_dataframe_dict(dictionary):
         print("\n\n")
 
 # writes json data to a file
-def write_json(data):
-    with open('e.json', 'w') as file:
-        json.dump(data.json(), file)
+def write_json(file_name, data):
+    with open(file_name, 'w') as file:
+        json.dump(data, file)
+    file.close()
 
 
 # reads json data from a file
-def read_json():
-    with open('scrape.json', 'r') as file:
+def read_json(file_name):
+    with open(file_name, 'r') as file:
         data = json.load(file)
+    file.close()
     return data

@@ -1,20 +1,26 @@
 import requests
 import json
 import re
-from utils import write_json, query_api_site
+from inputs import NAMESPACE as namespace
+from utils import write_json, read_json, query_api_site, get_result_list
 from pprint import pprint
 
-# base_url = "https://thanos.nrp-nautilus.io/api/v1/"
-# endpoint = "name/values"
-# full_url = base_url + endpoint
-# query database
-# queried_data = requests.get(full_url).json()
-
-# query = 'group by(__name__) ({__name__=".*node.*"})' #trying to use regex to filter for names with 'node' in it
-query = 'group by(__name__) ({__name__!=""})'
+# query for all metrics with node somewhere in the name
+query = '{__name__ =~".*node.*", namespace="alto"}[7h]'
 queried_data = query_api_site(query)
 
-pprint(queried_data)
-# write_json(queried_data)
-file = open("node_temp_data.txt", "a")
-file.write(queried_data)
+# put all unique names in a list
+names_list = []
+res_list = get_result_list(queried_data)
+for dictionary in res_list:
+    for title in dictionary.keys():
+        if title == 'metric':
+            name = dictionary['metric']['__name__']
+            if name not in names_list:
+                names_list.append(name)
+
+# print names_list and write it to a file
+pprint(names_list)
+write_json("node_names.txt", names_list)
+
+
