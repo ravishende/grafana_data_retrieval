@@ -1,12 +1,10 @@
-import requests
-import json
-import re
-from inputs import NAMESPACE as namespace
-from utils import write_json, read_json, query_api_site, get_result_list
+from inputs import NAMESPACE
+from utils import write_json, query_api_site, get_result_list
 from pprint import pprint
 
+duration = '7h'
 # query for all metrics with node somewhere in the name
-query = '{__name__ =~".*node.*", namespace="alto"}[7h]'
+query = '{__name__ =~".*node.*", namespace="' + NAMESPACE + '"}[' + duration + ']'
 queried_data = query_api_site(query)
 
 # put all unique names in a list
@@ -22,5 +20,3 @@ for dictionary in res_list:
 # print names_list and write it to a file
 pprint(names_list)
 write_json("node_names.txt", names_list)
-
-
