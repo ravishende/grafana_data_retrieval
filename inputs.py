@@ -5,7 +5,7 @@
 # NAMESPACE = 'wifire-quicfire'
 NAMESPACE = 'alto'  # used for testing when no data in wifire-quicfire
 
-# duration for all 3 data types: Header, tables, graphs
+# duration for data types: tables, graphs
 DEFAULT_DURATION = '10m'
 
 # graphs
