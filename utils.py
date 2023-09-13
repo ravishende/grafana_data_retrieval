@@ -92,8 +92,10 @@ def get_worker_id(pod_name):
 # for every worker pod in a given df, change pod's value to just be the worker id,
 # drop all non-worker pods, then return that new, filtered dataframe
 def filter_df_for_workers(dataframe):
-    dataframe = dataframe.apply(lambda row: get_worker_id(row["Pod"]))
-    dataframe = dataframe.dropna(columns=["Pod"])
+    # run get_worker_id() on all pods to replace the pod with the ensemble or None if not a worker
+    dataframe['Pod'] = dataframe['Pod'].apply(get_worker_id)
+    # drop all the rows with non worker pods
+    dataframe = dataframe.dropna(subset=["Pod"])
     return dataframe
 
 #Printing Functions
