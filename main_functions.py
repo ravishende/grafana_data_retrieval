@@ -80,7 +80,7 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
     # get losses
     graphs_losses_dict = graphs_class.check_for_losses(graphs, print_info=print_info)
     if all(value is None for value in graphs_losses_dict.values()):
-        print(colored("No pods were dropped, so no need for requerying.", "green"))
+        print(colored("No pods were dropped, so no need for requerying.", "green"), "\n\n")
         return {"Losses":None, "requeried":None}
 
     # prompt the user so requery can be set to True or False
@@ -104,7 +104,10 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
         print_title(graph_title)
 
         for category, graphs_list in loss_dict.items():
-            # Print Dropped or Recovered
+            # skip if there is no data
+            if len(graphs_list) == 0:
+                continue
+            # Print Dropped or Recovered    
             print_sub_title(category)
             # Print graphs
             for graph in graphs_list:

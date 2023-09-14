@@ -366,17 +366,18 @@ class Graphs():
             return None
 
         # print collected statistics
-        if print_info:
+        if print_info and len(pods_dropped) > 0:
             print_sub_title(graph_title)
             # Print Info for Pods Dropped: pod, previous value, time of last value, time dropped,
             print(colored("Pods Dropped || Previous Value || Time of Previous Value || Time Dropped", "green"))
             for pod in pods_dropped:
                 print(f'{pod["pod"]} || {pod["prev val"]} || {pod["start"]} || {pod["end"]}')
 
-            # Print Info for Pods Recovered: pod, value, time of last 0, time recovered
-            print(colored("\nPods Recovered || Recovered Value || Time of Previous 0 || Time Recovered", "green"))
-            for pod in pods_recovered:
-                print(f'{pod["pod"]} || {pod["val"]} || {pod["start"]} || {pod["end"]}')
+            if len(pods_recovered) > 0:
+                # Print Info for Pods Recovered: pod, value, time of last 0, time recovered
+                print(colored("\nPods Recovered || Recovered Value || Time of Previous 0 || Time Recovered", "green"))
+                for pod in pods_recovered:
+                    print(f'{pod["pod"]} || {pod["val"]} || {pod["start"]} || {pod["end"]}')
 
         return {'dropped': pods_dropped, 'recovered': pods_recovered}       
 
@@ -467,10 +468,6 @@ class Graphs():
                     #convert time_step back to str to be used for querying
                     time_step = self._get_time_str_from_timedelta(time_step)
                     graph_df = None
-
-                    # print("\n\n\n\n\n\n\n\n")
-                    # print_heading(str(time_step))
-                    # print("\n\n\n\n\n\n\n\n")
 
                     # graph is defined by 1 query --> query graph
                     if not partial_query:
