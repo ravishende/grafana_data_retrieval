@@ -4,7 +4,7 @@ These queries can be found in the json data which can be accessed by this site:
 	https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=default&var-cluster=&var-namespace=wifire-quicfire&from=1690454188000&to=1690472188000
 
 ***Note***: These queries are not the most up to date queries used in the code base. 
-    For all the most up to date queries, look in the individual class files (e.g. tables.py) and the queries will be stored in a dictionary called self.queries (as well as self.partial_queries for graphs.py). Those queries will include Node and pod information that the queries in this queries_notes file do not. 
+- For all the most up to date queries, look in the individual class files (e.g. tables.py) and the queries will be stored in a dictionary called self.queries (as well as self.partial_queries for graphs.py). Those queries will include Node and pod information that the queries in this queries_notes file do not. 
 
 ## Getting the json information and rough queries (they have since been modified in the code):
 1. In the navbar, click on the share icon: titled "Share dashboard or panel"
