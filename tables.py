@@ -44,6 +44,7 @@ class Tables():
     def _generate_df(self, col_title, raw_json_data):
         # initialize dataframe and filter json data
         df = pd.DataFrame(columns=['Node', 'Pod', col_title])
+        # df = pd.DataFrame(columns=['Time', 'Node', 'Pod', col_title])  # for timestamp
         res_list = get_result_list(raw_json_data)
         # fill in dataframe
         for datapoint in res_list:
@@ -51,9 +52,10 @@ class Tables():
             node = datapoint['metric']['node']
             pod = datapoint['metric']['pod']
             value = datapoint['value'][1]
-            # timestamp = data_point['value'][0]
+            # timestamp = data_point['value'][0]  # for timestamp
             # add a row to the end of the dataframe containing a node, pod, and value
             df.loc[len(df.index)] = [node, pod, value]
+            # df.loc[len(df.index)] = [timestamp, node, pod, value]  # for timestamp
         return df
 
     # returns an updated dataframe by filling in data queried from the

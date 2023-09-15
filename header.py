@@ -22,17 +22,19 @@ class Header():
         # parse json data and initialize dataframe
         res_list = get_result_list(raw_json_data)
         df = pd.DataFrame(columns=['Node', 'Pod', col_title])
+        # df = pd.DataFrame(columns=['Time', 'Node', 'Pod', col_title])  # for timestamp
 
         # fill in dataframe
         for datapoint in res_list:
             # each triplet is a dictionary with node (str), pod (str), values (list)
             node = datapoint['metric']['node']
             pod = datapoint['metric']['pod']
-            # timestamp = datapoint['value']['0']
+            # timestamp = datapoint['value']['0']  # for timestamp
             # multiply by 100 to get value in % form instead of decimal form.
             value = float(datapoint['value'][1])*100
             # add row to the end of the dataframe containing the node, pod, and value
             df.loc[len(df.index)] = [node, pod, value]
+            # df.loc[len(df.index)] = [timestamp, node, pod, value]  # for timestamp
         return df
 
     # returns a dict in the form {header_title:dataframe}
