@@ -27,13 +27,13 @@ There are 3 main types of data collected:
 
 
 ### Header:
-![Header](extras/example_header.png)
+![Header](extras/readme_photos/example_header.png)
 
 ### Table:
-![Tables](extras/example_table.png)  
+![Tables](extras/readme_photos/example_table.png)  
 
 ### Graph:
-![Graphs](extras/example_graph.png)  
+![Graphs](extras/readme_photos/example_graph.png)  
 
 ___
 
