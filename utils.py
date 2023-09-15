@@ -124,6 +124,7 @@ def print_sub_title(sub_title):
 def print_dataframe_dict(dictionary):
     for title, dataframe in dictionary.items():
         print_title(title)
+        # if the dataframe is empty, print "No Data"
         if dataframe is None or len(dataframe.index) == 0:
             print(colored("No Data", "red"))
         else:

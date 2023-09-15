@@ -61,22 +61,28 @@ class Tables():
     # returns an updated dataframe by filling in data queried from the
     # columns in a passed in dataframe
     def _fill_df_by_queries(self, table_df, queries=None):
+        # check if they passed in a dict of queries.
         if queries is None:
             queries = self.queries
+        
         # update the columns of the database with the data from querying
         for col_title in table_df.columns:
             # get the corresponding query for each column
             query = queries.get(col_title)
             if query is None:
                 continue
+            
             # update the table with the new column information
             queried_data = query_api_site(query)
             new_df = self._generate_df(col_title, queried_data)
-            # table_df.merge(new_df, how='left')
+            
+            # if table_df is not empty
             if len(table_df.index) > 0:
+                # add column to the rightmost end of the dataframe
                 final_col = new_df.columns[-1]
                 table_df[final_col] = new_df[final_col]
-            else:
+            else: # table_df is empty. 
+                # set table_df equal to the new df to fill in node and pod too
                 for column in new_df.columns:
                     table_df[column] = new_df[column]
         return table_df
@@ -86,6 +92,7 @@ class Tables():
         result = numerator_col.astype(float).div(divisor_col.astype(float))
         return result.multiply(100)
 
+    # get the cpu_quota dataframe. If it is empty, generate it
     def _get_cpu_quota(self):
         # check if the table has been filled in. If it has, return it
         if len(self.cpu_quota.index) > 0:
@@ -101,6 +108,7 @@ class Tables():
             self._calc_percent(self.cpu_quota['CPU Usage'], self.cpu_quota['CPU Limits'])
         return self.cpu_quota
 
+    # get the mem_quota dataframe. If it is empty, generate it
     def _get_mem_quota(self):
         # check if the table has been filled in. If it has, return it
         if len(self.mem_quota.index) > 0:
@@ -116,6 +124,7 @@ class Tables():
             self._calc_percent(self.mem_quota['Memory Usage'], self.mem_quota['Memory Limits'])
         return self.mem_quota
 
+    # get the network_usage dataframe. If it is empty, generate it
     def _get_network_usage(self):
         # check if the table has been filled in. If it has, return it
         if len(self.network_usage.index) > 0:
@@ -125,6 +134,7 @@ class Tables():
         self.network_usage = self._fill_df_by_queries(self.network_usage)
         return self.network_usage
 
+    # get the storage_io dataframe. If it is empty, generate it
     def _get_storage_io(self):
         # check if the table has been filled in. If it has, return it
         if len(self.storage_io.index) > 0:
@@ -139,6 +149,7 @@ class Tables():
             self.storage_io['Throughput(Read)'].astype(float) + self.storage_io['Throughput(Write)'].astype(float)
         return self.storage_io
 
+    # get a dictionary of all the tables
     def get_tables_dict(self, only_include_worker_pods=False):
         tables_dict = {
             'CPU Quota': self._get_cpu_quota(),

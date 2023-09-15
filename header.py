@@ -30,11 +30,14 @@ class Header():
             node = datapoint['metric']['node']
             pod = datapoint['metric']['pod']
             # timestamp = datapoint['value']['0']  # for timestamp
+            
             # multiply by 100 to get value in % form instead of decimal form.
             value = float(datapoint['value'][1])*100
+            
             # add row to the end of the dataframe containing the node, pod, and value
             df.loc[len(df.index)] = [node, pod, value]
             # df.loc[len(df.index)] = [timestamp, node, pod, value]  # for timestamp
+        
         return df
 
     # returns a dict in the form {header_title:dataframe}

@@ -143,6 +143,7 @@ class Graphs():
         if show_runtimes:
             start = time.time()
 
+        # query for data
         result_list = get_result_list(query_api_site_for_graph(query, time_filter))
         if len(result_list) == 0:
             return None
@@ -151,6 +152,7 @@ class Graphs():
             end = time.time()
             print("\ntime elapsed for querying:", colored(end-start, "green"))
 
+        # prepare columns for graph. columns will be appended to one pod at a time
         times_column = []
         values_column = []
         pods_column = []
@@ -170,13 +172,13 @@ class Graphs():
             node_list = [datapoint['metric']['node']]*len(times_list)
             pod_list = [datapoint['metric']['pod']]*len(times_list)
 
-            # add pod's lists to the whole graph's lists
+            # add pod's lists to the graph's columns
             times_column.extend(times_list)
             values_column.extend(values_list)
             nodes_column.extend(node_list)
             pods_column.extend(pod_list)
 
-        # make and populate graph dataframe
+        # create and populate graph dataframe
         graph_df = pd.DataFrame()
         graph_df['Time'] = times_column
         graph_df['Node'] = nodes_column
@@ -247,6 +249,8 @@ class Graphs():
 
         return graphs_dict
 
+    # combines all graph dataframes into one large dataframe. Each graph is represented as a column
+    # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
     def get_graphs_as_one_df(self, graphs_dict=None, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
         total_df = pd.DataFrame(data={})
 
@@ -297,32 +301,31 @@ class Graphs():
             }
             graph_df = pd.DataFrame(data=graph_data)
             graphs_dict[col_title] = graph_df
+
         return graphs_dict
 
     # change a query to only query for the given pod
     def _update_query_for_requery(self, query, pod):
-        # # change 'sum by(node, pod) ' to just be 'sum by(node) ' so we retain the node information while only requesting one pod
-        # str_to_delete = ' by(node, pod) '
-        # query = query.replace(str_to_delete, ' by(node) ')
-
         # add specific pod to query so only the one specific pod is queried instead of all pods
+        # insert the pod specification just before the namespace is specified
         namespace_index = query.find('namespace="')
         pod_str = f'pod="{pod}", '
         updated_query = query[:namespace_index] + pod_str + query[namespace_index:]
 
         return updated_query
 
-    # returns a dict in the form:
+    # returns a dictionary containing potential pod drops and recoveries in the form:
     # {'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...],
     #  'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]}
     # returns none if no losses
     def _check_graph_loss(self, graph_title, graph_df, print_info=False):
-        # variables
         previous_value = 0
         previous_pod = None
+        
         # data to return
         pods_dropped = []
         pods_recovered = []
+
         # loop through looking for lost and/or recovered pods
         for index in range(len(graph_df)):
             # store new pod and value
@@ -335,7 +338,7 @@ class Graphs():
                 previous_pod = current_pod
                 continue
 
-            # pod dropped - was nonzero, now is zero
+            # pod dropped: was nonzero, now is zero
             if previous_value != 0 and current_value == 0:
                 drop = {
                     'pod': current_pod,
@@ -345,7 +348,7 @@ class Graphs():
                 }
                 pods_dropped.append(drop)
 
-            # pod recovered - was zero, now is nonzero
+            # pod recovered: was zero, now is nonzero
             if previous_value == 0 and current_value != 0:
                 # check that pod was dropped in order for it to be recovered
                 if any(pod_dict['pod'] == current_pod for pod_dict in pods_dropped):
@@ -357,12 +360,13 @@ class Graphs():
                     }
                     pods_recovered.append(recovery)
 
-            # update old pod and value for next iteration
+            # update previous pod and value for next iteration
             previous_value = current_value
             previous_pod = current_pod
 
+        # once pod loss info is collected, check if there are any drops
         # cannot have recoverd pods if none were dropped.
-        # if both are dropped and recovered are empty, return None
+        # if both dropped and recovered are empty, return None
         if len(pods_dropped) == 0:
             return None
 
@@ -400,7 +404,7 @@ class Graphs():
         if graphs_dict is None:
             graphs_dict = self.get_graphs_dict()
 
-        # check for if graphs_dict was input as single dataframe instead
+        # check for if graphs_dict was input as single dataframe. If it is, convert it to a dict of graphs
         if isinstance(graphs_dict, pd.DataFrame):
             graphs_dict = self.convert_graphs_df_to_dict(graphs_dict)
 
@@ -408,8 +412,9 @@ class Graphs():
         elif all(value is None for value in graphs_dict.values()):
             raise ValueError("graphs_dict has no data; can't check for losses of no data")
             return
+        
         graphs_losses_dict = {}
-
+        # fill in graphs_losses_dict to be returned
         for graph_title, graph in graphs_dict.items():
             if graph is None:
                 continue
@@ -479,19 +484,23 @@ class Graphs():
 
                     # graph is defined by 2 queries --> query both, add both partial graphs to get the final graph
                     else:
+                        # each partial query is for some metric read+write values
                         updated_read_query = self._update_query_for_requery(query_pair[0], pod)
                         updated_write_query = self._update_query_for_requery(query_pair[1], pod)
 
+                        # get the metric's data by adding the read values df to the write values df
                         read_graph = self._generate_graph_df(
                             graph_title, updated_read_query, start=start, end=end, time_step=time_step, show_runtimes=show_runtimes
                         )
                         write_graph = self._generate_graph_df(
                             graph_title, updated_write_query, start=start, end=end, time_step=time_step, show_runtimes=show_runtimes
                         )
+                        
                         # keep time the same, so only add the values column
                         graph_df = read_graph
                         graph_df[graph_title] = read_graph[graph_title] + write_graph[graph_title]
 
                     # add graph to requeried_graphs_dict
                     requeried_graphs_dict[graph_title][category].append(graph_df)
+        
         return requeried_graphs_dict
