@@ -50,5 +50,5 @@ Note: There are a couple others used which can be found in [inputs.py](inputs.py
 
 For more information on the code base, inputs, and all data collected, look at [extras/data_retrieval.pdf](extras/data_retrieval.pdf)
 
-For information on how the queries were originally found, look at these [older notes](extras/information_files/queries_notes.md)
+For information on how the queries were originally found, look at these older notes: [extras/queries_notes.md](extras/queries_notes.md)
 
