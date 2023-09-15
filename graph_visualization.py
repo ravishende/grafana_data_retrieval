@@ -30,7 +30,7 @@ for graph_title, graph_df in graphs_dict.items():
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
     manager = plt.get_current_fig_manager()
     manager.full_screen_toggle()
-    plt.subplots_adjust(right=0.75) #right is default 0.9. right=0.75 moves the graph left so the legend is not partially cut off.
+    plt.subplots_adjust(right=0.75)  # right is default 0.9. right=0.75 moves the graph left so the legend is not partially cut off.
     plt.title(graph_title + " Over Time")
     plt.xlabel("Seconds Since "+s)
     plt.xticks(rotation=25)
