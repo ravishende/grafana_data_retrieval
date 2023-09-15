@@ -1,3 +1,4 @@
+# Contains the definitions for all the functions that are called in main.py
 from utils import print_heading, print_title, print_sub_title, print_dataframe_dict
 from termcolor import colored
 from header import Header
@@ -14,16 +15,19 @@ graphs_class = Graphs()
 # returns three dicts: one containing all header data,
 # one with all tables, and one with all graph data
 def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False, get_graphs_as_one_df=False):
+    # get header data
     print("    Retrieving Header Data")
     header_dict = header_class.get_header_dict(
         only_include_worker_pods=only_include_worker_pods
     )
 
+    # get tables data
     print("    Retrieving Tables Data")
     tables_dict = tables_class.get_tables_dict(
         only_include_worker_pods=only_include_worker_pods
     )
 
+    # get graphs data
     print("    Retrieving Graphs Data")
     graphs_dict = graphs_class.get_graphs_dict(
         only_include_worker_pods=only_include_worker_pods,
@@ -31,12 +35,14 @@ def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True,
         show_runtimes=show_graph_runtimes
     )
 
+    # set up dict to be returned
     return_dict = {
         'header': header_dict,
         'tables': tables_dict,
         'graphs': graphs_dict
     }
 
+    # change graphs_dict to one df instead of a dict of dataframes if specified
     if get_graphs_as_one_df:
         graphs_df = graphs_class.get_graphs_as_one_df(graphs_dict)
         return_dict['graphs'] = graphs_df
@@ -46,6 +52,7 @@ def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True,
 
 # prints data for headers, tables, and graphs.
 def print_all_data(data_dict=None):
+    # if there is no data passed in, generate it
     if data_dict is None:
         data_dict = get_all_data()
 
@@ -56,7 +63,7 @@ def print_all_data(data_dict=None):
     print_dataframe_dict(data_dict['tables'])
 
     print_heading('Graphs')
-    # check if graphs is a dictionary
+    # check if graphs is a dictionary or single dataframe
     graphs = data_dict['graphs']
     if isinstance(graphs, dict):
         print_dataframe_dict(graphs)
@@ -81,7 +88,7 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
         print(colored("No pods were dropped, so no need for requerying.", "green"), "\n\n")
         return {"Losses": None, "requeried": None}
 
-    # prompt the user so requery can be set to True or False
+    # prompt the user on whether to requery or not
     if requery is None:
         # prompt if the user would like to requery the graphs
         user_response = input("\n\nWould you like to requery the graphs for zoomed in views of the pod drops and recoveries?\nThis can help determine if data was truly dropped or if the graph just went to zero.\n(y/n)\n")
@@ -98,14 +105,14 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
     print_heading('Requeried Graphs')
     # loop through requeried_graphs_dict and print all requeried graphs
     for graph_title, loss_dict in requeried_graphs_dict.items():
-        # print graph title
         print_title(graph_title)
 
+        # loop through dropped and recovered graphs
         for category, graphs_list in loss_dict.items():
-            # skip if there is no data
+            # skip graph if there is no data
             if len(graphs_list) == 0:
                 continue
-            # Print Dropped or Recovered
+            # Print 'Dropped' or 'Recovered'
             print_sub_title(category)
             # Print graphs
             for graph in graphs_list:

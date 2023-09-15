@@ -1,3 +1,4 @@
+# For graphing all of the graph data that is stored in dataframes
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -24,7 +25,7 @@ for graph_title, graph_df in graphs_dict.items():
     # show time as datetimes instead of seconds since epoch(01-01-1970)
     graph_df["Time"] = graph_df["Time"].apply(dt.fromtimestamp)
 
-    # graph styling and labels
+    # Set graph styling and labels. Then display graph
     tick_spacing = 1
     ax = sns.lineplot(data=graph_df, x="Time", y=graph_title, hue="Pod")
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d %H:%M'))
