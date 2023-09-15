@@ -1,4 +1,4 @@
-# For analyzing all potential information that can be queried regarding nodes.
+# This file is for analyzing all potential information that can be queried regarding nodes.
 # Not necessary in the general program. More of a side enhancement.
 import sys
 import os
