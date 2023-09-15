@@ -14,15 +14,15 @@ ___
 There are 3 main types of data collected:
 1. **Header data**: 
 	
-	&nbsp; &nbsp; Singular datapoints (per pod) on CPU and Memory Utilization
+&nbsp; &nbsp; Singular datapoints (per pod) on CPU and Memory Utilization
 
 2. **Tables**: 
 	
-	&nbsp; &nbsp;Data tables containing several columns of statistics about related topics 
+&nbsp; &nbsp;Data tables containing several columns of statistics about related topics 
 
 3. **Graphs**:
 	
-	&nbsp; &nbsp; A table of datapoints containing several times and values per pod that can be displayed with a graph containing several colored lines (one line per pod).
+&nbsp; &nbsp; A table of datapoints containing several times and values per pod that can be displayed with a graph containing several colored lines (one line per pod).
 
 
 
