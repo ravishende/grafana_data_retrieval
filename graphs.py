@@ -98,12 +98,15 @@ class Graphs():
         # so we must check if time is a pandas Timestamp() before checking if it's a datetime object
         if isinstance(time, pd.Timestamp):
             return time.to_pydatetime(warn=False)
+        
         # check if time is a float (seconds since the epoch: 01/01/1970)
         if isinstance(time, float) or isinstance(time, int):
             return datetime.fromtimestamp(time)
+        
         # check if time is a datetime object
         if isinstance(time, datetime):
             return time
+        
         # if time is of unsupported type, raise error
         raise TypeError("argument for _convert_to_datetime() must be of type float, int, pandas.Timestamp, or datetime.datetime")
 
