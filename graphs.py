@@ -371,13 +371,13 @@ class Graphs():
             # Print Info for Pods Dropped: pod, previous value, time of last value, time dropped,
             print(colored("Pods Dropped || Previous Value || Time of Previous Value || Time Dropped", "green"))
             for pod in pods_dropped:
-                print(f'{pod["pod"]} || {pod["prev val"]} || {pod["start"]} || {pod["end"]}')
+                print(f'{pod["pod"]} || {round(pod["prev val"],3)} || {pod["start"]} || {pod["end"]}')
 
             if len(pods_recovered) > 0:
                 # Print Info for Pods Recovered: pod, value, time of last 0, time recovered
                 print(colored("\nPods Recovered || Recovered Value || Time of Previous 0 || Time Recovered", "green"))
                 for pod in pods_recovered:
-                    print(f'{pod["pod"]} || {pod["val"]} || {pod["start"]} || {pod["end"]}')
+                    print(f'{pod["pod"]} || {round(pod["val"],3)} || {pod["start"]} || {pod["end"]}')
 
         return {'dropped': pods_dropped, 'recovered': pods_recovered}       
 
