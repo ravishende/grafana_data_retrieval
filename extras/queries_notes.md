@@ -5,7 +5,7 @@ These queries can be found in the json data which can be accessed by this site:
 
 ***Note***: These queries are not the most up to date queries used in the code base. 
     
-- For all the most up to date queries, look in the individual class files (e.g. tables.py) and the queries will be stored in a dictionary called self.queries (as well as self.partial_queries for graphs.py). Those queries will include Node and pod information that the queries in this queries_notes.md file do not. 
+- For all the most up to date queries, look in the individual class files (e.g. tables.py), and the queries will be stored in a dictionary called self.queries (as well as self.partial_queries for graphs.py). Those queries will include node and pod information that the queries in this queries_notes.md file do not. 
 
 ___
 ## Getting the json information and original queries (they have since been modified in the code):
