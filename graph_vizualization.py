@@ -1,6 +1,4 @@
-import pandas as pd
 import seaborn as sns
-import time
 import matplotlib.pyplot as plt
 from graphs import Graphs
 from datetime import datetime as dt
@@ -24,11 +22,11 @@ for graph_title, graph_df in graphs_dict.items():
     print(my_datetime)
     s = my_datetime.strftime("%H:%M")
 
-    ax = sns.lineplot(data=graph_df, x="Time", y=graph_title,hue="Pod")
+    ax = sns.lineplot(data=graph_df, x="Time", y=graph_title, hue="Pod")
     # ax.set(xlim=0)
     # labels = ["13:44", "2023-08-30 13:50:42.138000128", "2023-08-30 13:55:42.138000128"]
     # ax.set(xticklabels=labels)
     plt.title(graph_title)
     plt.xlabel("Seconds Since "+s)
-    plt.xticks(rotation = 25)
+    plt.xticks(rotation=25)
     plt.show()

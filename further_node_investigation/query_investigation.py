@@ -1,5 +1,7 @@
 # This file is for getting information from queries retrieved by node_metrics_retrieval.py
 # To determine if this is information that should be saved or investigated further
+from termcolor import colored
+from pprint import pprint
 import sys
 import os
 # get set up to be able to import files from parent directory (grafana_data_retrieval)
@@ -8,10 +10,8 @@ sys.path.append("../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath("header.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
-from inputs import NAMESPACE, DEFAULT_DURATION
+from inputs import NAMESPACE
 from utils import read_json, write_json, query_api_site, get_result_list, print_sub_title, print_title
-from termcolor import colored
-from pprint import pprint
 
 
 duration = '15m'
@@ -32,7 +32,7 @@ for i in range(len(queries_list)):
     metric_name = metrics_list[i]
     queried_data[metric_name] = result_list
 
-#write queried data to a file
+# write queried data to a file
 write_json("queried_data.txt", queried_data)
 
 # print the queried data

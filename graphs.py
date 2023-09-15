@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
-from utils import query_api_site_for_graph, get_result_list, filter_df_for_workers, print_heading, print_title, print_sub_title
+from utils import query_api_site_for_graph, get_result_list, filter_df_for_workers, print_sub_title
 from inputs import NAMESPACE, DEFAULT_DURATION, DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP, REQUERY_GRAPH_STEP_DIVISOR
 from datetime import datetime, timedelta
 from termcolor import colored
-from pprint import pprint
 from tqdm import tqdm
 import time
 import re
@@ -22,7 +21,7 @@ class Graphs():
         self.requery_step_divisor = requery_step_divisor
 
         # dict storing titles and their queries.
-        self.queries_dict = { # Note: Do not change the white space in 'sum by(node, pod) ' because _update_query_for_requery() relies on it
+        self.queries_dict = {  # Note: Do not change the white space in 'sum by(node, pod) ' because _update_query_for_requery() relies on it
             'CPU Usage': 'sum by(node, pod) (node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})',
             'Memory Usage (w/o cache)': 'sum by(node, pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""})',
             'Receive Bandwidth': 'sum by(node, pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
@@ -45,7 +44,7 @@ class Graphs():
             ]
         }
 
-    #given a timedelta, get it in the form 2d4h12m30s for use with querying (time_step)
+    # given a timedelta, get it in the form 2d4h12m30s for use with querying (time_step)
     def _get_time_str_from_timedelta(self, delta):
         days = delta.days
         hours, remainder = divmod(delta.seconds, 3600)
@@ -99,10 +98,10 @@ class Graphs():
         # so we must check if time is a pandas Timestamp() before checking if it's a datetime object
         if isinstance(time, pd.Timestamp):
             return time.to_pydatetime(warn=False)
-        #check if time is a float (seconds since the epoch: 01/01/1970)
+        # check if time is a float (seconds since the epoch: 01/01/1970)
         if isinstance(time, float) or isinstance(time, int):
             return datetime.fromtimestamp(time)
-        #check if time is a datetime object
+        # check if time is a datetime object
         if isinstance(time, datetime):
             return time
         # if time is of unsupported type, raise error
@@ -123,7 +122,7 @@ class Graphs():
             # make sure both start and end are datetime objects
             start = self._convert_to_datetime(start)
             end = self._convert_to_datetime(end)
-        
+
         # assemble strings
         end_str = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         start_str = start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -211,11 +210,11 @@ class Graphs():
             # values instead of read+write. Later, it is updated to store both.
             graph_df = self._generate_graph_df(query_title, query_pair[0], show_runtimes=show_runtimes)
             graph_df_write = self._generate_graph_df(query_title, query_pair[1], show_runtimes=show_runtimes)
-            
+
             if graph_df is not None and graph_df_write is not None:
                 # calculate read + write column by adding read values and write values
                 graph_df[query_title] = graph_df[query_title] + graph_df_write[query_title]
-            
+
             # add graph dataframe to graphs_dict
             graphs_dict[query_title] = graph_df
 
@@ -228,7 +227,7 @@ class Graphs():
     # generate and return a list of all the graphs
     def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
-        #loop through graphs
+        # loop through graphs
         for graph_title, graph in graphs_dict.items():
             if graph is None:
                 continue
@@ -269,11 +268,10 @@ class Graphs():
 
         return total_df
 
-
 # _________________________________________
 #
 #           Requery Methods
-#__________________________________________
+# _________________________________________
 
     # convert a dataframe containing all graphs data into a dictionary with several graphs
     # used when a graphs_df is passed in instead of a graphs_dict in check_for_losses
@@ -300,7 +298,7 @@ class Graphs():
 
     # change a query to only query for the given pod
     def _update_query_for_requery(self, query, pod):
-        # # change 'sum by(node, pod) ' to just be 'sum by(node) ' so we retain the node information while only requesting one pod 
+        # # change 'sum by(node, pod) ' to just be 'sum by(node) ' so we retain the node information while only requesting one pod
         # str_to_delete = ' by(node, pod) '
         # query = query.replace(str_to_delete, ' by(node) ')
 
@@ -311,8 +309,8 @@ class Graphs():
 
         return updated_query
 
-    # returns a dict in the form: 
-    # {'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+    # returns a dict in the form:
+    # {'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...],
     #  'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]}
     # returns none if no losses
     def _check_graph_loss(self, graph_title, graph_df, print_info=False):
@@ -356,7 +354,7 @@ class Graphs():
                     }
                     pods_recovered.append(recovery)
 
-            #update old pod and value for next iteration
+            # update old pod and value for next iteration
             previous_value = current_value
             previous_pod = current_pod
 
@@ -379,18 +377,18 @@ class Graphs():
                 for pod in pods_recovered:
                     print(f'{pod["pod"]} || {round(pod["val"],3)} || {pod["start"]} || {pod["end"]}')
 
-        return {'dropped': pods_dropped, 'recovered': pods_recovered}       
+        return {'dropped': pods_dropped, 'recovered': pods_recovered}
 
     # returns a dictionary containing all potential dropped or recovered pods with information about them
     # the returned dictionary (graphs_losses_dict) is in the form
         # graphs_losses = {
         #     graph_title_1: {
-        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...],
         #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]
-        #     }, 
+        #     },
         #     graph_title_2: {
-        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
-        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...] 
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...],
+        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]
         #     },
         #     ...
         # }
@@ -405,14 +403,14 @@ class Graphs():
 
         # check if graphs_dict has data
         elif all(value is None for value in graphs_dict.values()):
-                raise ValueError("graphs_dict has no data; can't check for losses of no data")
-                return
+            raise ValueError("graphs_dict has no data; can't check for losses of no data")
+            return
         graphs_losses_dict = {}
 
         for graph_title, graph in graphs_dict.items():
             if graph is None:
                 continue
-            
+
             # collect and store loss data
             graph_loss_data = self._check_graph_loss(graph_title, graph, print_info=print_info)
             graphs_losses_dict[graph_title] = graph_loss_data
@@ -420,16 +418,16 @@ class Graphs():
         return graphs_losses_dict
 
     # returns a dictionary of graph titles with each title containing two categories: dropped and retrieved
-    # in each category, there is a list of graph dataframes. Each df corresponds to a pod that was dropped/recovered 
+    # in each category, there is a list of graph dataframes. Each df corresponds to a pod that was dropped/recovered
     # the returned dictionary (requiered_graph_dict) is in the form
         # graphs_losses = {
         #     graph_title_1: {
-        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...],
         #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]
-        #     }, 
+        #     },
         #     graph_title_2: {
-        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...], 
-        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...] 
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...],
+        #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]
         #     },
         #     ...
         # }
@@ -456,16 +454,16 @@ class Graphs():
                     # partial query --> 2 queries per graph
                     query_pair = self.partial_queries_dict[graph_title]
                     partial_query = True
-                
+
                 # loop through the pods for each graph
                 for pod_dict in pods_list:
                     # assemble arguments for self._generate_graph_df
                     pod = pod_dict['pod']
                     start = pod_dict['start']
                     end = pod_dict['end']
-                    #convert time_step to timedelta to be able to divide it
+                    # convert time_step to timedelta to be able to divide it
                     time_step = self._get_timedelta_from_str(self.time_step)/self.requery_step_divisor
-                    #convert time_step back to str to be used for querying
+                    # convert time_step back to str to be used for querying
                     time_step = self._get_time_str_from_timedelta(time_step)
                     graph_df = None
 
@@ -475,12 +473,12 @@ class Graphs():
                         graph_df = self._generate_graph_df(
                             graph_title, updated_query, start=start, end=end, time_step=time_step, show_runtimes=show_runtimes
                         )
-                    
+
                     # graph is defined by 2 queries --> query both, add both partial graphs to get the final graph
-                    else: 
+                    else:
                         updated_read_query = self._update_query_for_requery(query_pair[0], pod)
                         updated_write_query = self._update_query_for_requery(query_pair[1], pod)
-                        
+
                         read_graph = self._generate_graph_df(
                             graph_title, updated_read_query, start=start, end=end, time_step=time_step, show_runtimes=show_runtimes
                         )
