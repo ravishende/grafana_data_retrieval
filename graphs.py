@@ -21,7 +21,7 @@ class Graphs():
         self.requery_step_divisor = requery_step_divisor
 
         # dict storing titles and their queries.
-        self.queries_dict = {  # Note: Do not change the white space in 'sum by(node, pod) ' because _update_query_for_requery() relies on it
+        self.queries = {  # Note: Do not change the white space in 'sum by(node, pod) ' because _update_query_for_requery() relies on it
             'CPU Usage': 'sum by(node, pod) (node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})',
             'Memory Usage (w/o cache)': 'sum by(node, pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""})',
             'Receive Bandwidth': 'sum by(node, pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
@@ -31,7 +31,7 @@ class Graphs():
             'Rate of Received Packets Dropped': 'sum by(node, pod) (irate(container_network_receive_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'Rate of Transmitted Packets Dropped': 'sum by(node, pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
         }
-        self.partial_queries_dict = {
+        self.partial_queries = {
             # These two graphs need 2 queries each to calculate them.
             # It didn't work to get everything with one query
             'IOPS(Read+Write)': [
@@ -187,8 +187,8 @@ class Graphs():
 
     # get a dictionary in the form of {graph titles: list of graph data}
     def _generate_graphs(self, show_runtimes=False):
-        queries_dict = self.queries_dict
-        partial_queries_dict = self.partial_queries_dict
+        queries_dict = self.queries
+        partial_queries_dict = self.partial_queries
         graphs_dict = {}
 
         # get all of the initial graphs from the normal queries
@@ -450,12 +450,12 @@ class Graphs():
             for category, pods_list in label_dict.items():
                 requeried_graphs_dict[graph_title][category] = []
                 # get query (not updated for specific pod)
-                if graph_title in self.queries_dict.keys():
-                    query = self.queries_dict[graph_title]
+                if graph_title in self.queries.keys():
+                    query = self.queries[graph_title]
                     partial_query = False
                 else:
                     # partial query --> 2 queries per graph
-                    query_pair = self.partial_queries_dict[graph_title]
+                    query_pair = self.partial_queries[graph_title]
                     partial_query = True
 
                 # loop through the pods for each graph

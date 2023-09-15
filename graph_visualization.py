@@ -32,7 +32,6 @@ for graph_title, graph_df in graphs_dict.items():
     plt.get_current_fig_manager().full_screen_toggle()
     plt.subplots_adjust(right=0.75)  # right is default 0.9. right=0.75 moves the graph left so the legend is not partially cut off.
     plt.title(graph_title + " Over Time")
-    # plt.xlabel("Seconds Since " + time_0_s)
     plt.xlabel("Time")
     plt.xticks(rotation=25)
     plt.show()
