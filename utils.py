@@ -98,22 +98,26 @@ def filter_df_for_workers(dataframe):
     dataframe = dataframe.dropna(subset=["Pod"])
     return dataframe
 
-#Printing Functions
+
+# Printing Functions
 def print_heading(heading):
     indented_heading = " "*15 + heading + ":"
     print("\n\n\n\n" + "*"*100)
     print(colored(indented_heading, "magenta"))
     print("*" * 100)
-    
+
+
 def print_title(title):
     print("\n\n" + "-"*100, "\n")
     print("            ", colored(title, "green"))
     print("-" * 100, "\n")
 
+
 def print_sub_title(sub_title):
     print("\n\n" + '='*30)
     print(colored(sub_title, "blue"))
     print('='*30)
+
 
 # for a given dictionary in the form {titles:dataframes}
 # print the title and dataframe of each item in the dict
@@ -125,6 +129,7 @@ def print_dataframe_dict(dictionary):
         else:
             print(dataframe)
         print("\n\n")
+
 
 # writes json data to a file
 def write_json(file_name, data):

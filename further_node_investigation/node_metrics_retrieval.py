@@ -1,5 +1,6 @@
 # This file is for analyzing all potential information that can be queried regarding nodes.
 # Not necessary in the general program. More of a side enhancement.
+from pprint import pprint
 import sys
 import os
 # get set up to be able to import files from parent directory (grafana_data_retrieval)
@@ -10,7 +11,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 from inputs import NAMESPACE
 from utils import write_json, query_api_site, get_result_list
-from pprint import pprint
+
 
 # query for all metrics with node somewhere in the name
 duration = '1w'

@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 from main_functions import *
-from utils import write_json
 import pandas as pd
 
 # set pandas display dataframe options to display all columns
