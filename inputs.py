@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # namespace
-NAMESPACE = 'wifire-quicfire'  # main namespace to be using
-# NAMESPACE = 'alto'  # used for testing when no data in wifire-quicfire
+# NAMESPACE = 'wifire-quicfire'  # main namespace to be using
+NAMESPACE = 'alto'  # used for testing when no data in wifire-quicfire
 
 # duration for data types: tables, graphs
 DEFAULT_DURATION = '10m'
