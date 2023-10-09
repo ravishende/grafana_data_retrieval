@@ -11,6 +11,15 @@ header_class = Header()
 tables_class = Tables()
 graphs_class = Graphs()
 
+def get_header_data():
+    return header_class.get_header_dict()
+
+def get_tables_data():
+    return tables_class.get_tables_dict()
+
+def get_graphs_data():
+    return graphs_class.get_graphs_dict()
+
 
 # returns three dicts: one containing all header data,
 # one with all tables, and one with all graph data
