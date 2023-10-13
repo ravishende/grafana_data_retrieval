@@ -30,3 +30,7 @@ losses_and_requeried_graphs = \
         show_runtimes=False,  # for displaying in the terminal how long each query and graph creation takes
         display_time_as_timestamp=True  # displays time in readable format instead of seconds since epoch (01/01/1970)
     )
+
+get_tables_data(
+    only_include_worker_pods=True,
+    display_time_as_timestamp=False)
