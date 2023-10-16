@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 from utils import query_api_site_for_graph, get_result_list, filter_df_for_workers, print_sub_title
-from inputs import NAMESPACE, DEFAULT_DURATION, DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP, REQUERY_GRAPH_STEP_DIVISOR
+from inputs import *
 from datetime import datetime, timedelta
 from termcolor import colored
 from tqdm import tqdm
@@ -11,7 +11,7 @@ import re
 
 
 class Graphs():
-    def __init__(self, namespace=NAMESPACE, end=datetime.now(), duration=DEFAULT_DURATION, time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, requery_step_divisor=REQUERY_GRAPH_STEP_DIVISOR):
+    def __init__(self, namespace=NAMESPACE, end=DEFAULT_FINAL_GRAPH_TIME, duration=DEFAULT_DURATION, time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, requery_step_divisor=REQUERY_GRAPH_STEP_DIVISOR):
         # variables for querying data for graphs
         self.namespace = namespace
         self.end = end
