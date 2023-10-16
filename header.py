@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 from utils import query_api_site, get_result_list, filter_df_for_workers
-from inputs import NAMESPACE, DEFAULT_DURATION
+from inputs import NAMESPACE
 
 
 class Header():
-    def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
+    def __init__(self, namespace=NAMESPACE):
         self.namespace = namespace
-        self.duration = duration
         self.queries = {
             'CPU Utilisation (from requests)': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}) / sum by(node, pod) (kube_pod_container_resource_requests{job="kube-state-metrics", namespace="' + self.namespace + '", resource="cpu"})',
             'CPU Utilisation (from limits)': 'sum by (node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}) / sum by(node, pod) (kube_pod_container_resource_limits{job="kube-state-metrics", namespace="' + self.namespace + '", resource="cpu"})',

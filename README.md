@@ -38,10 +38,11 @@ There are 3 main types of data collected:
 ___
 
 ## Inputs
-There are 3 main inputs (defined in inputs.py) that specify what information will be returned:
+There are 4 main inputs (defined in inputs.py) that specify what information will be returned:
 1. DEFAULT_DURATION
 2. DEFAULT_GRAPH_STEP
 3. DEFAULT_GRAPH_TIME_OFFSET
+4. DEFAULT_FINAL_GRAPH_TIME
 
 You can also specify specific inputs in the parameters when calling a class in main.py. Changing these inputs will affect how much data will be returned and from how long ago.
 To see how inputs affect a specific query, mess with the settings for that query [here](https://thanos.nrp-nautilus.io/).
