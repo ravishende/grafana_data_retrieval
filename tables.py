@@ -15,9 +15,9 @@ class Tables():
         self.storage_io = pd.DataFrame(columns=["Pod", "Node", "IOPS(Reads)", "IOPS(Writes)", "IOPS(Reads + Writes)", "Throughput(Read)", "Throughput(Write)", "Throughput(Read + Write)"])
         self.queries = {
             # CPU Quota
-            'CPU Usage': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + NAMESPACE + '"})',
-            'CPU Requests': 'sum by(node, pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{cluster="", namespace="' + NAMESPACE + '"})',
-            'CPU Limits': 'sum by(node, pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits{cluster="", namespace="' + NAMESPACE + '"})',
+            'CPU Usage': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + self.namespace + '"})',
+            'CPU Requests': 'sum by(node, pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{cluster="", namespace="' + self.namespace + '"})',
+            'CPU Limits': 'sum by(node, pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits{cluster="", namespace="' + self.namespace + '"})',
             # Memory Quota
             'Memory Usage': 'sum by(node, pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + self.namespace + '", container!="", image!=""})',
             'Memory Requests': 'sum by(node, pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{cluster="", namespace="' + self.namespace + '"})',
