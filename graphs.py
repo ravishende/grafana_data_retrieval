@@ -22,8 +22,8 @@ class Graphs():
 
         # dict storing titles and their queries.
         self.queries = {  # Note: Do not change the white space in 'sum by(node, pod) ' because _update_query_for_requery() relies on it
-            'CPU Usage': 'sum by(node, pod) (node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"})',
-            'Memory Usage (w/o cache)': 'sum by(node, pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""})',
+            'CPU Usage': 'sum by(node, pod) (irate(node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}[' + self.duration + ']))',
+            'Memory Usage (w/o cache)': 'sum by(node, pod) (irate(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""}[' + self.duration + ']))',
             'Receive Bandwidth': 'sum by(node, pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'Transmit Bandwidth': 'sum by(node, pod) (irate(container_network_transmit_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'Rate of Received Packets': 'sum by(node, pod) (irate(container_network_receive_packets_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
