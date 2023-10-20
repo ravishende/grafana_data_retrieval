@@ -14,7 +14,8 @@ result_dict = get_all_data(
     only_include_worker_pods=False,  # filters graphs for only worker pods. Updates pod names to be just their ensemble
     display_time_as_timestamp=True,  # displays time in readable format instead of seconds since epoch (01/01/1970)
     show_graph_runtimes=False,  # for displaying in the terminal how long each query and graph creation takes
-    get_graphs_as_one_df=False  # puts all graphs into one dataframe instead of a dictionary with multiple graphs. For inputting into database in future
+    get_graphs_as_one_df=False,  # puts all graphs into one dataframe instead of a dictionary with multiple graphs. For inputting into database in future
+    get_tables_as_one_df=False,  # puts all tables into one dataframe instead of a dictionary with multiple tables. For inputting into database in future
 )
 
 # print data and collect graphs info
@@ -31,6 +32,6 @@ losses_and_requeried_graphs = \
         display_time_as_timestamp=True  # displays time in readable format instead of seconds since epoch (01/01/1970)
     )
 
-get_tables_data(
-    only_include_worker_pods=True,
-    display_time_as_timestamp=False)
+# tables_dict = get_tables_data(
+#     only_include_worker_pods=True,
+#     display_time_as_timestamp=False)

@@ -26,7 +26,7 @@ def get_graphs_data():
 
 # returns three dicts: one containing all header data,
 # one with all tables, and one with all graph data
-def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False, get_graphs_as_one_df=False):
+def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False, get_graphs_as_one_df=False, get_tables_as_one_df=False):
     # get header data
     print("    Retrieving Header Data")
     header_dict = header_class.get_header_dict(
@@ -54,11 +54,15 @@ def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True,
         'graphs': graphs_dict
     }
 
-    # change graphs_dict to one df instead of a dict of dataframes if specified
+    # change graphs_dict and tables_dict to one df instead of a dict of dataframes if specified
     if get_graphs_as_one_df:
         graphs_df = graphs_class.get_graphs_as_one_df(graphs_dict)
         return_dict['graphs'] = graphs_df
 
+    if get_tables_as_one_df:
+        print("getting tables as one df", "\n"*10)
+        tables_df = tables_class.get_tables_as_one_df(tables_dict)
+        return_dict['tables'] = tables_df
     return return_dict
 
 
@@ -72,7 +76,12 @@ def print_all_data(data_dict=None):
     print_dataframe_dict(data_dict['header'])
 
     print_heading('Tables')
-    print_dataframe_dict(data_dict['tables'])
+    # check if tables is a dictionary or single dataframe
+    tables = data_dict['tables']
+    if isinstance(tables, dict):
+        print_dataframe_dict(tables)
+    else:  # graphs is a single df
+        print(tables)
 
     print_heading('Graphs')
     # check if graphs is a dictionary or single dataframe
@@ -81,6 +90,7 @@ def print_all_data(data_dict=None):
         print_dataframe_dict(graphs)
     else:  # graphs is a single df
         print(graphs)
+
 
 
 # get information on dropped/recovered pods and requery if requested. Then return a dict of 'losses' (dropped/recovered pods) and 'requeried' graphs
