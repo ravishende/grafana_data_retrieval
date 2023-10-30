@@ -95,5 +95,7 @@ print(training_data)
 
 training_data.to_csv("queried_training_data.csv")
 
-# pprint(total_mem_data)
-# print(len(total_mem_data))
+# Todo: add more columns:
+    # 1 for cpu total usage at some randomized refresh time
+    # 1 for memory total usage at some randomized refresh time
+    # 1 for refresh time measured in seconds since the start time
