@@ -16,6 +16,21 @@ NUM_ROWS = 10
 NAMESPACE = 'wifire-quicfire'
 CURRENT_ROW = 1
 
+'''
+-----------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
+NOTE:
+if you choose want to use this file to fill out the queried information for an entire training data csv file,
+keep in mind this only collects from the beginning til N rows, then saves that dataframe in a file that has already been created.
+It does NOT append to that file, and instead rewrites it. You can modify this file to instead append, but make sure you update the 
+starting rows that you read from as well.
+-----------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
+
+'''
+
 # collect NUM_ROWS rows from the training data csv as a pandas DataFrame
 training_data = pd.read_csv('cleaned_training_data.csv', nrows=NUM_ROWS)
 
