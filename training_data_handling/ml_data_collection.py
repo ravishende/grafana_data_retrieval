@@ -1,10 +1,23 @@
-from tables import Tables
 import pandas as pd
-from utils import query_api_site, get_result_list, query_api_site_for_graph, print_title
 from pprint import pprint
 from datetime import datetime, timedelta
 from random import randint
 import csv
+# get set up to be able to import files from parent directory (grafana_data_retrieval)
+# utils.py and inputs.py not in this current directory and instead in the parent
+import sys
+import os
+sys.path.append("../grafana_data_retrieval")
+current = os.path.dirname(os.path.realpath("ml_data_collection.py"))
+parent = os.path.dirname(current)
+sys.path.append(parent)
+from utils import query_api_site, get_result_list, query_api_site_for_graph, print_title
+from tables import Tables
+
+'''
+This file is outdated. Instead, use ensemble_total_resource_consumption.py
+'''
+
 
 tables_class = Tables()
 
@@ -43,8 +56,30 @@ def assemble_time_filter(start, end, time_step=None):
 
     return time_filter
 
+def update_pods_nodes_count(result_list, pods_count, nodes_count):
+    for result in result_list:
+        node = result['metric']['node']
+        pod = result['metric']['pod']
+        if pod in pods_count:
+            pods_count[pod] += 1
+            nodes_count[node] += 1
+        else:
+            pods_count[pod] = 1;
+            if node in nodes_count:
+                nodes_count[node] += 1;
+            else:
+                nodes_count[node] = 1;
+    return pods_count, nodes_count
+
+
 
 print("Querying Data:")
+
+# query = tables_class.queries[0]
+# node_namespace_pod_container:
+query = 'sum by(node, pod) (increase(node_namespace_pod_container:container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[1h]))',
+pods_count = {}
+nodes_count = {}
 
 # finding the performance data for each training datapoint
 # read in csv
@@ -60,13 +95,24 @@ with open('training_data.csv', mode='r') as training_data:
         collection_seconds = randint(1, runtime_seconds)
         collection_time = start + timedelta(seconds=collection_seconds)
 
+        # query for the data from the start time til the random refresh time 
         time_filter = assemble_time_filter(start=start, end=collection_time)
+        result_list = get_result_list(query_api_site_for_graph(tables_class.queries['CPU Usage'], time_filter))
+        
+        # update which pods and nodes show up and how frequently
+        pods_count, nodes_count = update_pods_nodes_count(result_list, pods_count, nodes_count)
+        print_title("Datapoint index: " + str(line_count) + " || end (seconds since start): " + str(collection_seconds))  
+        # pprint(result_list)
 
-        queried_data = query_api_site_for_graph(tables_class.queries['CPU Usage'], time_filter)
-        print_title("Datapoint index: " + str(line_count) + " || end (seconds since start): " + str(collection_seconds))
-        pprint(queried_data)
+        # collect 1000 rows worth of data
         line_count+=1
+        if(line_count >= 1000):
+            break
+    print_title("Nodes Count:")
+    pprint(nodes_count)
 
+    print_title("Pods Count:")
+    pprint(pods_count)
 # # get csv as pandas dataframe
 # # training_df = pd.read_csv("training_data.csv")
 
