@@ -15,7 +15,14 @@ from utils import query_api_site, get_result_list, query_api_site_for_graph, pri
 from tables import Tables
 
 '''
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+NOTE:
 This file is outdated. Instead, use ensemble_total_resource_consumption.py
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
 '''
 
 
@@ -83,7 +90,7 @@ nodes_count = {}
 
 # finding the performance data for each training datapoint
 # read in csv
-with open('training_data.csv', mode='r') as training_data:
+with open('old_training_data.csv', mode='r') as training_data:
     data = csv.DictReader(training_data)
     line_count = 0
     for row in data:
@@ -114,7 +121,7 @@ with open('training_data.csv', mode='r') as training_data:
     print_title("Pods Count:")
     pprint(pods_count)
 # # get csv as pandas dataframe
-# # training_df = pd.read_csv("training_data.csv")
+# # training_df = pd.read_csv("old_training_data.csv")
 
 
 # # finding the performance data for each training datapoint
