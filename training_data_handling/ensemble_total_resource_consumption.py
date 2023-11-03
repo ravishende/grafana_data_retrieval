@@ -12,7 +12,7 @@ from utils import query_api_site, query_api_site_for_graph, get_result_list, pri
 
 # settings and constants
 pd.set_option('display.max_columns', None)
-NUM_ROWS = 10
+NUM_ROWS = 48
 NAMESPACE = 'wifire-quicfire'
 CURRENT_ROW = 1
 
@@ -21,18 +21,20 @@ CURRENT_ROW = 1
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 NOTE:
-if you choose want to use this file to fill out the queried information for an entire training data csv file,
-keep in mind this only collects from the beginning til N rows, then saves that dataframe in a file that has already been created.
-It does NOT append to that file, and instead rewrites it. You can modify this file to instead append, but make sure you update the 
-starting rows that you read from as well.
+This file reads in a csv called performance_training_data.csv, 
+which contains all the training data from devin's inputs as well as columns
+for cpu_usage_total and mem_usage total. Running this appends NUM_ROWS values for those two
+columns to what has already been queried for, slowly filling out more and more of the datapoints.
+
+All that needs to be done is select NUM_ROWS to be the value you would like and then run the file.
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 
 '''
 
-# collect NUM_ROWS rows from the training data csv as a pandas DataFrame
-training_data = pd.read_csv('cleaned_training_data.csv', nrows=NUM_ROWS)
+# get the csv file as a pandas dataframe
+training_data = pd.read_csv('performance_training_data.csv', index_col=0)
 
 # given a timedelta, get it in the form 2d4h12m30s for use with querying
 def delta_to_time_str(delta):
@@ -85,6 +87,7 @@ def get_cpu_total(start, stop):
     total_cpu_data = get_result_list(query_api_site(total_cpu_query))
     return total_cpu_data
 
+
 # given a start and stop time, query for total cpu usage of the entire run
 def get_mem_total(start, stop):
     # get start and stop as datetime objects
@@ -101,16 +104,35 @@ def get_mem_total(start, stop):
     CURRENT_ROW += 1
     return total_mem_data
 
-# for each row in the dataframe, query for the total cpu and memory usage of the run
-training_data['cpu_usage'] = training_data.apply(lambda row: get_cpu_total(row['start'], row['stop']), axis=1)
-training_data['mem_usage'] = training_data.apply(lambda row: get_mem_total(row['start'], row['stop']), axis=1)
 
-print("\n"*5)
-print(training_data)
+# given a dataframe and number of rows, calculate performance data columns for those rows
+# starting from the first None value. The other rows' values for those columns will be unchanged.
+# returns the updated dataframe.
+def insert_performace_cols(df, n_rows):
+    start_row = df['cpu_usage'].isna().idxmax()
+    # add values for cpu_usage and mem_usage columns starting from start_row and doing it for n_rows rows.
+    df['cpu_usage'] = df.apply(
+        lambda row: get_cpu_total(row['start'], row['stop']) if row.name in range(start_row, start_row+n_rows) else row['cpu_usage'],
+        axis=1)
+    df['mem_usage'] = df.apply(
+        lambda row: get_mem_total(row['start'], row['stop']) if start_row <= row.name < (start_row+n_rows) else row['mem_usage'],
+        axis=1)
+    return df
 
-training_data.to_csv("queried_training_data.csv")
+# calculate performance data
+training_data = insert_performace_cols(training_data, NUM_ROWS)
+print("\n"*5, training_data)
 
-# Todo: add more columns:
-    # 1 for cpu total usage at some randomized refresh time
-    # 1 for memory total usage at some randomized refresh time
-    # 1 for refresh time measured in seconds since the start time
+# write updated df to a csv file
+training_data.to_csv("performance_training_data.csv")
+
+# Todo: 
+# get cpu_usage and mem_usage columns to a single number
+    # filter cpu_usage and mem_usage columns to only include pods in the correct ensemble. 
+    # Then sum over all pods to get total cpu_usage for the run.
+# add more columns:
+    # one for cpu total usage at some randomized refresh time
+    # one for memory total usage at some randomized refresh time
+    # one for refresh time measured in seconds since the start time
+    # one for IO information
+    # one for network info
