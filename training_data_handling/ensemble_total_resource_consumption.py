@@ -13,7 +13,7 @@ from utils import query_api_site, query_api_site_for_graph, get_result_list, pri
 
 # settings and constants
 pd.set_option('display.max_columns', None)
-NUM_ROWS = 50
+NUM_ROWS = 100
 NAMESPACE = 'wifire-quicfire'
 CURRENT_ROW = 1
 
@@ -123,7 +123,7 @@ def insert_performace_cols(df, n_rows):
         axis=1)
     return df
 
-print(colored("\n\nquerying data...", yellow))
+print(colored("\n\nquerying data...\n\n", "yellow"))
 # calculate performance data
 training_data = insert_performace_cols(training_data, NUM_ROWS)
 print("\n"*5, training_data)
