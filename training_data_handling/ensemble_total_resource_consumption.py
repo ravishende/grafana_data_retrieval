@@ -13,9 +13,10 @@ from utils import query_api_site, query_api_site_for_graph, get_result_list, pri
 
 # settings and constants
 pd.set_option('display.max_columns', None)
-NUM_ROWS = 100
+NUM_ROWS = 500
 NAMESPACE = 'wifire-quicfire'
-CURRENT_ROW = 1
+CURRENT_CPU_ROW = 1
+CURRENT_MEM_ROW = 1
 
 '''
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -76,16 +77,26 @@ def datetime_ify(time):
         return time
 
 
-# given a start and stop time, query for total cpu usage of the entire run
-def get_cpu_total(start, stop):
+# given a start and stop time (and row_index for printing purposes),
+ # query for total cpu usage of the entire run and print updates on rows completed
+def get_cpu_total(start, stop, row_index):
     # get start and stop as datetime objects
     start = datetime_ify(start)
     stop = datetime_ify(stop)
+    
     # assemble query
     duration, offset = calculate_duration_and_offset(start, stop)
     total_cpu_query = 'sum by (node, pod) (increase(container_cpu_usage_seconds_total{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
     # gather data
     total_cpu_data = get_result_list(query_api_site(total_cpu_query))
+    
+    # print row information
+    global CURRENT_CPU_ROW
+    progress_message = "Row complete: " +  str(CURRENT_CPU_ROW) + " / " +  str(NUM_ROWS)
+    print(colored(progress_message, "green"))
+    print("row index:", row_index)
+    CURRENT_CPU_ROW += 1
+
     return total_cpu_data
 
 
@@ -95,17 +106,20 @@ def get_mem_total(start, stop, row_index):
     # get start and stop as datetime objects
     start = datetime_ify(start)
     stop = datetime_ify(stop)
+    
     # assemble query
     duration, offset = calculate_duration_and_offset(start, stop)
     total_mem_query = 'sum by (node, pod) (increase(container_memory_working_set_bytes{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
     # gather data
     total_mem_data = get_result_list(query_api_site(total_mem_query))
+    
     # print row information
-    global CURRENT_ROW
-    progress_message = "Row complete: " +  str(CURRENT_ROW) + " / " +  str(NUM_ROWS)
+    global CURRENT_MEM_ROW
+    progress_message = "Row complete: " +  str(CURRENT_MEM_ROW) + " / " +  str(NUM_ROWS)
     print(colored(progress_message, "green"))
     print("row index:", row_index)
-    CURRENT_ROW += 1
+    CURRENT_MEM_ROW += 1
+
     return total_mem_data
 
 
@@ -113,17 +127,22 @@ def get_mem_total(start, stop, row_index):
 # starting from the first None value. The other rows' values for those columns will be unchanged.
 # returns the updated dataframe.
 def insert_performace_cols(df, n_rows):
+    # get first row without CPU usage data 
     start_row = df['cpu_usage'].isna().idxmax()
+    
     # add values for cpu_usage and mem_usage columns starting from start_row and doing it for n_rows rows.
+    print_title("Inserting CPU Data")
     df['cpu_usage'] = df.apply(
-        lambda row: get_cpu_total(row['start'], row['stop']) if row.name in range(start_row, start_row+n_rows) else row['cpu_usage'],
+        lambda row: get_cpu_total(row['start'], row['stop'], row.name) if row.name in range(start_row, start_row+n_rows) else row['cpu_usage'],
         axis=1)
+    
+    print_title("Inserting Memory Data")
     df['mem_usage'] = df.apply(
         lambda row: get_mem_total(row['start'], row['stop'], row.name) if start_row <= row.name < (start_row+n_rows) else row['mem_usage'],
         axis=1)
     return df
 
-print(colored("\n\nquerying data...\n\n", "yellow"))
+
 # calculate performance data
 training_data = insert_performace_cols(training_data, NUM_ROWS)
 print("\n"*5, training_data)
