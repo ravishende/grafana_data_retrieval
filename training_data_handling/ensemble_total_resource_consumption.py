@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import datetime, timedelta
+from termcolor import colored
 # get set up to be able to import files from parent directory (grafana_data_retrieval)
 # utils.py and inputs.py not in this current directory and instead in the parent
 import sys
@@ -12,7 +13,7 @@ from utils import query_api_site, query_api_site_for_graph, get_result_list, pri
 
 # settings and constants
 pd.set_option('display.max_columns', None)
-NUM_ROWS = 48
+NUM_ROWS = 50
 NAMESPACE = 'wifire-quicfire'
 CURRENT_ROW = 1
 
@@ -88,8 +89,9 @@ def get_cpu_total(start, stop):
     return total_cpu_data
 
 
-# given a start and stop time, query for total cpu usage of the entire run
-def get_mem_total(start, stop):
+# given a start and stop time (and row_index for printing purposes),
+# query for total memory usage of the entire run and print updates on rows completed
+def get_mem_total(start, stop, row_index):
     # get start and stop as datetime objects
     start = datetime_ify(start)
     stop = datetime_ify(stop)
@@ -100,7 +102,9 @@ def get_mem_total(start, stop):
     total_mem_data = get_result_list(query_api_site(total_mem_query))
     # print row information
     global CURRENT_ROW
-    print("Row complete:", CURRENT_ROW, "/", NUM_ROWS)
+    progress_message = "Row complete: " +  str(CURRENT_ROW) + " / " +  str(NUM_ROWS)
+    print(colored(progress_message, "green"))
+    print("row index:", row_index)
     CURRENT_ROW += 1
     return total_mem_data
 
@@ -115,10 +119,11 @@ def insert_performace_cols(df, n_rows):
         lambda row: get_cpu_total(row['start'], row['stop']) if row.name in range(start_row, start_row+n_rows) else row['cpu_usage'],
         axis=1)
     df['mem_usage'] = df.apply(
-        lambda row: get_mem_total(row['start'], row['stop']) if start_row <= row.name < (start_row+n_rows) else row['mem_usage'],
+        lambda row: get_mem_total(row['start'], row['stop'], row.name) if start_row <= row.name < (start_row+n_rows) else row['mem_usage'],
         axis=1)
     return df
 
+print(colored("\n\nquerying data...", yellow))
 # calculate performance data
 training_data = insert_performace_cols(training_data, NUM_ROWS)
 print("\n"*5, training_data)
