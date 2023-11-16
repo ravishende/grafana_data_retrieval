@@ -182,10 +182,10 @@ training_data.to_csv(csv_file)
 # Todo: 
 # get cpu_usage and mem_usage columns to a single number
     # filter cpu_usage and mem_usage columns to only include pods in the correct ensemble. 
-    # then sum over all pods to get total cpu_usage for the run.
+    # then sum over all pods to get total cpu_usage for the ensemble during the runtime.
 # add more columns:
-    # one for cpu total usage at some randomized refresh time
-    # one for memory total usage at some randomized refresh time
-    # one for refresh time measured in seconds since the start time
+    # one for some random refresh time measured in seconds since the start time
+    # one for cpu total usage at refresh time
+    # one for memory total usage at refresh time
     # one for IO information
     # one for network info
