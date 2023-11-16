@@ -13,6 +13,7 @@ from utils import query_api_site, query_api_site_for_graph, get_result_list, pri
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
 pd.set_option('display.max_columns', None)
+csv_file = 'performance_training_data.csv'
 NUM_ROWS = 500
 NAMESPACE = 'wifire-quicfire'
 
@@ -39,7 +40,7 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 '''
 
 # get the csv file as a pandas dataframe
-training_data = pd.read_csv('performance_training_data.csv', index_col=0)
+training_data = pd.read_csv(csv_file, index_col=0)
 
 '''
 ---------------------------------------
@@ -86,9 +87,9 @@ def datetime_ify(time):
         return time
 
 
-# given a start and stop time (and row_index for printing purposes),
- # query for total cpu usage of the entire run and print updates on rows completed
-def get_cpu_total(start, stop, row_index):
+# given a start and stop time (also row_index and n_rows for printing purposes),
+# query for total cpu usage of the entire run and print updates on rows completed
+def get_cpu_total(start, stop, row_index, n_rows):
     # get start and stop as datetime objects
     start = datetime_ify(start)
     stop = datetime_ify(stop)
@@ -101,7 +102,7 @@ def get_cpu_total(start, stop, row_index):
     
     # print row information
     global CURRENT_CPU_ROW
-    progress_message = "Row complete: " +  str(CURRENT_CPU_ROW) + " / " +  str(NUM_ROWS)
+    progress_message = "Row complete: " +  str(CURRENT_CPU_ROW) + " / " +  str(n_rows)
     print(colored(progress_message, "green"))
     print("row index:", row_index)
     CURRENT_CPU_ROW += 1
@@ -109,9 +110,9 @@ def get_cpu_total(start, stop, row_index):
     return total_cpu_data
 
 
-# given a start and stop time (and row_index for printing purposes),
+# given a start and stop time (also row_index and n_rows for printing purposes),
 # query for total memory usage of the entire run and print updates on rows completed
-def get_mem_total(start, stop, row_index):
+def get_mem_total(start, stop, row_index, n_rows):
     # get start and stop as datetime objects
     start = datetime_ify(start)
     stop = datetime_ify(stop)
@@ -124,7 +125,7 @@ def get_mem_total(start, stop, row_index):
     
     # print row information
     global CURRENT_MEM_ROW
-    progress_message = "Row complete: " +  str(CURRENT_MEM_ROW) + " / " +  str(NUM_ROWS)
+    progress_message = "Row complete: " +  str(CURRENT_MEM_ROW) + " / " +  str(n_rows)
     print(colored(progress_message, "green"))
     print("row index:", row_index)
     CURRENT_MEM_ROW += 1
@@ -144,25 +145,29 @@ def get_mem_total(start, stop, row_index):
 def insert_performace_cols(df, n_rows):
     # get first row without CPU usage data, find last row to generate to
     start_row = df['cpu_usage'].isna().idxmax()
-    end_row = start_row+n_rows
+    end_row = start_row + n_rows - 1
+    
+    # make sure you don't try to query past the end of the dataframe
     last_index = len(df) - 1
-    # make sure you don't try to generate information for more rows than there are in the dataframe
     if(end_row > last_index):
         end_row = last_index
+        n_rows = end_row - start_row + 1
+        print(colored("\n\nEnd row is greater than last index. Only generating to last index.", "yellow"))
 
     # if no na values, there is nothing to generate.
     if start_row == 0 and df['cpu_usage'][0]:
+        print(colored("\n\nNo NA rows", "yellow"))
         return df
     
     # add values for cpu_usage and mem_usage columns starting from start_row and doing it for n_rows rows.
     print_title("Inserting CPU Data")
     df['cpu_usage'] = df.apply(
-        lambda row: get_cpu_total(row['start'], row['stop'], row.name) if start_row <= row.name < end_row else row['cpu_usage'],
+        lambda row: get_cpu_total(row['start'], row['stop'], row.name, n_rows) if start_row <= row.name <= end_row else row['cpu_usage'],
         axis=1)  # Note: row.name is just the index of the row
     
     print_title("Inserting Memory Data")
     df['mem_usage'] = df.apply(
-        lambda row: get_mem_total(row['start'], row['stop'], row.name) if start_row <= row.name < end_row else row['mem_usage'],
+        lambda row: get_mem_total(row['start'], row['stop'], row.name, n_rows) if start_row <= row.name <= end_row else row['mem_usage'],
         axis=1)
     return df
 
@@ -172,7 +177,7 @@ training_data = insert_performace_cols(training_data, NUM_ROWS)
 print("\n"*5, training_data)
 
 # write updated df to a csv file
-training_data.to_csv("performance_training_data.csv")
+training_data.to_csv(csv_file)
 
 # Todo: 
 # get cpu_usage and mem_usage columns to a single number
