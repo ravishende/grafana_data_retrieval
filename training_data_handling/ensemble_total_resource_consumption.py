@@ -11,10 +11,12 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 from utils import query_api_site, query_api_site_for_graph, get_result_list, print_title
 
-# settings and constants
+# Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
 pd.set_option('display.max_columns', None)
-NUM_ROWS = 6
+NUM_ROWS = 500
 NAMESPACE = 'wifire-quicfire'
+
+# For printing rows. Do not edit these.
 CURRENT_CPU_ROW = 1
 CURRENT_MEM_ROW = 1
 
@@ -24,9 +26,10 @@ CURRENT_MEM_ROW = 1
 -----------------------------------------------------------------------------------------------------------------------------------
 NOTE:
 This file reads in a csv called performance_training_data.csv, 
-which contains all the training data from devin's inputs as well as columns
-for cpu_usage_total and mem_usage total. Running this appends NUM_ROWS values for those two
-columns to what has already been queried for, slowly filling out more and more of the datapoints.
+which contains all the training data from Devin's inputs as well as columns
+for cpu_usage_total and mem_usage total. Running this appends NUM_ROWS values 
+for those two columns to what has already been queried for, filling out more and 
+more of the datapoints. 
 
 All that needs to be done is select NUM_ROWS to be the value you would like and then run the file.
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -37,6 +40,12 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 
 # get the csv file as a pandas dataframe
 training_data = pd.read_csv('performance_training_data.csv', index_col=0)
+
+'''
+---------------------------------------
+            Helper Functions
+---------------------------------------
+'''
 
 # given a timedelta, get it in the form 2d4h12m30s for use with querying
 def delta_to_time_str(delta):
@@ -123,25 +132,37 @@ def get_mem_total(start, stop, row_index):
     return total_mem_data
 
 
+'''
+---------------------------------------
+            User Function
+---------------------------------------
+'''
+
 # given a dataframe and number of rows, calculate performance data columns for those rows
 # starting from the first None value. The other rows' values for those columns will be unchanged.
 # returns the updated dataframe.
 def insert_performace_cols(df, n_rows):
-    # get first row without CPU usage data 
+    # get first row without CPU usage data, find last row to generate to
     start_row = df['cpu_usage'].isna().idxmax()
-    # if no na values, there is nothing to do.
+    end_row = start_row+n_rows
+    last_index = len(df) - 1
+    # make sure you don't try to generate information for more rows than there are in the dataframe
+    if(end_row > last_index):
+        end_row = last_index
+
+    # if no na values, there is nothing to generate.
     if start_row == 0 and df['cpu_usage'][0]:
         return df
     
     # add values for cpu_usage and mem_usage columns starting from start_row and doing it for n_rows rows.
     print_title("Inserting CPU Data")
     df['cpu_usage'] = df.apply(
-        lambda row: get_cpu_total(row['start'], row['stop'], row.name) if row.name in range(start_row, start_row+n_rows) else row['cpu_usage'],
-        axis=1)
+        lambda row: get_cpu_total(row['start'], row['stop'], row.name) if start_row <= row.name < end_row else row['cpu_usage'],
+        axis=1)  # Note: row.name is just the index of the row
     
     print_title("Inserting Memory Data")
     df['mem_usage'] = df.apply(
-        lambda row: get_mem_total(row['start'], row['stop'], row.name) if start_row <= row.name < (start_row+n_rows) else row['mem_usage'],
+        lambda row: get_mem_total(row['start'], row['stop'], row.name) if start_row <= row.name < end_row else row['mem_usage'],
         axis=1)
     return df
 
@@ -156,7 +177,7 @@ training_data.to_csv("performance_training_data.csv")
 # Todo: 
 # get cpu_usage and mem_usage columns to a single number
     # filter cpu_usage and mem_usage columns to only include pods in the correct ensemble. 
-    # Then sum over all pods to get total cpu_usage for the run.
+    # then sum over all pods to get total cpu_usage for the run.
 # add more columns:
     # one for cpu total usage at some randomized refresh time
     # one for memory total usage at some randomized refresh time
