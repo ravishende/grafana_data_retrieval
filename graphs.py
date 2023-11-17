@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
-from helpers.querying import query_api_site_for_graph, get_result_list, filter_df_for_workers
+from helpers.querying import query_data_for_graph
 from helpers.printing import print_sub_title
+from helpers.filtering import filter_df_for_workers
 from inputs import *
 from datetime import datetime, timedelta
 from termcolor import colored
@@ -111,7 +112,7 @@ class Graphs():
         # if time is of unsupported type, raise error
         raise TypeError("argument for _convert_to_datetime() must be of type float, int, pandas.Timestamp, or datetime.datetime")
 
-    # assembles string for the time filter to be passed into query_api_site_for_graph()
+    # assembles string for the time filter to be passed into query_data_for_graph()
     def _assemble_time_filter(self, start=None, end=None, time_step=None):
         # set default values if not given
         if time_step is None:
@@ -145,7 +146,7 @@ class Graphs():
             start = time.time()
 
         # query for data
-        result_list = get_result_list(query_api_site_for_graph(query, time_filter))
+        result_list = query_data_for_graph(query, time_filter)
         if len(result_list) == 0:
             return None
 

@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
-from helpers.querying import query_api_site, get_result_list, filter_df_for_workers
+from helpers.querying import query_data
+from helpers.filtering import filter_df_for_workers
 from inputs import NAMESPACE
 
 
@@ -16,10 +17,9 @@ class Header():
         }
 
     # returns a dataframe containing nodes, pods, and values for
-    # a given json_data from a query (header data)
-    def _generate_df(self, col_title, raw_json_data):
+    # a given result_list from a query (header data)
+    def _generate_df(self, col_title, res_list):
         # parse json data and initialize dataframe
-        res_list = get_result_list(raw_json_data)
         df = pd.DataFrame(columns=['Node', 'Pod', col_title])
         # df = pd.DataFrame(columns=['Time', 'Node', 'Pod', col_title])  # for timestamp
 
@@ -47,8 +47,8 @@ class Header():
         # generate a dataframe for each header item, then add it to header_dict
         for query_title, query in self.queries.items():
             # generate dataframe
-            json_data = query_api_site(query)
-            header_item = self._generate_df(query_title, json_data)
+            result_list = query_data(query)
+            header_item = self._generate_df(query_title, result_list)
 
             # filter by worker pods if requested
             if only_include_worker_pods:

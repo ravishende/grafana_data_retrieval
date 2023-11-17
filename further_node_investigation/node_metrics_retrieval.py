@@ -10,17 +10,16 @@ current = os.path.dirname(os.path.realpath("node_metrics_retrieval.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from inputs import NAMESPACE
-from helpers.querying import write_json, query_api_site, get_result_list
+from helpers.querying import write_json, query_data
 
 
 # query for all metrics with node somewhere in the name
 duration = '1w'
 query = '{__name__ =~".*node.*", namespace="' + NAMESPACE + '"}[' + duration + ']'
-queried_data = query_api_site(query)
+res_list = query_data(query)
 
 # put all unique names in a list
 names_list = []
-res_list = get_result_list(queried_data)
 for dictionary in res_list:
     for title in dictionary.keys():
         if title == 'metric':

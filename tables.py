@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
-from helpers.querying import query_api_site, get_result_list, filter_df_for_workers
+from helpers.querying import query_data
+from helpers.filtering import filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION
 
 
@@ -39,13 +40,12 @@ class Tables():
             'Throughput(Write)': 'sum by(node, pod) (rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))'
         }
 
-    # return a dataframe of pods, nodes, and values for a given json_data for a
+    # return a dataframe of pods, nodes, and values for a given result_list for a
     # column in a table (e.g. CPUQuota: CPU usage)
-    def _generate_df(self, col_title, raw_json_data):
+    def _generate_df(self, col_title, res_list):
         # initialize dataframe and filter json data
         df = pd.DataFrame(columns=['Node', 'Pod', col_title])
         # df = pd.DataFrame(columns=['Time', 'Node', 'Pod', col_title])  # for timestamp
-        res_list = get_result_list(raw_json_data)
         # fill in dataframe
         for datapoint in res_list:
             # each datapoint in parsed_data is a dictionary with node (str), pod (str), (int)
@@ -73,8 +73,8 @@ class Tables():
                 continue
             
             # update the table with the new column information
-            queried_data = query_api_site(query)
-            new_df = self._generate_df(col_title, queried_data)
+            result_list = query_data(query)
+            new_df = self._generate_df(col_title, result_list)
             
             # if table_df is not empty
             if len(table_df.index) > 0:

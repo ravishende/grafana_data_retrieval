@@ -11,7 +11,7 @@ current = os.path.dirname(os.path.realpath("query_investigation.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from inputs import NAMESPACE
-from helpers.querying import read_json, write_json, query_api_site, get_result_list
+from helpers.querying import read_json, write_json, query_data
 from helpers.printing import print_sub_title, print_title
 
 
@@ -29,7 +29,7 @@ for metric in metrics_list:
 # store the data from the queries
 queried_data = {}
 for i in range(len(queries_list)):
-    result_list = get_result_list(query_api_site(queries_list[i]))
+    result_list = query_data(queries_list[i])
     metric_name = metrics_list[i]
     queried_data[metric_name] = result_list
 
