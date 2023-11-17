@@ -8,7 +8,7 @@ sys.path.append("../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath("ensemble_total_resource_metrics.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
-from helpers.querying import query_api_site, get_result_list
+from helpers.querying import query_data
 from helpers.printing import print_title
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
@@ -98,7 +98,7 @@ def get_cpu_total(start, stop, row_index, n_rows):
     duration, offset = calculate_duration_and_offset(start, stop)
     total_cpu_query = 'sum by (node, pod) (increase(container_cpu_usage_seconds_total{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
     # gather data
-    total_cpu_data = get_result_list(query_api_site(total_cpu_query))
+    total_cpu_data = query_data(total_cpu_query)
     
     # print row information
     global CURRENT_CPU_ROW
@@ -121,7 +121,7 @@ def get_mem_total(start, stop, row_index, n_rows):
     duration, offset = calculate_duration_and_offset(start, stop)
     total_mem_query = 'sum by (node, pod) (increase(container_memory_working_set_bytes{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
     # gather data
-    total_mem_data = get_result_list(query_api_site(total_mem_query))
+    total_mem_data = query_data(total_mem_query)
     
     # print row information
     global CURRENT_MEM_ROW

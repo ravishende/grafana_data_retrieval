@@ -10,7 +10,7 @@ sys.path.append("../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath("ml_data_collection.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
-from helpers.querying import query_api_site, get_result_list, query_api_site_for_graph
+from helpers.querying import query_data, query_data_for_graph
 from helpers.printing import print_title
 from tables import Tables
 
@@ -45,7 +45,7 @@ def convert_to_datetime(time):
     if isinstance(time, datetime):
         return time
 
-# assembles string for the time filter to be passed into query_api_site_for_graph()
+# assembles string for the time filter to be passed into query_data_for_graph()
 def assemble_time_filter(start, end, time_step=None):
     if time_step is None:
         # get time_step to be larger than duration so that there is only one datapoint per pod
@@ -104,7 +104,7 @@ with open('old_training_data.csv', mode='r') as training_data:
 
         # query for the data from the start time til the random refresh time 
         time_filter = assemble_time_filter(start=start, end=collection_time)
-        result_list = get_result_list(query_api_site_for_graph(tables_class.queries['CPU Usage'], time_filter))
+        result_list = query_data(tables_class.queries['CPU Usage'], time_filter)
         
         # update which pods and nodes show up and how frequently
         pods_count, nodes_count = update_pods_nodes_count(result_list, pods_count, nodes_count)
@@ -139,9 +139,9 @@ with open('old_training_data.csv', mode='r') as training_data:
 
 #     time_filter = assemble_time_filter(start=start, end=collection_time)
 
-#     queried_data = query_api_site_for_graph(tables_class.queries['CPU Usage'], time_filter)
+#     result_list = query_data_for_graph(tables_class.queries['CPU Usage'], time_filter)
 #     print_title(line_count)
-#     pprint(queried_data)
+#     pprint(result_list)
 #     line_count+=1
 
 # # finding the performance data for each training datapoint
@@ -157,7 +157,7 @@ with open('old_training_data.csv', mode='r') as training_data:
 
 #     time_filter = assemble_time_filter(start=start, end=collection_time)
 
-#     query_api_site_for_graph(tables_class.queries['CPU Usage'], time_filter)
+#     query_data_for_graph(tables_class.queries['CPU Usage'], time_filter)
 
 
 # tables_class = Tables()
@@ -174,9 +174,9 @@ with open('old_training_data.csv', mode='r') as training_data:
 
 # query = 'container_cpu_usage_seconds_total{namespace="wifire-quicfire"}[5m]'
 # # query = 'node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="alto"}'
-# queried_data = query_api_site(query)
-# pprint(queried_data)
-# print ("||", len(get_result_list(queried_data)), "||")
+# res_list = query_data(query)
+# pprint(res_list)
+# print ("||", len(res_list), "||")
 
 # print("\n"*5, "*"*100, "\n"*5)
 # end = datetime.now()
@@ -188,6 +188,6 @@ with open('old_training_data.csv', mode='r') as training_data:
 # query2 = 'node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="wifire-quicfire"}'
 # query2 = 'sum by(node, pod) (container_cpu_usage_seconds_total{namespace="wifire-quicfire"})'
 # query2 = 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="alto"})'
-# queried_data2 = query_api_site(query2)
-# pprint(queried_data2)
-# print ("||", len(get_result_list(queried_data2)), "||")
+# res_list2 = query_data(query2)
+# pprint(res_list2)
+# print ("||", len(res_list2), "||")
