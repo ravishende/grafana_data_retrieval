@@ -6,7 +6,7 @@ from termcolor import colored
 QUERY_COUNT = 0
 
 
-# retrieves global variable for total number of querries
+# retrieves global variable for total number of queries
 # since the start of the program
 def get_query_count():
     global QUERY_COUNT
@@ -15,9 +15,10 @@ def get_query_count():
 
 # Use url and a given query to request data from the website
 def query_data(query, handle_fail=True):
-    # handle fail will re request the api if no response from query. Set to true by default
+    # handle_fail will re request the api if no response from query. Set to true by default
     # there is a bug with the api itself where every fifth request comes back with no data,
     # this parameter set to True will re request to deal with that
+    # It is highly recommended that handle_fail is always set to True.
 
     global QUERY_COUNT
     # set up url
@@ -44,9 +45,10 @@ def query_data(query, handle_fail=True):
 # Use url and a given query and time_filter to request data for a graph from the api
 # Different function from query_data() to avoid confusion with querying single data points and tables vs graphs
 def query_data_for_graph(query, time_filter, handle_fail=True):
-    # handle fail will re request the api if it gets no response from your query. Set to true by default
+    # handle_fail will re request the api if it gets no response from your query. Set to true by default
     # there is a bug with the api itself where every fifth request comes back with no data,
     # this parameter set to True will re request to deal with that
+    # It is highly recommended that handle_fail is always set to True.
 
     global QUERY_COUNT
     # set up url
