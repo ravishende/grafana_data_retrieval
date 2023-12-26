@@ -2,14 +2,14 @@ import pandas as pd
 from datetime import datetime, timedelta
 from termcolor import colored
 # get set up to be able to import files from parent directory (grafana_data_retrieval)
-# utils.py and inputs.py not in this current directory and instead in the parent
 import sys
 import os
 sys.path.append("../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath("ensemble_total_resource_metrics.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
-from utils import query_api_site, query_api_site_for_graph, get_result_list, print_title
+from helpers.querying import query_api_site, get_result_list
+from helpers.printing import print_title
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
 pd.set_option('display.max_columns', None)
@@ -149,7 +149,7 @@ def insert_performace_cols(df, n_rows):
     
     # make sure you don't try to query past the end of the dataframe
     last_index = len(df) - 1
-    if(end_row > last_index):
+    if end_row > last_index:
         end_row = last_index
         n_rows = end_row - start_row + 1
         print(colored("\n\nEnd row is greater than last index. Only generating to last index.", "yellow"))
@@ -169,8 +169,8 @@ def insert_performace_cols(df, n_rows):
     df['mem_usage'] = df.apply(
         lambda row: get_mem_total(row['start'], row['stop'], row.name, n_rows) if start_row <= row.name <= end_row else row['mem_usage'],
         axis=1)
-    return df
 
+    return df
 
 # calculate performance data
 training_data = insert_performace_cols(training_data, NUM_ROWS)

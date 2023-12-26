@@ -23,7 +23,7 @@ useful_columns = [
     "surface_moisture", 
     "extent",  
     "run_max_mem_rss_bytes",
-     "threads"
+    "threads"
 ]
 
 filtered_df = un_filtered_df.get(useful_columns)

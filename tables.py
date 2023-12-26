@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
-from utils import query_api_site, get_result_list, filter_df_for_workers
+from helpers.querying import query_api_site, get_result_list, filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION
 
 

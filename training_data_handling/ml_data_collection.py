@@ -4,14 +4,14 @@ from datetime import datetime, timedelta
 from random import randint
 import csv
 # get set up to be able to import files from parent directory (grafana_data_retrieval)
-# utils.py and inputs.py not in this current directory and instead in the parent
 import sys
 import os
 sys.path.append("../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath("ml_data_collection.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
-from utils import query_api_site, get_result_list, query_api_site_for_graph, print_title
+from helpers.querying import query_api_site, get_result_list, query_api_site_for_graph
+from helpers.printing import print_title
 from tables import Tables
 
 '''
