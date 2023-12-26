@@ -13,7 +13,7 @@ from utils import query_api_site, query_api_site_for_graph, get_result_list, pri
 
 # settings and constants
 pd.set_option('display.max_columns', None)
-NUM_ROWS = 500
+NUM_ROWS = 6
 NAMESPACE = 'wifire-quicfire'
 CURRENT_CPU_ROW = 1
 CURRENT_MEM_ROW = 1
@@ -129,6 +129,9 @@ def get_mem_total(start, stop, row_index):
 def insert_performace_cols(df, n_rows):
     # get first row without CPU usage data 
     start_row = df['cpu_usage'].isna().idxmax()
+    # if no na values, there is nothing to do.
+    if start_row == 0 and df['cpu_usage'][0]:
+        return df
     
     # add values for cpu_usage and mem_usage columns starting from start_row and doing it for n_rows rows.
     print_title("Inserting CPU Data")
