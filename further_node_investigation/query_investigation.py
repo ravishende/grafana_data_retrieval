@@ -11,7 +11,8 @@ current = os.path.dirname(os.path.realpath("query_investigation.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from inputs import NAMESPACE
-from utils import read_json, write_json, query_api_site, get_result_list, print_sub_title, print_title
+from helpers.querying import read_json, write_json, query_api_site, get_result_list
+from helpers.printing import print_sub_title, print_title
 
 
 duration = '15m'

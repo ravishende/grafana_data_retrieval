@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
-from utils import query_api_site_for_graph, get_result_list, filter_df_for_workers, print_sub_title
+from helpers.querying import query_api_site_for_graph, get_result_list, filter_df_for_workers
+from helpers.printing import print_sub_title
 from inputs import *
 from datetime import datetime, timedelta
 from termcolor import colored

@@ -10,7 +10,7 @@ current = os.path.dirname(os.path.realpath("node_metrics_retrieval.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from inputs import NAMESPACE
-from utils import write_json, query_api_site, get_result_list
+from helpers.querying import write_json, query_api_site, get_result_list
 
 
 # query for all metrics with node somewhere in the name

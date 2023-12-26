@@ -1,5 +1,5 @@
 # Contains the definitions for all the functions that are called in main.py
-from utils import print_heading, print_title, print_sub_title, print_dataframe_dict
+from helpers.printing import print_heading, print_title, print_sub_title, print_dataframe_dict
 from termcolor import colored
 from header import Header
 from tables import Tables
