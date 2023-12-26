@@ -3,19 +3,26 @@ from termcolor import colored
 import ast
 from pprint import pprint
 from datetime import datetime
-pd.set_option('display.max_columns', None)
 
 '''
 file for taking in a csv of raw bp3d runs data and dropping unneccessary 
 information as well as calculating area and runtime from the data.
 '''
 
-un_filtered_df = pd.read_csv("training_data_initial.csv")
+# settings and constants
+read_file = "csv_files/unfiltered.csv" #training_data_initial.csv
+write_file = "csv_files/area_runtime_filtered.csv" #"cleaned_training_data.csv"
+pd.set_option("display.max_columns", None)
 
+
+unfiltered_df = pd.read_csv(read_file, index_col=0)
+
+# Note: as of now, this is all of the columns in unfiltered_df
 useful_columns = [
+    "path",  # used for merging with successful_runs.csv df to get ensemble_uuids
     "start", 
     "stop", 
-    "sim_time", 
+    "sim_time",
     "timestep", 
     "wind_direction",
     "wind_speed", 
@@ -26,17 +33,20 @@ useful_columns = [
     "threads"
 ]
 
-filtered_df = un_filtered_df.get(useful_columns)
+# select only the useful columns from our unfiltered df
+filtered_df = unfiltered_df[useful_columns].copy()
 
 # on several rows, there are faulty datapoints displaying the column
 # names as their values. This causes an error if these rows aren't dropped
 drop_condition = filtered_df['stop'] == 'stop'
 filtered_df = filtered_df.drop(filtered_df[drop_condition].index)
-filtered_df.dropna(subset=['extent', "start", "stop"], inplace=True)
-filtered_df = filtered_df.reset_index()
+
+# drop runs without an area or start and stop time
+filtered_df = filtered_df.dropna(subset=['extent', "start", "stop"])
+filtered_df = filtered_df.reset_index(drop=True)
 
 def calculate_area(L):
-    #where p1 in the bottom left = (x1,y1) and p2 in the bottom left = (x2,y2)
+    # where p1 in the bottom left = (x1,y1) and p2 in the bottom left = (x2,y2)
     # Converting string to list
     res = ast.literal_eval(L)
     L = res
@@ -63,15 +73,15 @@ def calculate_runtime(start, stop):
         return runtime_delta.total_seconds()
 
 
-# calculate area, runtime
-filtered_df['area'] = filtered_df.apply(lambda row: calculate_area(row['extent']), axis=1)
+# calculate area and runtime
+filtered_df['area'] = filtered_df['extent'].apply(calculate_area)
 filtered_df['runtime'] = filtered_df.apply(lambda row: calculate_runtime(row['start'], row['stop']), axis=1)
 
 # after extent is used to calculate area, it is no longer needed. Also drop duplicate index column
-filtered_df = filtered_df.drop(columns=['extent', 'index'])
+filtered_df = filtered_df.drop(columns='extent')
 
 # save filtered data to a new csv file and print the final df
-filtered_df.to_csv("cleaned_training_data.csv")
+filtered_df.to_csv(write_file)
 print(filtered_df)
 print(colored('success', 'green'))
 
