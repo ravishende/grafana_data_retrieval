@@ -146,6 +146,23 @@ def query_resource(resource, start, duration, row_index, n_rows):
             User Function
 ---------------------------------------
 '''
+# generate random values between run_start and some end time, put into duration1
+def insert_rand_refresh_col(df, refresh_title):
+    # convert start and stop times to datetime
+    df['start'] = df['start'].apply(datetime_ify)
+    df['stop'] = df['stop'].apply(datetime_ify)
+
+    # calculate duration in seconds
+    # duration_seconds = (df['stop'] - df['start']).dt.total_seconds()
+    duration_seconds = df['runtime']
+
+    # generate random values between 45sec and half of the duration
+    # df[refresh_title] = duration_seconds.apply(lambda x: random.randint(45, x // 2) if x // 2 >= 45 else x)
+    # generate random values between 45sec and 5min
+    df[refresh_title] = duration_seconds.apply(lambda x: random.randint(45, 300) if x >= 300 else x)
+
+    return df
+
 
 # Given a dataframe, resource ("cpu" or "mem") name of the column to insert,
 #  name of the duration column to use for calculating, and the number of rows to query for:
@@ -203,13 +220,7 @@ n_rows = NUM_ROWS
 training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
 training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
 
-'''
-# calculate performance data up to a point
-training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t1', n_rows)
-training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
-'''
+
 # print and write updated df to a csv file
 print("\n"*5, training_data)
 training_data.to_csv(csv_file)
@@ -223,6 +234,26 @@ training_data.to_csv(csv_file)
     # one for network info
 
 
+'''
+# add new columns and insert duration col
+# training_data['duration_t1'] = None
+# training_data['cpu_t1'] = None
+# training_data['mem_t1'] = None
+# training_data = insert_rand_refresh_col(training_data, "duration_t1")
+
+# add new columns and insert duration col
+# training_data['duration_t2'] = None
+# training_data['cpu_t2'] = None
+# training_data['mem_t2'] = None
+# training_data = insert_rand_refresh_col(training_data, "duration_t2")
+
+# calculate performance data up to a point
+training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
+training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t1', n_rows)
+training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
+training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
+
+'''
 
 
 
