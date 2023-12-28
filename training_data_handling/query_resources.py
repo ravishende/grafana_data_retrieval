@@ -224,13 +224,16 @@ training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_r
 print("\n"*5, training_data)
 training_data.to_csv(csv_file)
 
+
+
+
+
+
+
 # Todo: 
-# add more columns:
-    # one for some random refresh time measured in seconds since the start time
-    # one for cpu total usage at refresh time
-    # one for memory total usage at refresh time
-    # one for IO information
-    # one for network info
+# add more columns / metrics:
+    # IO information
+    # network info
 
 
 '''
@@ -254,105 +257,3 @@ training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_r
 
 '''
 
-
-
-'''
----------------------------------------
-            Old Functions
----------------------------------------
-
-
-# given a start and stop time, figure out how long ago the stop time was and how long of a duration the run was for
-def calculate_duration_and_offset(start, end):
-    if not isinstance(start, datetime) or not isinstance(end, datetime):
-        raise ValueError("start and end must be datetime objects")
-
-    duration = delta_to_time_str((end-start))
-
-    offset_delta = datetime.now() - end
-    offset = delta_to_time_str(offset_delta) #convert offset from timedelta to time string
-
-    return duration, offset
-
-
-# given a start and stop time (also row_index and n_rows for printing purposes),
-# query for total cpu usage of the entire run and print updates on rows completed
-def get_cpu_total(start, stop, row_index, n_rows):
-    # get start and stop as datetime objects
-    start = datetime_ify(start)
-    stop = datetime_ify(stop)
-    
-    # assemble query
-    duration, offset = calculate_duration_and_offset(start, stop)
-    total_cpu_query = 'sum by (node, pod) (increase(container_cpu_usage_seconds_total{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
-    # gather data
-    total_cpu_data = get_result_list(query_api_site(total_cpu_query))
-    
-    # print row information
-    global CURRENT_CPU_ROW
-    progress_message = "Row complete: " +  str(CURRENT_CPU_ROW) + " / " +  str(n_rows)
-    print(colored(progress_message, "green"))
-    print("row index:", row_index)
-    CURRENT_CPU_ROW += 1
-
-    return total_cpu_data
-
-
-# given a start and stop time (also row_index and n_rows for printing purposes),
-# query for total memory usage of the entire run and print updates on rows completed
-def get_mem_total(start, stop, row_index, n_rows):
-    # get start and stop as datetime objects
-    start = datetime_ify(start)
-    stop = datetime_ify(stop)
-    
-    # assemble query
-    duration, offset = calculate_duration_and_offset(start, stop)
-    total_mem_query = 'sum by (node, pod) (increase(container_memory_working_set_bytes{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
-    # gather data
-    total_mem_data = query_api_site(total_mem_query)
-    
-    # print row information
-    global CURRENT_MEM_ROW
-    progress_message = "Row complete: " +  str(CURRENT_MEM_ROW) + " / " +  str(n_rows)
-    print(colored(progress_message, "green"))
-    print("row index:", row_index)
-    CURRENT_MEM_ROW += 1
-
-    return total_mem_data
-
-# given a dataframe and number of rows, calculate performance data columns for those rows
-# starting from the first None value. The other rows' values for those columns will be unchanged.
-# returns the updated dataframe.
-def insert_performace_cols(df, n_rows):
-    # get first row without CPU usage data, find last row to generate to
-    start_row = df['cpu_usage'].isna().idxmax()
-    end_row = start_row + n_rows - 1
-    
-    # make sure you don't try to query past the end of the dataframe
-    last_index = len(df) - 1
-    if(end_row > last_index):
-        end_row = last_index
-        n_rows = end_row - start_row + 1
-        print(colored("\n\nEnd row is greater than last index. Only generating to last index.", "yellow"))
-
-    # if no na values, there is nothing to generate.
-    if start_row == 0 and df['cpu_usage'][0]:
-        print(colored("\n\nNo NA rows", "yellow"))
-        return df
-    
-    # add values for cpu_usage and mem_usage columns starting from start_row and doing it for n_rows rows.
-    print_title("Inserting CPU Data")
-    df['cpu_usage'] = df.apply(
-        lambda row: get_cpu_total(row['start'], row['stop'], row.name, n_rows) if start_row <= row.name <= end_row else row['cpu_usage'],
-        axis=1)  # Note: row.name is just the index of the row
-    
-    print_title("Inserting Memory Data")
-    df['mem_usage'] = df.apply(
-        lambda row: get_mem_total(row['start'], row['stop'], row.name, n_rows) if start_row <= row.name <= end_row else row['mem_usage'],
-        axis=1)
-    return df
-
-
-
-
-'''
