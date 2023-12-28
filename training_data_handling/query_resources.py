@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from termcolor import colored
+import random
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
@@ -148,18 +149,12 @@ def query_resource(resource, start, duration, row_index, n_rows):
 '''
 # generate random values between run_start and some end time, put into duration1
 def insert_rand_refresh_col(df, refresh_title):
-    # convert start and stop times to datetime
-    df['start'] = df['start'].apply(datetime_ify)
-    df['stop'] = df['stop'].apply(datetime_ify)
-
-    # calculate duration in seconds
-    # duration_seconds = (df['stop'] - df['start']).dt.total_seconds()
     duration_seconds = df['runtime']
-
     # generate random values between 45sec and half of the duration
-    # df[refresh_title] = duration_seconds.apply(lambda x: random.randint(45, x // 2) if x // 2 >= 45 else x)
+    # df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time // 2) if time // 2 >= 45 else time)
+
     # generate random values between 45sec and 5min
-    df[refresh_title] = duration_seconds.apply(lambda x: random.randint(45, 300) if x >= 300 else x)
+    df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, 300) if time >= 300 else time)
 
     return df
 
@@ -217,9 +212,13 @@ training_data = pd.read_csv(csv_file, index_col=0)
 n_rows = NUM_ROWS
 
 # calculate total performance data
-training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
-training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
-
+# training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
+# training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
+# training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
+# training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
+training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
+training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
+# training_data = insert_rand_refresh_col(training_data, "duration_t2")
 
 # print and write updated df to a csv file
 print("\n"*5, training_data)
