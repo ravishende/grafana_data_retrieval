@@ -21,10 +21,10 @@ that contains the ensemble that each run is a part of.
 
 # settings
 pd.set_option("display.max_columns", None)
-pd.set_option("display.max_rows", None)
-read_file = "csv_files/queried_w_ids.csv" #p2_ensemble_included.csv
+# pd.set_option("display.max_rows", None)
+read_file = "csv_files/queried_w_ids.csv" 
 total_write_file = "csv_files/summed.csv"
-success_write_file = "csv_files/summed_success.csv" #calculated_training_data.csv
+success_write_file = "csv_files/summed_success.csv"
 na_write_file = "csv_files/summed_na.csv"
 
 
@@ -87,26 +87,27 @@ def update_col(df, update_col_title, ensemble_col_title):
 
 # select columns to update (sum over) as well as ensemble ids column
 ensemble_col = "ensemble_uuid"
-cpu_tot_col = "cpu_total"
-mem_tot_col = "mem_total"
-# cpu_t1_col = "cpu_t1"
-# mem_t1_col = "mem_t1"
-# cpu_t2_col = "cpu_t2"
-# mem_t2_col = "mem_t2"
+cpu_tot = "cpu_total"
+mem_tot = "mem_total"
+cpu_t1 = "cpu_t1"
+mem_t1 = "mem_t1"
+cpu_t2 = "cpu_t2"
+mem_t2 = "mem_t2"
 
 # get the csv file as a pandas dataframe
 summed_runs = pd.read_csv(read_file, index_col=0)
 
 # update columns (sum json-like data to get single float)
-summed_runs[cpu_tot_col] = update_col(summed_runs, cpu_tot_col, ensemble_col)
-summed_runs[mem_tot_col] = update_col(summed_runs, mem_tot_col, ensemble_col)
-# summed_runs[cpu_t1] = update_col(summed_runs, cpu_t1, ensemble_col)
-# summed_runs[mem_t1] = update_col(summed_runs, mem_t1, ensemble_col)
-# summed_runs[cpu_t2] = update_col(summed_runs, cpu_t2, ensemble_col)
-# summed_runs[mem_t2] = update_col(summed_runs, mem_t2, ensemble_col)
+summed_runs[cpu_tot] = update_col(summed_runs, cpu_tot, ensemble_col)
+summed_runs[mem_tot] = update_col(summed_runs, mem_tot, ensemble_col)
+summed_runs[cpu_t1] = update_col(summed_runs, cpu_t1, ensemble_col)
+summed_runs[mem_t1] = update_col(summed_runs, mem_t1, ensemble_col)
+summed_runs[cpu_t2] = update_col(summed_runs, cpu_t2, ensemble_col)
+summed_runs[mem_t2] = update_col(summed_runs, mem_t2, ensemble_col)
 
-# split the summed_runs into runs that had data for floats and for ones that didn't (no bp3d-workers)
-na_mask = summed_runs['cpu_total'].isna() | summed_runs['mem_total'].isna()
+# split the summed_runs into runs that had data for total resources and for ones that didn't (no bp3d-workers)
+# in other words, if cpu_tot or mem_tot are none, add row to na_mask
+na_mask = summed_runs[cpu_tot].isna() | summed_runs[mem_tot].isna()
 na_worker_runs = summed_runs[na_mask]
 valid_worker_runs = summed_runs[~na_mask]
 
