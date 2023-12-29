@@ -1,5 +1,10 @@
 import pandas as pd
-pd.set_option('display.max_columns', None)
+import shutil
+
+# display settings
+pd.set_option("display.max_columns", None)
+terminal_width = shutil.get_terminal_size().columns
+pd.set_option('display.width', terminal_width)
 
 '''
 file to get rid of all unnecessary columns for training a model

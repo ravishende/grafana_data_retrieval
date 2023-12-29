@@ -1,5 +1,10 @@
 import pandas as pd
+import shutil
 
+# display settings
+pd.set_option("display.max_columns", None)
+terminal_width = shutil.get_terminal_size().columns
+pd.set_option('display.width', terminal_width)
 
 '''
 This file is for selecting all successful runs from the original csv file that
