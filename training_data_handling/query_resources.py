@@ -122,7 +122,6 @@ def get_resource_query(resource, start, duration):
     offset = calculate_offset(start, duration)
     duration = delta_to_time_str(timedelta(seconds=duration))
     prefix = 'sum by (node, pod) (increase('
-    # prefix = 'sum by (node, pod) (rate('
     suffix = '{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
 
     # assemble the final query
