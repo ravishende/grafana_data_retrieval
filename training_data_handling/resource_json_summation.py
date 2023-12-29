@@ -3,6 +3,7 @@ import json
 from ast import literal_eval
 from termcolor import colored
 from uuid import UUID
+import shutil
 import sys
 import os
 # get set up to be able to import helper files from parent directory (grafana_data_retrieval)
@@ -11,6 +12,7 @@ current = os.path.dirname(os.path.realpath("node_metrics_retrieval.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.filtering import get_worker_id
+
 '''
 NOTE:
 This file should be run after find_ensembles.py creates a new csv 
@@ -21,7 +23,10 @@ that contains the ensemble that each run is a part of.
 
 # settings
 pd.set_option("display.max_columns", None)
+terminal_width = shutil.get_terminal_size().columns
+pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
+
 read_file = "csv_files/queried_w_ids.csv" 
 total_write_file = "csv_files/summed.csv"
 success_write_file = "csv_files/summed_success.csv"
@@ -54,10 +59,6 @@ def sum_pods_for_ensemble(result_list, ensemble):
         if str(UUID(worker_id)) == ensemble:
             value = item["value"][1]
             total += float(value)
-
-        # if there are no bp3d-worker-pods, return None
-        if total == 0:
-            return None
 
     return total
 

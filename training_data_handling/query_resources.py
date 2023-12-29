@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from termcolor import colored
 import random
+import shutil
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
@@ -14,10 +15,15 @@ from helpers.printing import print_title
 
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
-pd.set_option('display.max_columns', None)
 csv_file = 'csv_files/queried.csv'
-NUM_ROWS = 1000
+NUM_ROWS = 100
 NAMESPACE = 'wifire-quicfire'
+
+# display settings
+pd.set_option("display.max_columns", None)
+terminal_width = shutil.get_terminal_size().columns
+pd.set_option('display.width', terminal_width)
+
 
 # For printing rows. Do not edit.
 CURRENT_ROW = 1
@@ -116,6 +122,7 @@ def get_resource_query(resource, start, duration):
     offset = calculate_offset(start, duration)
     duration = delta_to_time_str(timedelta(seconds=duration))
     prefix = 'sum by (node, pod) (increase('
+    # prefix = 'sum by (node, pod) (rate('
     suffix = '{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
 
     # assemble the final query
@@ -212,18 +219,16 @@ training_data = pd.read_csv(csv_file, index_col=0)
 n_rows = NUM_ROWS
 
 # calculate total performance data
-# training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
-# training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
-# training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
-# training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
+training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
+training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
+training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
+training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
 training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
 training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
-# training_data = insert_rand_refresh_col(training_data, "duration_t2")
 
 # print and write updated df to a csv file
 print("\n"*5, training_data)
 training_data.to_csv(csv_file)
-
 
 
 

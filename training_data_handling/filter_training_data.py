@@ -3,6 +3,7 @@ from termcolor import colored
 import ast
 from pprint import pprint
 from datetime import datetime
+import shutil
 
 '''
 file for taking in a csv of raw bp3d runs data and dropping unneccessary 
@@ -12,8 +13,11 @@ information as well as calculating area and runtime from the data.
 # settings and constants
 read_file = "csv_files/unfiltered.csv" #training_data_initial.csv
 write_file = "csv_files/area_runtime_filtered.csv" #"cleaned_training_data.csv"
-pd.set_option("display.max_columns", None)
 
+# display settings
+pd.set_option("display.max_columns", None)
+terminal_width = shutil.get_terminal_size().columns
+pd.set_option('display.width', terminal_width)
 
 unfiltered_df = pd.read_csv(read_file, index_col=0)
 
