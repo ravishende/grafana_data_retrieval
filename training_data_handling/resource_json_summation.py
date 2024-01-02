@@ -28,9 +28,9 @@ pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
 
 read_file = "csv_files/queried_w_ids.csv" 
-total_write_file = "csv_files/summed.csv"
-success_write_file = "csv_files/summed_success.csv"
-na_write_file = "csv_files/summed_na.csv"
+write_file = "csv_files/summed.csv"
+# success_write_file = "csv_files/summed_success.csv"
+# na_write_file = "csv_files/summed_na.csv"
 
 
 
@@ -106,18 +106,22 @@ summed_runs[mem_t1] = update_col(summed_runs, mem_t1, ensemble_col)
 summed_runs[cpu_t2] = update_col(summed_runs, cpu_t2, ensemble_col)
 summed_runs[mem_t2] = update_col(summed_runs, mem_t2, ensemble_col)
 
+'''
 # split the summed_runs into runs that had data for total resources and for ones that didn't (no bp3d-workers)
 # in other words, if cpu_tot or mem_tot are none, add row to na_mask
 na_mask = summed_runs[cpu_tot].isna() | summed_runs[mem_tot].isna()
 na_worker_runs = summed_runs[na_mask]
 valid_worker_runs = summed_runs[~na_mask]
+'''
 
 # save dataframes to new files and print summed_runs
-summed_runs.to_csv(total_write_file)
-valid_worker_runs.to_csv(success_write_file)
-na_worker_runs.to_csv(na_write_file)
+summed_runs.to_csv(write_file)
+# valid_worker_runs.to_csv(success_write_file)
+# na_worker_runs.to_csv(na_write_file)
 
 print(summed_runs)
+
+
 
 # can be used to find the worker ids of each run for analysis/debugging purposes
 # def get_ids(res_list):

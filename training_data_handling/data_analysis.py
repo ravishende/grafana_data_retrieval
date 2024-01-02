@@ -6,7 +6,7 @@ import numpy as np
 # csv files
 runs_csv = "csv_files/summed.csv"
 zero_runs_csv = "csv_files/zeros.csv"
-non_zero_runs_csv = "csv_files/summed_success.csv"
+non_zero_runs_csv = "csv_files/summed.csv"
 
 # get csv files as dataframes
 zero_runs = pd.read_csv(zero_runs_csv, index_col=0)
