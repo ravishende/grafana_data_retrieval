@@ -12,7 +12,7 @@ and dressing up anything else to help
 (like changing cpu_t1 to be an average collected up until t1)
 '''
 
-read_file = 'csv_files/summed_success.csv'
+read_file = 'csv_files/non_zeros.csv'
 write_file = 'csv_files/training_data.csv'
 
 
