@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 from main_functions import *
 import pandas as pd
+import shutil
 
-# set pandas display dataframe options to display all columns
+# display settings
 pd.set_option('display.max_columns', None)  # for displaying all columns
 pd.set_option('display.expand_frame_repr', True)  # for having df break and wrap across multiple lines
 pd.set_option('display.precision', 3)  # for how many decimal places to display on floats
+pd.set_option('display.width', shutil.get_terminal_size().columns) # for using whole window width
 # pd.set_option('display.max_rows', None)  # for displaying all rows
 
 # run all code
@@ -31,7 +33,3 @@ losses_and_requeried_graphs = \
         show_runtimes=False,  # for displaying in the terminal how long each query and graph creation takes
         display_time_as_timestamp=True  # displays time in readable format instead of seconds since epoch (01/01/1970)
     )
-
-# tables_dict = get_tables_data(
-#     only_include_worker_pods=True,
-#     display_time_as_timestamp=False)
