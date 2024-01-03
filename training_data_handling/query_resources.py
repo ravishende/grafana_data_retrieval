@@ -32,7 +32,6 @@ CURRENT_ROW = 1
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
-NOTE:
 This file reads in a csv which contains all the training data from Devin's inputs as well as columns
 for cpu_total and mem_total usage for the run. Running this appends NUM_ROWS values 
 for those two columns to what has already been queried for, filling out more and 
@@ -217,7 +216,7 @@ def insert_column(df, resource, insert_col, duration_col, n_rows):
 training_data = pd.read_csv(csv_file, index_col=0)
 n_rows = NUM_ROWS
 
-# calculate total performance data
+# query total performance data
 training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
 training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
 training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
