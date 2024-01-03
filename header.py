@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
+from tqdm import tqdm
 from helpers.querying import query_data
 from helpers.filtering import filter_df_for_workers
 from inputs import NAMESPACE
@@ -45,7 +46,7 @@ class Header():
         header_dict = {}
 
         # generate a dataframe for each header item, then add it to header_dict
-        for query_title, query in self.queries.items():
+        for query_title, query in tqdm(self.queries.items()):
             # generate dataframe
             result_list = query_data(query)
             header_item = self._generate_df(query_title, result_list)
