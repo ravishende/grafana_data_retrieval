@@ -16,7 +16,7 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-
+# columns to drop
 useless_columns = [
     'path',
     'start',
