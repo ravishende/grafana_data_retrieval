@@ -4,7 +4,6 @@ import shutil
 '''
 file to get rid of all unnecessary columns for training a model
 and dressing up anything else to help
-(like changing cpu_t1 to be an average collected up until t1)
 '''
 
 # settings
@@ -23,7 +22,11 @@ useless_columns = [
     'stop', 
     'timestep',  # no variations in values - all 600
     'ensemble_uuid', 
-    'run_uuid' 
+    'run_uuid', 
+    'cpu_t1',  # with the ratio columns added, these no longer become useful
+    'mem_t1',
+    'cpu_t2',
+    'mem_t2'
 ]
 
 # read csv and drop unnecessary columns
