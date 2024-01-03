@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import pandas as pd
+from tqdm import tqdm
 from helpers.querying import query_data
 from helpers.filtering import filter_df_for_workers
 from inputs import NAMESPACE, DEFAULT_DURATION
@@ -66,7 +67,7 @@ class Tables():
             queries = self.queries
         
         # update the columns of the database with the data from querying
-        for col_title in table_df.columns:
+        for col_title in tqdm(table_df.columns):
             # get the corresponding query for each column
             query = queries.get(col_title)
             if query is None:
