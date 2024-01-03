@@ -6,6 +6,7 @@ training_data_handling/add_ids_col.py
 training_data_handling/investigate.py
 training_data_handling/csv_files/queried_w_ids.csv
 training_data_handling/csv_files/queried.csv
+training_data_handling/csv_files/ratios_added.csv
 extras/.DS_Store
 .DS_Store
 __pycache__/
