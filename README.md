@@ -22,9 +22,7 @@ There are 3 main types of data collected:
 
 3. **Graphs**:
 	
-    &nbsp; &nbsp; A table of datapoints containing several times and values per pod that can be displayed with a graph containing several colored lines (one line per pod).
-
-    &nbsp; &nbsp; &nbsp; &nbsp; Graphs can be displayed by running graph_visualization.py
+    &nbsp; &nbsp; A table of datapoints containing several times and values per pod that can be displayed with a graph containing several colored lines (one line per pod). Graphs can be displayed by running graph_visualization.py
 
 
 
