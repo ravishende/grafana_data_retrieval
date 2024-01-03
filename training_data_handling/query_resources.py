@@ -42,7 +42,6 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
-
 '''
 
 
@@ -51,7 +50,6 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
             Helper Functions
 ---------------------------------------
 '''
-
 
 # given a timedelta, get it in the form 2d4h12m30s for use with querying
 def delta_to_time_str(delta):
