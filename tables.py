@@ -93,13 +93,13 @@ class Tables():
         return result.multiply(100)
 
     # get the cpu_quota dataframe. If it is empty, generate it
-    def _get_cpu_quota(self):
+    def _get_cpu_quota(self, queries=None):
         # check if the table has been filled in. If it has, return it
         if len(self.cpu_quota.index) > 0:
             return self.cpu_quota
 
         # if not, fill in the table then return it
-        self.cpu_quota = self._fill_df_by_queries(self.cpu_quota)
+        self.cpu_quota = self._fill_df_by_queries(table_df=self.cpu_quota, queries=queries)
         # calculate each percent column by dividing the two columns
         # responsible for it then multiplying by 100
         self.cpu_quota['CPU Requests %'] = \
@@ -109,13 +109,13 @@ class Tables():
         return self.cpu_quota
 
     # get the mem_quota dataframe. If it is empty, generate it
-    def _get_mem_quota(self):
+    def _get_mem_quota(self, queries=None):
         # check if the table has been filled in. If it has, return it
         if len(self.mem_quota.index) > 0:
             return self.mem_quota
 
         # if not, fill in the table then return it
-        self.mem_quota = self._fill_df_by_queries(self.mem_quota)
+        self.mem_quota = self._fill_df_by_queries(table_df=self.mem_quota, queries=queries)
         # calculate each percent column by dividing the two columns
         # responsible for it
         self.mem_quota['Memory Requests %'] = \
@@ -125,23 +125,26 @@ class Tables():
         return self.mem_quota
 
     # get the network_usage dataframe. If it is empty, generate it
-    def _get_network_usage(self):
+    def _get_network_usage(self, queries=None):
         # check if the table has been filled in. If it has, return it
         if len(self.network_usage.index) > 0:
             return self.network_usage
 
         # if not, fill in the table then return it
-        self.network_usage = self._fill_df_by_queries(self.network_usage)
+        self.network_usage = self._fill_df_by_queries(table_df=self.network_usage, queries=queries)
         return self.network_usage
 
     # get the storage_io dataframe. If it is empty, generate it
-    def _get_storage_io(self):
+    def _get_storage_io(self, partial_queries=None):
         # check if the table has been filled in. If it has, return it
         if len(self.storage_io.index) > 0:
             return self.storage_io
 
+        if partial_queries is None:
+            partial_queries = self.partial_queries
+
         # if not, fill in the table then return it
-        self.storage_io = self._fill_df_by_queries(self.storage_io, queries=self.partial_queries)
+        self.storage_io = self._fill_df_by_queries(table_df=self.storage_io, queries=partial_queries)
         # calculate each sum column by adding the two columns responsible for it
         self.storage_io['IOPS(Reads + Writes)'] = \
             self.storage_io['IOPS(Reads)'].astype(float) + self.storage_io['IOPS(Writes)'].astype(float)
@@ -150,12 +153,15 @@ class Tables():
         return self.storage_io
 
     # get a dictionary of all the tables
-    def get_tables_dict(self, only_include_worker_pods=False):
+    def get_tables_dict(self, only_include_worker_pods=False, queries=None, partial_queries=None):
+        # Note: queries and partial_queries can be passed in as None and will be updated in 
+        # _fill_df_by_queries() for the first 3 and _get_storage_io() for 'Current Storage IO'
+
         tables_dict = {
-            'CPU Quota': self._get_cpu_quota(),
-            'Memory Quota': self._get_mem_quota(),
-            'Current Network Usage': self._get_network_usage(),
-            'Current Storage IO': self._get_storage_io()
+            'CPU Quota': self._get_cpu_quota(queries=queries),
+            'Memory Quota': self._get_mem_quota(queries=queries),
+            'Current Network Usage': self._get_network_usage(queries=queries),
+            'Current Storage IO': self._get_storage_io(partial_queries=partial_queries)
         }
 
         # filter by worker pods if requested
