@@ -16,9 +16,9 @@ def get_header_data():
 
 def get_tables_data(only_include_worker_pods=True, display_time_as_timestamp=False):
     return tables_class.get_tables_dict(
-            only_include_worker_pods=only_include_worker_pods,
-            display_time_as_timestamp=display_time_as_timestamp
-        )
+        only_include_worker_pods=only_include_worker_pods,
+        display_time_as_timestamp=display_time_as_timestamp
+    )
 
 def get_graphs_data():
     return graphs_class.get_graphs_dict()
