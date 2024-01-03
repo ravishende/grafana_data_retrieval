@@ -4,6 +4,7 @@ import pandas as pd
 from helpers.querying import query_data_for_graph
 from helpers.printing import print_sub_title
 from helpers.filtering import filter_df_for_workers
+from helpers.time_functions import datetime_ify, delta_to_time_str, time_str_to_delta, find_time_from_offset
 from inputs import *
 from datetime import datetime, timedelta
 from termcolor import colored
@@ -46,6 +47,7 @@ class Graphs():
             ]
         }
 
+    '''
     # given a timedelta, get it in the form 2d4h12m30s for use with querying (time_step)
     def _get_time_str_from_timedelta(self, delta):
         days = delta.days
@@ -53,6 +55,7 @@ class Graphs():
         minutes, seconds = divmod(remainder, 60)
         time_str = f"{days}d{hours}h{minutes}m{seconds}s"
         return time_str
+    
 
     # given a string in the form 5w3d6h30m5s, save the times to a dict accesible
     # by the unit as their key. The int times can be any length (500m160s is allowed)
@@ -84,6 +87,7 @@ class Graphs():
 
         return time_delta
 
+
     # given an end_time (datetime) and an offset_str (string) (e.g. "12h5m30s"),
     # return a new datetime object offset away from the end_time
     def _find_time_from_offset(self, end_time, offset_str):
@@ -92,6 +96,7 @@ class Graphs():
         # return the start time
         return end_time-time_offset
 
+    
     # takes in a time in seconds since epoch (float or int), pandas Timestamp(), or datetime object formats
     # returns the time as a datetime object
     def _convert_to_datetime(self, time):
@@ -111,6 +116,7 @@ class Graphs():
         
         # if time is of unsupported type, raise error
         raise TypeError("argument for _convert_to_datetime() must be of type float, int, pandas.Timestamp, or datetime.datetime")
+    '''
 
     # assembles string for the time filter to be passed into query_data_for_graph()
     def _assemble_time_filter(self, start=None, end=None, time_step=None):
@@ -119,14 +125,14 @@ class Graphs():
             time_step = self.time_step
         if start is None and end is None:
             # calculate start time
-            start = self._find_time_from_offset(self.end, self.time_offset)
+            start = find_time_from_offset(end=self.end, offset=self.time_offset)
             end = self.end
         elif start is None or end is None:  # one is none but not both
             raise ValueError("start and end must either be both defined or both None")
         else:
             # make sure both start and end are datetime objects
-            start = self._convert_to_datetime(start)
-            end = self._convert_to_datetime(end)
+            start = datetime_ify(start)
+            end = datetime_ify(end)
 
         # assemble strings
         end_str = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -472,9 +478,9 @@ class Graphs():
                     start = pod_dict['start']
                     end = pod_dict['end']
                     # convert time_step to timedelta to be able to divide it
-                    time_step = self._get_timedelta_from_str(self.time_step)/self.requery_step_divisor
+                    time_step = time_str_to_delta(self.time_step)/self.requery_step_divisor
                     # convert time_step back to str to be used for querying
-                    time_step = self._get_time_str_from_timedelta(time_step)
+                    time_step = delta_to_time_str(time_step)
                     graph_df = None
 
                     # graph is defined by 1 query --> query graph
