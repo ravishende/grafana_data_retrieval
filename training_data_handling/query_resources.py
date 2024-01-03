@@ -12,6 +12,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.querying import query_data
 from helpers.printing import print_title
+from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_offset
 
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
@@ -50,56 +51,6 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
             Helper Functions
 ---------------------------------------
 '''
-
-# given a timedelta, get it in the form 2d4h12m30s for use with querying
-def delta_to_time_str(delta):
-    days = delta.days
-    hours, remainder = divmod(delta.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    time_str = f"{days}d{hours}h{minutes}m{seconds}s"
-    return time_str
-
-
-# convert a time string into a datetime object
-def datetime_ify(time):
-    # handle if it is already of type pandas datetime or actual datetime
-    if isinstance(time, pd.Timestamp):
-        return time.to_pydatetime(warn=False)
-    if isinstance(time, datetime):
-        return time
-
-    # get time as datetime object. Time format should be one of two patterns.
-    try:
-        # get time down to the second, no decimal seconds.
-        time = time[0:time.find(".")]
-        # get time as datetime
-        format_string = "%Y-%m-%d %H:%M:%S"
-        time = datetime.strptime(time, format_string)
-        return time
-    except ValueError:
-        # get start and stop as datetimes, then find the difference between them for the runtime
-        format_string = "%Y-%m-%dT%H:%M:%S"
-        time = datetime.strptime(time, format_string)
-        return time
-
-
-# given a start (datetime object) of a run and duration in seconds, 
-# return the offset of the end of the run from the current time
-def calculate_offset(start, duration):
-    # check for proper inputs
-    if not isinstance(start, datetime):
-        raise ValueError("start must be a datetime object")
-    try:
-        duration = float(duration)
-    except ValueError:
-        raise ValueError("duration must be a float or int")
-
-    # calculate offset from current time by finding end time and subtracting now from end
-    end = start + timedelta(seconds=duration)
-    offset_delta = datetime.now() - end
-    offset = delta_to_time_str(offset_delta) #convert offset from timedelta to time string
-
-    return offset
 
 # given a resource ("cpu" or "mem"), start (datetime), and duration (float)
 # return a query for the resource over the given duration of the run
@@ -147,7 +98,7 @@ def query_resource(resource, start, duration, row_index, n_rows):
 
 '''
 ---------------------------------------
-            User Function
+            User Functions
 ---------------------------------------
 '''
 # generate random values between run_start and some end time, put into duration1
@@ -214,6 +165,12 @@ def insert_column(df, resource, insert_col, duration_col, n_rows):
 training_data = pd.read_csv(csv_file, index_col=0)
 n_rows = NUM_ROWS
 
+# initialize metrics columns if they aren't already
+metrics = ['cpu_total', 'mem_total', 'cpu_t1', 'mem_t1', 'cpu_t2', 'mem_t2']
+for metric in metrics:
+    if metric not in training_data.columns:
+        training_data[metric] = None
+
 # query total performance data
 training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
 training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
@@ -237,24 +194,23 @@ training_data.to_csv(csv_file)
     # network info
 
 
+
+'''
+======================================================
+For inserting another duration and more metric columns
+
+Note: make sure to edit insert_rand_refresh_col() to 
+be within the time range you want it to be.
+======================================================
+'''
 '''
 # add new columns and insert duration col
-# training_data['duration_t1'] = None
-# training_data['cpu_t1'] = None
-# training_data['mem_t1'] = None
-# training_data = insert_rand_refresh_col(training_data, "duration_t1")
+# training_data['duration_t3'] = None
+# training_data['cpu_t3'] = None
+# training_data['mem_t3'] = None
+# training_data = insert_rand_refresh_col(training_data, "duration_t3")
 
-# add new columns and insert duration col
-# training_data['duration_t2'] = None
-# training_data['cpu_t2'] = None
-# training_data['mem_t2'] = None
-# training_data = insert_rand_refresh_col(training_data, "duration_t2")
-
-# calculate performance data up to a point
-training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t1', n_rows)
-training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
-
+training_data = insert_column(training_data, "cpu", "cpu_t3", 'duration_t3', n_rows)
+training_data = insert_column(training_data, "mem", "mem_t3", 'duration_t3', n_rows)
 '''
 
