@@ -59,7 +59,7 @@ class Graphs():
     # works given as many or few of the time units. (e.g. 12h also works and sets everything but h to None)
     def _get_timedelta_from_str(self, time_str):
         # define regex pattern (groups by optional int+unit but only keeps the int)
-        pattern = "(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?"
+        pattern = r"(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?"
         feedback = re.search(pattern, time_str)
 
         # save time variables (if not in time_str they will be set to None)
