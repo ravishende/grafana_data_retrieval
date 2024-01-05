@@ -10,7 +10,6 @@ from helpers.querying import query_data
 from helpers.time_functions import delta_to_time_str, time_str_to_delta, datetime_ify, calculate_offset
 
 
-
 # settings
 read_file = "training_data_handling/csv_files/non_zeros.csv"
 NAMESPACE = 'wifire-quicfire'
@@ -19,107 +18,196 @@ NAMESPACE = 'wifire-quicfire'
 pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
-# pd.set_option('display.max_colwidth', 30)
+pd.set_option('display.max_colwidth', 30)
 
 
 
-# return a query for the resource over the given duration of the run
-def assemble_queries(query_bodies, start, duration, static=False, resource=""):
-    # get all the pieces necessary to assemble the query
-    offset = calculate_offset(start, duration)
-    duration_int = duration
-    duration = delta_to_time_str(timedelta(seconds=duration))
-    prefix = 'sum by (node, pod) (increase('
+'''
+Categories of metrics for querying: 
+    3. Max Over Time Range Metrics
+        - Metrics that fluctuate over a run, but only the max value matters (e.g. Memory Usage)
+    1. Increasing Metrics
+        - metrics that increase over a run (e.g. CPU Usage)
+    2. Static Metrics
+        - metrics that never change throughout a run (e.g. Memory Limits)
+'''
+
+
+
+'''
+================
+Helper functions
+================
+'''
+# assemble queries for all max based metrics
+def assemble_max_queries(max_query_bodies, start, duration_seconds):
+    # get offset and duration for query
+    offset = calculate_offset(start, duration_seconds)
+    duration = delta_to_time_str(timedelta(seconds=duration_seconds))
+
+    # get components of query ready to be assembled
+    prefix = "sum by (node, pod) (max_over_time("
     suffix = '{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
-    
-    # some metrics are static throughout an entire run (limits, requests). These queries are different
-    static_prefix = 'sum by (node, pod) ('
-    static_suffixes = {
-        'cpu':'{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ') * ' + str(duration_int),
+
+    # assemble queries
+    max_queries = {}
+    for title, query_body in max_query_bodies.items():
+        max_queries[title] = prefix + query_body + suffix
+
+    return max_queries
+
+
+# assemble queries for all increase based metrics
+def assemble_increase_queries(increase_query_bodies, start, duration_seconds):
+    # get offset and duration for query
+    offset = calculate_offset(start, duration_seconds)
+    duration = delta_to_time_str(timedelta(seconds=duration_seconds))
+
+    # get components of query ready to be assembled
+    prefix = "sum by (node, pod) (increase("
+    suffix = '{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
+
+    # assemble queries
+    increase_queries = {}
+    for title, query_body in increase_query_bodies.items():
+        increase_queries[title] = prefix + query_body + suffix
+
+    return increase_queries
+
+
+# assemble queries for all static metrics
+def assemble_static_queries(static_query_bodies, start, duration_seconds):
+    # get offset and duration for query
+    offset = calculate_offset(start, duration_seconds)
+    duration = delta_to_time_str(timedelta(seconds=duration_seconds))
+
+    # get prefix of query ready for assembly (suffix gets defined while looping over query_bodies)
+    prefix = "sum by (node, pod) ("
+
+    # get the right suffix depending on the resource
+    suffixes = {
+         # set resource to cpu and multiply by duration seconds to get metric from measuring cpu cores to cpu seconds
+        'cpu':'{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ') * ' + str(duration_seconds),
+        # set resource to memory
         'mem':'{resource="memory", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')'
     }
-    
-    # assemble the final queries
-    queries = query_bodies
-    for title, query_body in query_bodies.items():
-        query = ""
-        if static:
-            query = static_prefix + query_body + static_suffixes[resource]
-        else:
-            query = prefix + query_body + suffix
-        queries[title] = query
 
-    return queries
-
+    # assemble queries
+    static_queries = {}
+    for title, query_body in static_query_bodies.items():
+        # get the resource and corresponding suffix
+        resource = title[:3].lower()
+        suffix = suffixes[resource]
+        # assemble query and put into static_queries
+        static_queries[title] = prefix + query_body + suffix
+        
+    return static_queries
 
 
+'''
+=========================================================
+metrics and corresponding query bodies sorted by category
+=========================================================
+'''
+static_query_bodies = {
+    'CPU Requests': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests',
+    'CPU Limits': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits',
+    'Memory Requests': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests',
+    'Memory Limits': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_limits'
+}
 
-
-query_bodies = {
-    # CPU Quota
+increase_query_bodies = {
     'CPU Usage': 'container_cpu_usage_seconds_total',
-      # static metrics:
-        # 'CPU Requests': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests',
-        # 'CPU Limits': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits',
-    # Memory Quota
-    'Memory Usage': 'container_memory_working_set_bytes',
-      # static metrics:
-        # 'Memory Requests': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests',
-        # 'Memory Limits': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_limits',
-    'Memory Usage (RSS)': 'container_memory_rss',
-    'Memory Usage (Cache)': 'container_memory_cache',
-    # Network Usage
     'Current Receive Bandwidth': 'container_network_receive_bytes_total',
     'Current Transmit Bandwidth': 'container_network_transmit_bytes_total',
     'Rate of Received Packets': 'container_network_receive_packets_total',
     'Rate of Transmitted Packets': 'container_network_transmit_packets_total',
     'Rate of Received Packets Dropped': 'container_network_receive_packets_dropped_total',
-    'Rate of Transmitted Packets Dropped':  'container_network_transmit_packets_dropped_total'
-}
-partial_query_bodies = {
+    'Rate of Transmitted Packets Dropped': 'container_network_transmit_packets_dropped_total',
     'IOPS(Reads)': 'container_fs_reads_total',
     'IOPS(Writes)': 'container_fs_writes_total',
     'Throughput(Read)': 'container_fs_reads_bytes_total',
     'Throughput(Write)': 'container_fs_writes_bytes_total'
 }
 
-static_cpu_query_bodies = {
-    'CPU Requests': 'kube_pod_container_resource_requests',
-    'CPU Limits': 'kube_pod_container_resource_limits'
+max_query_bodies = {
+    'Memory Usage': 'container_memory_working_set_bytes',
+    'Memory Usage (RSS)': 'container_memory_rss',
+    'Memory Usage (Cache)': 'container_memory_cache'
 }
-static_mem_query_bodies = {
-    'Memory Requests': 'kube_pod_container_resource_requests',
-    'Memory Limits': 'kube_pod_container_resource_limits'
+
+
+'''
+========================================================
+metrics sorted by tables (for feeding into tables_class)
+========================================================
+'''
+metrics = {
+    # CPU Quota
+    'CPU Usage',
+    'CPU Requests',
+    'CPU Limits',
+    # Memory Quota
+    'Memory Usage',
+    'Memory Requests',
+    'Memory Limits',
+    'Memory Usage (RSS)',
+    'Memory Usage (Cache)',
+    # Network Usage
+    'Current Receive Bandwidth',
+    'Current Transmit Bandwidth',
+    'Rate of Received Packets',
+    'Rate of Transmitted Packets',
+    'Rate of Received Packets Dropped',
+    'Rate of Transmitted Packets Dropped'
 }
+partial_metrics = {
+    # Input Output
+    'IOPS(Reads)',
+    'IOPS(Writes)',
+    'Throughput(Read)',
+    'Throughput(Write)'
+}
+
+
+
+
+'''
+============================
+        Main Program        
+============================
+'''
 
 # select a run from the dataframe of runs
-df = pd.read_csv(read_file, index_col=0, nrows=21)
+df = pd.read_csv(read_file, index_col=0)
 df['start'] = df['start'].apply(datetime_ify)
-run = df.iloc[20]
+run = df.iloc[50]
 
-# get duration and start
+# get duration and start of run
 start = run['start']
-duration = run['runtime']
+duration_seconds = run['runtime']
 
-# assemble queries and print information
-run_queries = assemble_queries(query_bodies, start, duration)
-static_cpu_queries = assemble_queries(static_cpu_query_bodies, start, duration, static=True, resource='cpu')
-static_mem_queries = assemble_queries(static_mem_query_bodies, start, duration, static=True, resource='mem')
-run_queries.update(static_cpu_queries)
-run_queries.update(static_mem_queries)
-run_partial_queries = assemble_queries(partial_query_bodies, start, duration)
+# assemble queries
+max_queries = assemble_max_queries(max_query_bodies, start, duration_seconds)
+increase_queries = assemble_increase_queries(increase_query_bodies, start, duration_seconds)
+static_queries = assemble_static_queries(static_query_bodies, start, duration_seconds)
 
+# get all queries into one dictionary
+unsorted_queries = {}
+unsorted_queries.update(max_queries)
+unsorted_queries.update(increase_queries)
+unsorted_queries.update(static_queries)
 
-def multiply_cols_by_duration(df, duration, cols_to_update):
-    for col_title in cols_to_update:
-        df[col_title] = pd.to_numeric(df[col_title]) * duration
-    return df
+# assemble queries and partial_queries for the run - sorted versions of the unsorted_queries separated by full queries vs partial_queries
+run_queries = {key: unsorted_queries[key] for key in metrics}
+run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
 
-
+# get tables from queriess
 tables_class = Tables(namespace=NAMESPACE)
 tables_dict = tables_class.get_tables_dict(
     only_include_worker_pods=False, 
     queries=run_queries, 
     partial_queries=run_partial_queries)
+
 
 print_dataframe_dict(tables_dict)
