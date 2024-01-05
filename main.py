@@ -13,8 +13,8 @@ pd.set_option('display.width', shutil.get_terminal_size().columns) # for using w
 
 # run all code
 result_dict = get_all_data(
-    only_include_worker_pods=False,  # filters graphs for only worker pods. Updates pod names to be just their ensemble
-    display_time_as_timestamp=True,  # displays time in readable format instead of seconds since epoch (01/01/1970)
+    only_include_worker_pods=False,  # filters graphs for only worker pods. Updates pod names to be just their ensemble id
+    display_time_as_timestamp=True,  # displays graph times in readable format instead of seconds since epoch (01/01/1970)
     show_graph_runtimes=False,  # for displaying in the terminal how long each query and graph creation takes
     get_graphs_as_one_df=False,  # puts all graphs into one dataframe instead of a dictionary with multiple graphs. For inputting into database in future
     get_tables_as_one_df=False,  # puts all tables into one dataframe instead of a dictionary with multiple tables. For inputting into database in future
@@ -28,7 +28,7 @@ graphs = result_dict['graphs']
 losses_and_requeried_graphs = \
     check_graphs_losses(
         graphs=graphs,  # if this is not passed in, it will automatically be regenerated. This may take time
-        print_info=True,  # prints information on pods dropped/recovered: pod, values dropped/recovered, previous time, time of drop/recovery
+        print_info=False,  # prints information on pods dropped/recovered: pod, values dropped/recovered, previous time, time of drop/recovery
         requery=None,  # requeries pods dropped/recovered at higher resolution if True, doesn't if False. When None, prompts user if it should requery after collecting info
         show_runtimes=False,  # for displaying in the terminal how long each query and graph creation takes
         display_time_as_timestamp=True  # displays time in readable format instead of seconds since epoch (01/01/1970)
