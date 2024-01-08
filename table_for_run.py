@@ -79,6 +79,8 @@ def assemble_increase_queries(increase_query_bodies, start, duration_seconds):
 def assemble_static_queries(static_query_bodies, start, duration_seconds):
     # get offset for query
     offset = calculate_offset(start, duration_seconds)
+    # query metrics 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
+    # offset = calculate_offset(start, 5)
 
     # get prefix of query ready for assembly (suffix gets defined while looping over query_bodies)
     prefix = "sum by (node, pod) ("
@@ -86,8 +88,9 @@ def assemble_static_queries(static_query_bodies, start, duration_seconds):
     # get the right suffix depending on the resource
     suffixes = {
          # set resource to cpu and multiply by duration seconds to get metric from measuring cpu cores to cpu seconds
+         # ex: cpu_usage is measured in cpu seconds, so to make the cpu requests % (cpu_usage/cpu_requests) accurate, they both have to be in the same units.
         'cpu':'{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ') * ' + str(duration_seconds),
-        # set resource to memory
+        # set resource to memory. It is already in the preferred unit of bytes
         'mem':'{resource="memory", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')'
     }
 
