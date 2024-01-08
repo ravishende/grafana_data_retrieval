@@ -24,11 +24,11 @@ pd.set_option('display.max_colwidth', 30)
 
 '''
 Categories of metrics for querying: 
-    3. Max Over Time Range Metrics
+    1. Max Over Time Range Metrics
         - Metrics that fluctuate over a run, but only the max value matters (e.g. Memory Usage)
-    1. Increasing Metrics
+    2. Increasing Metrics
         - metrics that increase over a run (e.g. CPU Usage)
-    2. Static Metrics
+    3. Static Metrics
         - metrics that never change throughout a run (e.g. Memory Limits)
 '''
 
@@ -77,9 +77,8 @@ def assemble_increase_queries(increase_query_bodies, start, duration_seconds):
 
 # assemble queries for all static metrics
 def assemble_static_queries(static_query_bodies, start, duration_seconds):
-    # get offset and duration for query
+    # get offset for query
     offset = calculate_offset(start, duration_seconds)
-    duration = delta_to_time_str(timedelta(seconds=duration_seconds))
 
     # get prefix of query ready for assembly (suffix gets defined while looping over query_bodies)
     prefix = "sum by (node, pod) ("
@@ -180,8 +179,9 @@ partial_metrics = {
 
 # select a run from the dataframe of runs
 df = pd.read_csv(read_file, index_col=0)
-df['start'] = df['start'].apply(datetime_ify)
-run = df.iloc[50]
+df['start'] = df['start'].apply(datetime_ify) # get run start times as datetimes
+run_index = 50 # can pick any run between [0,len(df))
+run = df.iloc[run_index] 
 
 # get duration and start of run
 start = run['start']
