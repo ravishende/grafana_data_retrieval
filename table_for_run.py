@@ -202,6 +202,10 @@ unsorted_queries.update(static_queries)
 run_queries = {key: unsorted_queries[key] for key in metrics}
 run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
 
+# Print information on the run and queries
+print('\n'*5, "run:", run, sep='\n')
+print('\n'*5, "Queries:", run_queries, "\n"*5, sep='\n')
+
 # get tables from queriess
 tables_class = Tables(namespace=NAMESPACE)
 tables_dict = tables_class.get_tables_dict(
