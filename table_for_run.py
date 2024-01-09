@@ -105,7 +105,24 @@ def assemble_static_queries(static_query_bodies, start, duration_seconds):
         
     return static_queries
 
+# given a table dataframe of either cpu quota or memory quota, a resource ("mem" or "cpu"),
+# fill in the na values for requests, limits, requests %, and limits %
+def fill_in_static_na(df, resource):
+    # use resource to determine resource_str
+    resource_str = ""
+    if resource == "cpu":
+        resource_str = "CPU"
+    elif resource == "mem":
+        resource_str = "Memory"
+    else:
+        raise ValueError('resource must be either "cpu" or "mem"')
+    
+    # fill in na values
+    df[[f'{resource_str} Requests', f'{resource_str} Limits']] = df[[f'{resource_str} Requests', f'{resource_str} Limits']].fillna(method='ffill')
+    df[f'{resource_str} Requests %'] = df[f'{resource_str} Usage'].astype(float) / df[f'{resource_str} Requests'].astype(float) * 100 
+    df[f'{resource_str} Limits %'] = df[f'{resource_str} Usage'].astype(float) / df[f'{resource_str} Limits'].astype(float) * 100
 
+    return df
 '''
 =========================================================
 metrics and corresponding query bodies sorted by category
@@ -226,5 +243,11 @@ tables_dict = tables_class.get_tables_dict(
     queries=run_queries, 
     partial_queries=run_partial_queries)
 
+
+# fill in missing values in requests and limits
+cpu_quota = tables_dict['CPU Quota']
+mem_quota = tables_dict['Memory Quota']
+tables_dict['CPU Quota'] = fill_in_static_na(cpu_quota, "cpu")
+tables_dict['Memory Quota'] = fill_in_static_na(mem_quota, "mem")
 
 print_dataframe_dict(tables_dict)
