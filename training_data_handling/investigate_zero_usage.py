@@ -55,5 +55,5 @@ print_title("Nontrivial Zeros DataFrame")
 print(nontrivial_zeros, "\n\nLowest runtime:", lowest_runtime, "seconds\nHighest runtime:", round(highest_runtime/3600, 1), "hours", "\n"*10)
 
 # save dataframes to csv files
-# zeros.to_csv(zeros_write_file)
-# non_zeros.to_csv(non_zeros_write_file)
+zeros.to_csv(zeros_write_file)
+non_zeros.to_csv(non_zeros_write_file)

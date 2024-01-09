@@ -10,7 +10,7 @@ from datetime import datetime as dt
 graphs_class = Graphs()
 graphs_dict = graphs_class.get_graphs_dict(
     only_include_worker_pods=False,  # filters graphs to only include bpd3-worker pods. displays the worker ensemble
-    display_time_as_timestamp=False,  # keep as False. Important for calculating the time and displaying it
+    display_time_as_datetime=False,  # keep as False. Important for calculating the time and displaying it
     show_runtimes=False  # for displaying in the terminal how long each query and graph creation takes
     )
 

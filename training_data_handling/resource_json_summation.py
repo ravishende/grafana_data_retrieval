@@ -99,13 +99,14 @@ mem_t2 = "mem_t2"
 summed_runs = pd.read_csv(read_file, index_col=0)
 
 # update columns (sum json-like data to get single float)
+# cpu
 summed_runs[cpu_tot] = update_col(summed_runs, cpu_tot, ensemble_col)
-summed_runs[mem_tot] = update_col(summed_runs, mem_tot, ensemble_col)
 summed_runs[cpu_t1] = update_col(summed_runs, cpu_t1, ensemble_col)
-summed_runs[mem_t1] = update_col(summed_runs, mem_t1, ensemble_col)
 summed_runs[cpu_t2] = update_col(summed_runs, cpu_t2, ensemble_col)
+# memory
+summed_runs[mem_tot] = update_col(summed_runs, mem_tot, ensemble_col)
+summed_runs[mem_t1] = update_col(summed_runs, mem_t1, ensemble_col)
 summed_runs[mem_t2] = update_col(summed_runs, mem_t2, ensemble_col)
-
 '''
 # split the summed_runs into runs that had data for total resources and for ones that didn't (no bp3d-workers)
 # in other words, if cpu_tot or mem_tot are none, add row to na_mask

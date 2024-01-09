@@ -78,9 +78,9 @@ def assemble_increase_queries(increase_query_bodies, start, duration_seconds):
 # assemble queries for all static metrics
 def assemble_static_queries(static_query_bodies, start, duration_seconds):
     # get offset for query
-    offset = calculate_offset(start, duration_seconds)
-    # query metrics 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
-    # offset = calculate_offset(start, 5)
+    # offset = calculate_offset(start, duration_seconds)
+    # query static metrics 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
+    offset = calculate_offset(start, 5)
 
     # get prefix of query ready for assembly (suffix gets defined while looping over query_bodies)
     prefix = "sum by (node, pod) ("
@@ -200,7 +200,7 @@ partial_metrics = {
 # select a run from the dataframe of runs
 df = pd.read_csv(read_file, index_col=0)
 df['start'] = df['start'].apply(datetime_ify) # get run start times as datetimes
-run_index = 50 # can pick any run between [0,len(df))
+run_index = 90 # can pick any run between [0,len(df)) so between 0 and 191
 run = df.iloc[run_index] 
 
 # get duration and start of run
@@ -221,20 +221,6 @@ unsorted_queries.update(static_queries)
 # assemble queries and partial_queries for the run - sorted versions of the unsorted_queries separated by full queries vs partial_queries
 run_queries = {key: unsorted_queries[key] for key in metrics}
 run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
-
-# select queries for printing
-selected_queries = [
-    'CPU Usage',
-    'CPU Requests',
-    'CPU Limits',
-    'Memory Usage',
-    'Memory Requests',
-    'Memory Limits']
-important_queries = {key:run_queries[key] for key in selected_queries}
-# Print information on the run and queries
-print('\n'*5, "run:", run,'\n'*5, "Queries:", sep='\n')
-pprint(important_queries)
-print("\n"*5)
 
 # get tables from queriess
 tables_class = Tables(namespace=NAMESPACE)

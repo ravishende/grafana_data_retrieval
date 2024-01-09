@@ -16,8 +16,8 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
-csv_file = 'csv_files/queried.csv'
-NUM_ROWS = 100
+csv_file = 'csv_files/queried_w_ids.csv'
+NUM_ROWS = 1000
 NAMESPACE = 'wifire-quicfire'
 
 # display settings
@@ -34,8 +34,8 @@ CURRENT_ROW = 1
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 This file reads in a csv which contains all the training data from Devin's inputs as well as columns
-for cpu_total and mem_total usage for the run. Running this appends NUM_ROWS values 
-for those two columns to what has already been queried for, filling out more and 
+for cpu_total, cpu_t1, cpu_t2, mem_total, mem_t1, and mem_t2 usage for the run. Running this appends NUM_ROWS values 
+for those 6 columns to what has already been queried for, filling out more and 
 more of the datapoints. This can be edited in the main program portion of the file to query for any cpu and memory
 usage up until a certain duration. The only requirement is adding that new duration column.
 
@@ -57,8 +57,8 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 def get_resource_query(resource, start, duration):
     # all resources and the heart of their queries
     query_bodies = {
-        "cpu":"container_cpu_usage_seconds_total",
-        "mem":"container_memory_working_set_bytes"
+        "cpu":"increase(container_cpu_usage_seconds_total",
+        "mem":"max_over_time(container_memory_working_set_bytes"
     }
 
     # check if user input resource is in known resources
@@ -69,8 +69,8 @@ def get_resource_query(resource, start, duration):
     # get all the pieces necessary to assemble the query
     offset = calculate_offset(start, duration)
     duration = delta_to_time_str(timedelta(seconds=duration))
-    prefix = 'sum by (node, pod) (increase('
     suffix = '{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
+    prefix = 'sum by (node, pod) ('
 
     # assemble the final query
     query = prefix + query_bodies[resource] + suffix
@@ -172,11 +172,13 @@ for metric in metrics:
         training_data[metric] = None
 
 # query total performance data
+# cpu columns
 training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
-training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
 training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
 training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
+# memory columns
+training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
+training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
 training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
 
 # print and write updated df to a csv file

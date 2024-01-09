@@ -172,9 +172,9 @@ class Tables():
 
         return tables_dict
 
-        # combines all graph dataframes into one large dataframe. Each graph is represented as a column
+    # combines all graph dataframes into one large dataframe. Each graph is represented as a column
     # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
-    def get_tables_as_one_df(self, tables_dict=None, only_include_worker_pods=False, queries=None, partial_queries=None, display_time_as_timestamp=True, show_runtimes=False):
+    def get_tables_as_one_df(self, tables_dict=None, only_include_worker_pods=False, queries=None, partial_queries=None, display_time_as_datetime=True, show_runtimes=False):
         total_df = pd.DataFrame(data={})
 
         # Generate graphs if none given
