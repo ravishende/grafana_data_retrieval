@@ -222,16 +222,6 @@ unsorted_queries.update(static_queries)
 run_queries = {key: unsorted_queries[key] for key in metrics}
 run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
 
-# select queries for printing
-selected_queries = [
-    'CPU Usage',
-    'CPU Requests',
-    'CPU Limits',
-    'Memory Usage',
-    'Memory Requests',
-    'Memory Limits']
-important_queries = {key:run_queries[key] for key in selected_queries}
-
 # get tables from queriess
 tables_class = Tables(namespace=NAMESPACE)
 tables_dict = tables_class.get_tables_dict(
