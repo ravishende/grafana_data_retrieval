@@ -238,16 +238,19 @@ print("\n"*5)
 
 # get tables from queriess
 tables_class = Tables(namespace=NAMESPACE)
-tables_dict = tables_class.get_tables_dict(
+tables_df = tables_class.get_tables_as_one_df(
     only_include_worker_pods=False, 
     queries=run_queries, 
     partial_queries=run_partial_queries)
 
 
 # fill in missing values in requests and limits
-cpu_quota = tables_dict['CPU Quota']
-mem_quota = tables_dict['Memory Quota']
-tables_dict['CPU Quota'] = fill_in_static_na(cpu_quota, "cpu")
-tables_dict['Memory Quota'] = fill_in_static_na(mem_quota, "mem")
+tables_df = fill_in_static_na(tables_df, "cpu")
+tables_df = fill_in_static_na(tables_df, "mem")
 
-print_dataframe_dict(tables_dict)
+# print_dataframe_dict(tables_dict)
+print(tables_df)
+
+# output df to a csv file
+write_file = "output.csv"
+tables_df.to_csv(write_file)
