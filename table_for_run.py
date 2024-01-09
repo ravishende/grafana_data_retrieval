@@ -78,9 +78,9 @@ def assemble_increase_queries(increase_query_bodies, start, duration_seconds):
 # assemble queries for all static metrics
 def assemble_static_queries(static_query_bodies, start, duration_seconds):
     # get offset for query
-    offset = calculate_offset(start, duration_seconds)
-    # query metrics 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
-    # offset = calculate_offset(start, 5)
+    # offset = calculate_offset(start, duration_seconds)
+    # query static metrics 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
+    offset = calculate_offset(start, 5)
 
     # get prefix of query ready for assembly (suffix gets defined while looping over query_bodies)
     prefix = "sum by (node, pod) ("
@@ -200,7 +200,7 @@ partial_metrics = {
 # select a run from the dataframe of runs
 df = pd.read_csv(read_file, index_col=0)
 df['start'] = df['start'].apply(datetime_ify) # get run start times as datetimes
-run_index = 50 # can pick any run between [0,len(df))
+run_index = 100 # can pick any run between [0,len(df)) so between 0 and 191
 run = df.iloc[run_index] 
 
 # get duration and start of run
@@ -251,3 +251,4 @@ tables_dict['CPU Quota'] = fill_in_static_na(cpu_quota, "cpu")
 tables_dict['Memory Quota'] = fill_in_static_na(mem_quota, "mem")
 
 print_dataframe_dict(tables_dict)
+print(len(df), "=====")
