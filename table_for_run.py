@@ -200,7 +200,7 @@ partial_metrics = {
 # select a run from the dataframe of runs
 df = pd.read_csv(read_file, index_col=0)
 df['start'] = df['start'].apply(datetime_ify) # get run start times as datetimes
-run_index = 100 # can pick any run between [0,len(df)) so between 0 and 191
+run_index = 90 # can pick any run between [0,len(df)) so between 0 and 191
 run = df.iloc[run_index] 
 
 # get duration and start of run
@@ -231,10 +231,6 @@ selected_queries = [
     'Memory Requests',
     'Memory Limits']
 important_queries = {key:run_queries[key] for key in selected_queries}
-# Print information on the run and queries
-print('\n'*5, "run:", run,'\n'*5, "Queries:", sep='\n')
-pprint(important_queries)
-print("\n"*5)
 
 # get tables from queriess
 tables_class = Tables(namespace=NAMESPACE)
@@ -251,4 +247,3 @@ tables_dict['CPU Quota'] = fill_in_static_na(cpu_quota, "cpu")
 tables_dict['Memory Quota'] = fill_in_static_na(mem_quota, "mem")
 
 print_dataframe_dict(tables_dict)
-print(len(df), "=====")
