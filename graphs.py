@@ -238,7 +238,7 @@ class Graphs():
         return graphs_dict
 
     # generate and return a list of all the graphs
-    def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
+    def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_datetime=True, show_runtimes=False):
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
         # loop through graphs
         for graph_title, graph in graphs_dict.items():
@@ -250,7 +250,7 @@ class Graphs():
                 graph = filter_df_for_workers(graph)
 
             # update graphs with correct time columns
-            if display_time_as_timestamp:
+            if display_time_as_datetime:
                 graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
 
             graphs_dict[graph_title] = graph
@@ -259,7 +259,7 @@ class Graphs():
 
     # combines all graph dataframes into one large dataframe. Each graph is represented as a column
     # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
-    def get_graphs_as_one_df(self, graphs_dict=None, only_include_worker_pods=False, display_time_as_timestamp=True, show_runtimes=False):
+    def get_graphs_as_one_df(self, graphs_dict=None, only_include_worker_pods=False, display_time_as_datetime=True, show_runtimes=False):
         total_df = pd.DataFrame(data={})
 
         # Generate graphs if none given

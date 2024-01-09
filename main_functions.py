@@ -14,10 +14,10 @@ graphs_class = Graphs()
 def get_header_data():
     return header_class.get_header_dict()
 
-def get_tables_data(only_include_worker_pods=True, display_time_as_timestamp=False):
+def get_tables_data(only_include_worker_pods=True, display_time_as_datetime=False):
     return tables_class.get_tables_dict(
         only_include_worker_pods=only_include_worker_pods,
-        display_time_as_timestamp=display_time_as_timestamp
+        display_time_as_datetime=display_time_as_datetime
     )
 
 def get_graphs_data():
@@ -26,7 +26,7 @@ def get_graphs_data():
 
 # returns three dicts: one containing all header data,
 # one with all tables, and one with all graph data
-def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True, show_graph_runtimes=False, get_graphs_as_one_df=False, get_tables_as_one_df=False):
+def get_all_data(only_include_worker_pods=False, display_time_as_datetime=True, show_graph_runtimes=False, get_graphs_as_one_df=False, get_tables_as_one_df=False):
     # get header data
     print("    Retrieving Header Data")
     header_dict = header_class.get_header_dict(
@@ -43,7 +43,7 @@ def get_all_data(only_include_worker_pods=False, display_time_as_timestamp=True,
     print("    Retrieving Graphs Data")
     graphs_dict = graphs_class.get_graphs_dict(
         only_include_worker_pods=only_include_worker_pods,
-        display_time_as_timestamp=display_time_as_timestamp,
+        display_time_as_datetime=display_time_as_datetime,
         show_runtimes=show_graph_runtimes
     )
 
@@ -94,7 +94,7 @@ def print_all_data(data_dict=None):
 
 
 # get information on dropped/recovered pods and requery if requested. Then return a dict of 'losses' (dropped/recovered pods) and 'requeried' graphs
-def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=False, display_time_as_timestamp=False):
+def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=False, display_time_as_datetime=False):
     # check for if graphs was input as single dataframe instead of graph
     if isinstance(graphs, pd.DataFrame):
         # check if there is data in the dataframe
@@ -139,7 +139,7 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
             # Print graphs
             for graph in graphs_list:
                 # update graphs with correct time columns
-                if display_time_as_timestamp:
+                if display_time_as_datetime:
                     graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
                 print(graph, "\n\n")
 
