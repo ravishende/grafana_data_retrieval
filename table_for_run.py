@@ -229,14 +229,25 @@ tables_df = tables_class.get_tables_as_one_df(
     queries=run_queries, 
     partial_queries=run_partial_queries)
 
-
 # fill in missing values in requests and limits
 tables_df = fill_in_static_na(tables_df, "cpu")
 tables_df = fill_in_static_na(tables_df, "mem")
 
+'''
+# for getting as a dict of table dataframes instead of one large df:
+tables_class = Tables(namespace=NAMESPACE)
+tables_dict = tables_class.get_tables_dict(
+    only_include_worker_pods=False, 
+    queries=run_queries, 
+    partial_queries=run_partial_queries)
+# fill in missing values in requests and limits
+tables_dict['CPU Quota'] = fill_in_static_na(tables_dict['CPU Quota'], "cpu")
+tables_dict['Memory Quota'] = fill_in_static_na(tables_dict['Memory Quota'], "mem")
+print_dataframe_dict(tables_dict)
+'''
+
 # print_dataframe_dict(tables_dict)
 print(tables_df)
-
 # output df to a csv file
 write_file = "output.csv"
 tables_df.to_csv(write_file)
