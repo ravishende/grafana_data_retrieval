@@ -165,9 +165,11 @@ def update_df_IOPS_naming(df):
 ========================================
 '''
 
+# given a dataframe of runs, and list of indices of runs in the dataframe, (can also specify as_one_df and only_include_worker_pods)
+# return a dataframe (if as_one_df==True) of all of the tables queried for those runs
+# or return a list of dataframes (if_as_one_df==False) of all the tables queried for that run
 def get_tables_for_many_runs(runs_df, run_indices, as_one_df=False, only_include_worker_pods=False):
     # get tables class to be able to use methods for querying tables
-    global NAMESPACE
     tables_class = Tables(namespace=NAMESPACE)
 
     # get run start times as datetimes
@@ -210,9 +212,11 @@ def get_tables_for_many_runs(runs_df, run_indices, as_one_df=False, only_include
     return dfs_list
 
 
+# given a dataframe of runs, and an index of a run in the dataframe, (can also specify as_one_df and only_include_worker_pods)
+# return a dataframe (if as_one_df==True) of all of the tables queried for that run
+# or return a dict of dataframes (if_as_one_df==False) of all the tables queried for that run separated by table type
 def get_tables_for_one_run(runs_df, run_index, as_one_df=False, only_include_worker_pods=False):
     # get tables class to be able to use methods for querying tables
-    global NAMESPACE
     tables_class = Tables(namespace=NAMESPACE)
 
     # get run start times as datetimes
@@ -351,7 +355,7 @@ run_tables_df = get_tables_for_one_run(
     as_one_df=True, # if set to False, returns a dictionary of titles, tables
     only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
     )
-print(run_tables_df, "\n"*5)
+print(run_tables_df)
 
 
 '''
@@ -363,5 +367,5 @@ runs_tables_df = get_tables_for_many_runs(
     as_one_df=True, # if set to False, returns a dictionary of titles, tables
     only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
     )
-print(runs_tables_df, "\n"*5)
+print(runs_tables_df)
 '''
