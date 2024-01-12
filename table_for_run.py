@@ -77,9 +77,8 @@ def assemble_increase_queries(increase_query_bodies, start, duration_seconds):
 
 # assemble queries for all static metrics
 def assemble_static_queries(static_query_bodies, start, duration_seconds):
-    # get offset for query
-    # offset = calculate_offset(start, duration_seconds)
-    # query static metrics 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
+    # get offset for query 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
+    # to get offset for when the run ends, use `offset = calculate_offset(start, duration_seconds)`
     offset = calculate_offset(start, 5)
 
     # get prefix of query ready for assembly (suffix gets defined while looping over query_bodies)
