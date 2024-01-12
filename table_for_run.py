@@ -35,9 +35,9 @@ Categories of metrics for querying:
 
 
 '''
-================
-Helper functions
-================
+========================================
+            Helper functions
+========================================
 '''
 # assemble queries for all max based metrics
 def assemble_max_queries(max_query_bodies, start, duration_seconds):
@@ -104,6 +104,33 @@ def assemble_static_queries(static_query_bodies, start, duration_seconds):
         
     return static_queries
 
+
+'''
+========================================
+            User functions
+========================================
+'''
+# given a dict of all query bodies, a dict of all metrics, a run start (datetime), and run duration_seconds (int or float)
+# return two dictionaries, one with full queries, and one with partial queries, both to be passed into tables_class methods
+def get_queries(query_bodies_dict, metrics_dict, start, duration_seconds):
+    # assemble queries
+    max_queries = assemble_max_queries(query_bodies_dict['max'], start, duration_seconds)
+    increase_queries = assemble_increase_queries(query_bodies_dict['increase'], start, duration_seconds)
+    static_queries = assemble_static_queries(query_bodies_dict['static'], start, duration_seconds)
+
+    # get all queries into one dictionary
+    unsorted_queries = {}
+    unsorted_queries.update(max_queries)
+    unsorted_queries.update(increase_queries)
+    unsorted_queries.update(static_queries)
+
+    # assemble queries and partial_queries for the run - sorted versions of the unsorted_queries separated by full queries vs partial_queries
+    run_queries = {key: unsorted_queries[key] for key in metrics}
+    run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
+
+    return run_queries, run_partial_queries
+
+
 # given a table dataframe of either cpu quota or memory quota, a resource ("mem" or "cpu"),
 # fill in the na values for requests, limits, requests %, and limits %
 def fill_in_static_na(df, resource):
@@ -136,6 +163,7 @@ def update_df_IOPS_naming(df):
     renamed_df = df.rename(columns=col_rename_dict)
     return renamed_df
 
+
 '''
 =========================================================
 metrics and corresponding query bodies sorted by category
@@ -166,6 +194,13 @@ max_query_bodies = {
     'Memory Usage': 'container_memory_working_set_bytes',
     'Memory Usage (RSS)': 'container_memory_rss',
     'Memory Usage (Cache)': 'container_memory_cache'
+}
+
+
+all_query_bodies_dict = {
+    'static': static_query_bodies,
+    'increase': increase_query_bodies,
+    'max': max_query_bodies
 }
 
 
@@ -202,6 +237,10 @@ partial_metrics = {
 }
 
 
+all_metrics_dict = {
+    'metrics':metrics,
+    'partial':partial_metrics
+}
 
 
 '''
@@ -220,21 +259,10 @@ run = df.iloc[run_index]
 start = run['start']
 duration_seconds = run['runtime']
 
-# assemble queries
-max_queries = assemble_max_queries(max_query_bodies, start, duration_seconds)
-increase_queries = assemble_increase_queries(increase_query_bodies, start, duration_seconds)
-static_queries = assemble_static_queries(static_query_bodies, start, duration_seconds)
+# get queries and partial_queries to be passed into tables_class methods
+run_queries, run_partial_queries = get_queries(all_query_bodies_dict, all_metrics_dict, start, duration_seconds)
 
-# get all queries into one dictionary
-unsorted_queries = {}
-unsorted_queries.update(max_queries)
-unsorted_queries.update(increase_queries)
-unsorted_queries.update(static_queries)
-
-# assemble queries and partial_queries for the run - sorted versions of the unsorted_queries separated by full queries vs partial_queries
-run_queries = {key: unsorted_queries[key] for key in metrics}
-run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
-
+# get tables class to be able to use methods for querying tables
 tables_class = Tables(namespace=NAMESPACE)
 
 '''
