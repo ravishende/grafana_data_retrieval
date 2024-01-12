@@ -123,6 +123,20 @@ def fill_in_static_na(df, resource):
     df[f'{resource_str} Limits %'] = df[f'{resource_str} Usage'].astype(float) / df[f'{resource_str} Limits'].astype(float) * 100
 
     return df
+
+
+# Returns a dataframe with changed names of columns that contain "IOPS" to use "IO" instead.
+# Reason: in tables.py, it is usually giving a snapshot present, so IO per second
+# (IOPS) is useful. But in this case, we are looking over an entire run, so we want
+# the total IO of the run rather than the average IOPS of the run.
+# Note: The updated queries already do this, we just have to change the names to match,
+# after we do the querying from the tables_class methods.
+def update_df_IOPS_naming(df):
+    # for every column name that contains "IOPS", replace "IOPS" with "IO"
+    col_rename_dict = {col: col.replace("IOPS", "IO") for col in df.columns}
+    renamed_df = df.rename(columns=col_rename_dict)
+    return renamed_df
+
 '''
 =========================================================
 metrics and corresponding query bodies sorted by category
@@ -222,20 +236,29 @@ unsorted_queries.update(static_queries)
 run_queries = {key: unsorted_queries[key] for key in metrics}
 run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
 
-# get tables from queriess
 tables_class = Tables(namespace=NAMESPACE)
+
+'''
+# for getting as a single larger dataframe instead of a dict of dataframes
+# get tables as one df from queries
 tables_df = tables_class.get_tables_as_one_df(
     only_include_worker_pods=False, 
     queries=run_queries, 
     partial_queries=run_partial_queries)
-
 # fill in missing values in requests and limits
 tables_df = fill_in_static_na(tables_df, "cpu")
 tables_df = fill_in_static_na(tables_df, "mem")
-
+# print data
+tables_df = update_df_IOPS_naming(tables_df)
+print(tables_df)
+# output df to a csv file
+# write_file = "output.csv"
+# tables_df.to_csv(write_file)
 '''
+
+# '''
 # for getting as a dict of table dataframes instead of one large df:
-tables_class = Tables(namespace=NAMESPACE)
+# get tables as dict of dfs from queries
 tables_dict = tables_class.get_tables_dict(
     only_include_worker_pods=False, 
     queries=run_queries, 
@@ -243,11 +266,11 @@ tables_dict = tables_class.get_tables_dict(
 # fill in missing values in requests and limits
 tables_dict['CPU Quota'] = fill_in_static_na(tables_dict['CPU Quota'], "cpu")
 tables_dict['Memory Quota'] = fill_in_static_na(tables_dict['Memory Quota'], "mem")
+# rename "Current Storage IO" to be "Storage IO" and "Current Netowrk Usage" to be "Network Usage"
+tables_dict['Storage IO'] = tables_dict.pop('Current Storage IO')
+tables_dict['Network Usage'] = tables_dict.pop('Current Network Usage')
+# update IOPS column names in Storage IO df to be IO instead of IOPS
+tables_dict['Storage IO'] = update_df_IOPS_naming(tables_dict['Storage IO'])
+# print data
 print_dataframe_dict(tables_dict)
-'''
-
-# print_dataframe_dict(tables_dict)
-print(tables_df)
-# output df to a csv file
-write_file = "output.csv"
-tables_df.to_csv(write_file)
+# '''
