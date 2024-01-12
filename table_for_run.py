@@ -19,6 +19,7 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 pd.set_option('display.max_colwidth', 30)
+pd.set_option("display.max_rows", None)
 
 
 
@@ -104,12 +105,6 @@ def assemble_static_queries(static_query_bodies, start, duration_seconds):
         
     return static_queries
 
-
-'''
-========================================
-            User functions
-========================================
-'''
 # given a dict of all query bodies, a dict of all metrics, a run start (datetime), and run duration_seconds (int or float)
 # return two dictionaries, one with full queries, and one with partial queries, both to be passed into tables_class methods
 def get_queries(query_bodies_dict, metrics_dict, start, duration_seconds):
@@ -163,6 +158,102 @@ def update_df_IOPS_naming(df):
     renamed_df = df.rename(columns=col_rename_dict)
     return renamed_df
 
+
+'''
+========================================
+            User functions
+========================================
+'''
+
+def get_tables_for_many_runs(runs_df, run_indices, as_one_df=False, only_include_worker_pods=False):
+    # get tables class to be able to use methods for querying tables
+    global NAMESPACE
+    tables_class = Tables(namespace=NAMESPACE)
+
+    # get run start times as datetimes
+    runs_df['start'] = runs_df['start'].apply(datetime_ify)
+
+    # get all the selected runs into a single df to iterate over
+    selected_runs_df = runs_df.iloc[run_indices]
+
+    # get tables as a single dataframe for each run, add it to dfs_list
+    dfs_list = []
+    for index, run in selected_runs_df.iterrows():
+        # get duration and start of run
+        start = run['start']
+        duration_seconds = run['runtime']
+
+        # get queries and partial_queries to be passed into tables_class methods
+        run_queries, run_partial_queries = get_queries(all_query_bodies_dict, all_metrics_dict, start, duration_seconds)
+
+        # get tables as one df from queries
+        tables_df = tables_class.get_tables_as_one_df(
+            only_include_worker_pods=only_include_worker_pods, 
+            queries=run_queries, 
+            partial_queries=run_partial_queries)
+        # fill in missing values in requests and limits
+        tables_df = fill_in_static_na(tables_df, "cpu")
+        tables_df = fill_in_static_na(tables_df, "mem")
+        
+        # add tables_df to table_runs_df
+        tables_df = update_df_IOPS_naming(tables_df)
+        tables_df.insert(0,'run_id', run['run_uuid'])
+        tables_df.insert(0,'run_index', index)
+        dfs_list.append(tables_df)
+
+    # get all runs as a single dataframe
+    if as_one_df:
+        table_runs_df = pd.concat(dfs_list, ignore_index=True)
+        return table_runs_df
+    
+    # otherwise, return a list of dataframes
+    return dfs_list
+
+
+def get_tables_for_one_run(runs_df, run_index, as_one_df=False, only_include_worker_pods=False):
+    # get tables class to be able to use methods for querying tables
+    global NAMESPACE
+    tables_class = Tables(namespace=NAMESPACE)
+
+    # get run start times as datetimes
+    runs_df['start'] = runs_df['start'].apply(datetime_ify)
+
+    # get run from run_index
+    run = runs_df.iloc[run_index]
+
+    # get duration and start of run
+    start = run['start']
+    duration_seconds = run['runtime']
+
+    # get queries and partial_queries to be passed into tables_class methods
+    run_queries, run_partial_queries = get_queries(all_query_bodies_dict, all_metrics_dict, start, duration_seconds)
+
+    # get tables as one df from queries
+    if as_one_df:
+        tables_df = tables_class.get_tables_as_one_df(
+            only_include_worker_pods=only_include_worker_pods, 
+            queries=run_queries, 
+            partial_queries=run_partial_queries)
+        # fill in missing values in requests and limits
+        tables_df = fill_in_static_na(tables_df, "cpu")
+        tables_df = fill_in_static_na(tables_df, "mem")
+        return tables_df
+
+    # otherwise get tables as dict of dfs
+    tables_dict = tables_class.get_tables_dict(
+    only_include_worker_pods=only_include_worker_pods, 
+    queries=run_queries, 
+    partial_queries=run_partial_queries)
+    # fill in missing values in requests and limits
+    tables_dict['CPU Quota'] = fill_in_static_na(tables_dict['CPU Quota'], "cpu")
+    tables_dict['Memory Quota'] = fill_in_static_na(tables_dict['Memory Quota'], "mem")
+    # rename "Current Storage IO" to be "Storage IO" and "Current Netowrk Usage" to be "Network Usage"
+    tables_dict['Storage IO'] = tables_dict.pop('Current Storage IO')
+    tables_dict['Network Usage'] = tables_dict.pop('Current Network Usage')
+    # update IOPS column names in Storage IO df to be IO instead of IOPS
+    tables_dict['Storage IO'] = update_df_IOPS_naming(tables_dict['Storage IO'])
+
+    return tables_dict
 
 '''
 =========================================================
@@ -249,55 +340,28 @@ all_metrics_dict = {
 ============================
 '''
 
-# select a run from the dataframe of runs
-df = pd.read_csv(read_file, index_col=0)
-df['start'] = df['start'].apply(datetime_ify) # get run start times as datetimes
-run_index = 90 # can pick any run between [0,len(df)) so between 0 and 191
-run = df.iloc[run_index] 
+# get a dataframe of runs
+runs_df = pd.read_csv(read_file, index_col=0)
 
-# get duration and start of run
-start = run['start']
-duration_seconds = run['runtime']
+# get tables data for one run
+run_index = 50 # can pick any run between 0 and len(df)-1 inclusive
+run_tables_df = get_tables_for_one_run(
+    runs_df=runs_df,
+    run_index=run_index,
+    as_one_df=True, # if set to False, returns a dictionary of titles, tables
+    only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
+    )
+print(run_tables_df, "\n"*5)
 
-# get queries and partial_queries to be passed into tables_class methods
-run_queries, run_partial_queries = get_queries(all_query_bodies_dict, all_metrics_dict, start, duration_seconds)
-
-# get tables class to be able to use methods for querying tables
-tables_class = Tables(namespace=NAMESPACE)
 
 '''
-# for getting as a single larger dataframe instead of a dict of dataframes
-# get tables as one df from queries
-tables_df = tables_class.get_tables_as_one_df(
-    only_include_worker_pods=False, 
-    queries=run_queries, 
-    partial_queries=run_partial_queries)
-# fill in missing values in requests and limits
-tables_df = fill_in_static_na(tables_df, "cpu")
-tables_df = fill_in_static_na(tables_df, "mem")
-# print data
-tables_df = update_df_IOPS_naming(tables_df)
-print(tables_df)
-# output df to a csv file
-# write_file = "output.csv"
-# tables_df.to_csv(write_file)
+# get tables data for multiple runs
+run_indices = [50, 60, 70] # can pick any runs between 0 and len(df)-1 inclusive
+runs_tables_df = get_tables_for_many_runs(
+    runs_df=runs_df,
+    run_indices=run_indices,
+    as_one_df=True, # if set to False, returns a dictionary of titles, tables
+    only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
+    )
+print(runs_tables_df, "\n"*5)
 '''
-
-# '''
-# for getting as a dict of table dataframes instead of one large df:
-# get tables as dict of dfs from queries
-tables_dict = tables_class.get_tables_dict(
-    only_include_worker_pods=False, 
-    queries=run_queries, 
-    partial_queries=run_partial_queries)
-# fill in missing values in requests and limits
-tables_dict['CPU Quota'] = fill_in_static_na(tables_dict['CPU Quota'], "cpu")
-tables_dict['Memory Quota'] = fill_in_static_na(tables_dict['Memory Quota'], "mem")
-# rename "Current Storage IO" to be "Storage IO" and "Current Netowrk Usage" to be "Network Usage"
-tables_dict['Storage IO'] = tables_dict.pop('Current Storage IO')
-tables_dict['Network Usage'] = tables_dict.pop('Current Network Usage')
-# update IOPS column names in Storage IO df to be IO instead of IOPS
-tables_dict['Storage IO'] = update_df_IOPS_naming(tables_dict['Storage IO'])
-# print data
-print_dataframe_dict(tables_dict)
-# '''
