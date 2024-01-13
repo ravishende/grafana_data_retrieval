@@ -11,10 +11,10 @@ class Tables():
     def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
         self.namespace = namespace
         self.duration = duration
-        self.cpu_quota = pd.DataFrame(columns=["Pod", "Node", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"])
-        self.mem_quota = pd.DataFrame(columns=["Pod", "Node", "Memory Usage", "Memory Requests",  "Memory Requests %",  "Memory Limits", "Memory Limits %", "Memory Usage (RSS)", "Memory Usage (Cache)"])
-        self.network_usage = pd.DataFrame(columns=["Pod", "Node", "Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"])
-        self.storage_io = pd.DataFrame(columns=["Pod", "Node", "IOPS(Reads)", "IOPS(Writes)", "IOPS(Reads + Writes)", "Throughput(Read)", "Throughput(Write)", "Throughput(Read + Write)"])
+        self.cpu_quota = pd.DataFrame(columns=["Node", "Pod", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"])
+        self.mem_quota = pd.DataFrame(columns=["Node", "Pod", "Memory Usage", "Memory Requests",  "Memory Requests %",  "Memory Limits", "Memory Limits %", "Memory Usage (RSS)", "Memory Usage (Cache)"])
+        self.network_usage = pd.DataFrame(columns=["Node", "Pod", "Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"])
+        self.storage_io = pd.DataFrame(columns=["Node", "Pod", "IOPS(Reads)", "IOPS(Writes)", "IOPS(Reads + Writes)", "Throughput(Read)", "Throughput(Write)", "Throughput(Read + Write)"])
         self.queries = {
             # CPU Quota
             'CPU Usage': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + self.namespace + '"})',
@@ -173,34 +173,31 @@ class Tables():
 
         return tables_dict
 
-    # combines all graph dataframes into one large dataframe. Each graph is represented as a column
-    # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
+    # combines all table dataframes into one large dataframe. Each table is represented as a few columns.
+    # this works because all tables are queried for the same time frame and they have the same pods
     def get_tables_as_one_df(self, tables_dict=None, only_include_worker_pods=False, queries=None, partial_queries=None, display_time_as_datetime=True, show_runtimes=False):
-        total_df = pd.DataFrame(data={})
+        # initialize total df
+        total_df = pd.DataFrame(columns=['Node', 'Pod'])
 
-        # Generate graphs if none given
+        # Generate tables if none given
         if tables_dict is None:
-            tables_dict = self.get_tables_dict(only_include_worker_pods=only_include_worker_pods, queries=queries, partial_queries=partial_queries)
+            tables_dict = self.get_tables_dict(
+                only_include_worker_pods=only_include_worker_pods,
+                queries=queries, partial_queries=partial_queries)
 
-        # Fill in Node and Pod columns with the first non-empty graph
+        # get first table_df that isn't empty and use its Node and Pod columns
         for table_df in tables_dict.values():
-            if len(table_df) > 0:
-                # total_df['Time'] = table_df['Time']
-                total_df['Node'] = table_df['Node']
-                total_df['Pod'] = table_df['Pod']
+            if not table_df.empty:
+                total_df = table_df[['Node', 'Pod']].copy()
                 break
 
-        # Fill in graphs columns
-        for title, table_df in tables_dict.items():
-            empty = False
-            if len(table_df) == 0:
-                empty = True
+        # Fill in tables columns
+        for table_df in tables_dict.values():
             for column in table_df.columns:
-                # if the df is empty, set columns to none
-                if empty:
-                    total_df[column] = None
+                # Node and Pod columns are all the same for each table_df
+                if column == "Node" or column == "Pod":
                     continue
-                # otherwise, set columns to their values
-                total_df[column] = table_df[column]
+                # Add unique columns to total_df
+                total_df[column] = table_df[column].copy()
 
         return total_df
