@@ -166,7 +166,8 @@ training_data = pd.read_csv(csv_file, index_col=0)
 n_rows = NUM_ROWS
 
 # initialize metrics columns if they aren't already
-metrics = ['cpu_total', 'mem_total', 'cpu_t1', 'mem_t1', 'cpu_t2', 'mem_t2']
+# metrics = ['cpu_total', 'mem_total', 'cpu_t1', 'mem_t1', 'cpu_t2', 'mem_t2']
+metrics = ['cpu_total', 'mem_total']
 for metric in metrics:
     if metric not in training_data.columns:
         training_data[metric] = None
@@ -174,12 +175,12 @@ for metric in metrics:
 # query total performance data
 # cpu columns
 training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
-training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
-training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
+# training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
+# training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
 # memory columns
 training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
+# training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
+# training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
 
 # print and write updated df to a csv file
 print("\n"*5, training_data)
