@@ -8,7 +8,7 @@ import sys
 import os
 # get set up to be able to import helper files from parent directory (grafana_data_retrieval)
 sys.path.append("../grafana_data_retrieval")
-current = os.path.dirname(os.path.realpath("node_metrics_retrieval.py"))
+current = os.path.dirname(os.path.realpath("resource_json_summation.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.filtering import get_worker_id
@@ -28,7 +28,7 @@ pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
 
 read_file = "csv_files/queried_w_ids.csv" 
-write_file = "csv_files/summed.csv"
+write_file = "csv_files/new_summed.csv"
 # success_write_file = "csv_files/summed_success.csv"
 # na_write_file = "csv_files/summed_na.csv"
 
@@ -45,6 +45,7 @@ def sum_pods_for_ensemble(result_list, ensemble):
         return result_list
 
     total = 0
+    worker_found = False
     # loop over pods in ensemble, adding values to sum
     for item in result_list:
         # get worker id of each pod
@@ -59,6 +60,11 @@ def sum_pods_for_ensemble(result_list, ensemble):
         if str(UUID(worker_id)) == ensemble:
             value = item["value"][1]
             total += float(value)
+            worker_found = True
+
+        # if there are no worker pods that match the ensemble id, return -1
+        if total == 0 and not worker_found:
+            total = -1
 
     return total
 
