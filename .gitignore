@@ -7,6 +7,7 @@ training_data_handling/investigate.py
 training_data_handling/csv_files/queried_w_ids.csv
 training_data_handling/csv_files/queried.csv
 training_data_handling/csv_files/ratios_added.csv
+training_data_handling/csv_files/testing_summed.csv
 training_data_handling/collect_runs/.ipynb_checkpoints/
 extras/.DS_Store
 .DS_Store
