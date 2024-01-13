@@ -16,7 +16,6 @@ runs_csv = "csv_files/summed.csv"
 zero_runs_csv = "csv_files/zeros.csv"
 non_zero_runs_csv = "csv_files/non_zeros.csv"
 
-print("Generating graphs...")
 
 # get csv files as dataframes
 total_runs = pd.read_csv(runs_csv, index_col=0)
@@ -88,9 +87,9 @@ plt.ylabel('Memory Total')
 plt.show()
 
 
-# ==============
-#     ratios
-# ==============
+# ======================
+#     plot ratios
+# ======================
 
 # Calculating ratios for CPU and Memory usage vs duration for non-zero runs
 non_zero_runs['cpu_t1_ratio'] = non_zero_runs['cpu_t1'] / non_zero_runs['duration_t1']
@@ -104,9 +103,9 @@ non_zero_runs['mem_total_ratio'] = non_zero_runs['mem_total'] / non_zero_runs['r
 non_zero_runs_filtered = non_zero_runs.replace([np.inf, -np.inf], np.nan).dropna(subset=['cpu_t1_ratio', 'cpu_total_ratio'])
 
 
-# ====================
-#   plot ratios t1
-# ====================
+# ===============
+#   ratios t1
+# ===============
 
 # Plotting cpu_t1/duration_t1 vs cpu_total/runtime for non-zero runs
 plt.figure(figsize=(12, 6))
@@ -126,10 +125,9 @@ plt.ylabel('Total Memory Usage Ratio (mem_total/runtime)')
 plt.show()
 
 
-
-# ====================
-#   plot ratios t2
-# ====================
+# ===============
+#   ratios t2
+# ===============
 
 # Plotting cpu_t2/duration_t2 vs cpu_total/runtime for non-zero runs
 plt.figure(figsize=(12, 6))
