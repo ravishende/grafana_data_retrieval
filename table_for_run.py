@@ -146,17 +146,54 @@ def fill_in_static_na(df, resource):
     return df
 
 
-# Returns a dataframe with changed names of columns that contain "IOPS" to use "IO" instead.
-# Reason: in tables.py, it is usually giving a snapshot present, so IO per second
-# (IOPS) is useful. But in this case, we are looking over an entire run, so we want
-# the total IO of the run rather than the average IOPS of the run.
-# Note: The updated queries already do this, we just have to change the names to match,
-# after we do the querying from the tables_class methods.
-def update_df_IOPS_naming(df):
-    # for every column name that contains "IOPS", replace "IOPS" with "IO"
-    col_rename_dict = {col: col.replace("IOPS", "IO") for col in df.columns}
-    renamed_df = df.rename(columns=col_rename_dict)
+# Returns a dataframe with changed names of certain columns to represent the true data
+# for a run rather than the current snapshot in time.
+# Note: The updated queries already query the correct information, we just have to change
+# the names to match, after we do the querying from the tables_class methods (which rely on the names).
+def rename_df_metrics(df):
+    rename_dict = {}
+    for old_name in df.columns:
+        if "IOPS" in old_name: # change "IOPS" column names to "IO"
+            rename_dict[old_name] = old_name.replace("IOPS", "IO")
+        elif "Current" in old_name: # get rid of "Current"
+            rename_dict[old_name] = old_name.replace("Current", "")
+        elif "Rate of" in old_name: # get rid of "Rate of"
+            rename_dict[old_name] = old_name.replace("Rate of", "")
+        else: # keep old name
+            rename_dict[old_name] = old_name
+
+    renamed_df = df.rename(columns=rename_dict)
     return renamed_df
+
+# if tables is a single dataframe or list of dataframes, updates names of the metrics in tables.
+# if tables is a dict of dataframes, updates names of the tables and their metrics.
+# returns the orginal dataframe or dict of dataframes
+def rename_tables(tables):
+    # tables is a single dataframe
+    if isinstance(tables, pd.DataFrame):
+        return rename_df_metrics(tables)
+
+    # tables is a dict of dataframes
+    if isinstance(tables, dict):
+        # rename tables titles ("Current Storage IO" --> "Storage IO", "Current Netowrk Usage" --> "Network Usage")
+        tables_dict = tables
+        tables_dict['Storage IO'] = tables_dict.pop('Current Storage IO')
+        tables_dict['Network Usage'] = tables_dict.pop('Current Network Usage')
+        # rename metrics in dataframes
+        for title, table_df in tables_dict.items():
+            tables_dict[title] = rename_df_metrics(table_df)
+        return tables_dict
+
+    # tables is a list of dataframes
+    if isinstance(tables, dict):
+        tables_list = []
+        for table_df in tables:
+            tables_list.append(rename_df_metrics(table_df))
+        return tables_list
+
+    # If tables is not one of the above, there is a wrong user input
+    raise ValueError("tables must either be a dataframe or a dictionary of dataframes, a list of dataframes.")
+
 
 
 '''
@@ -198,7 +235,7 @@ def get_tables_for_many_runs(runs_df, run_indices, as_one_df=False, only_include
         tables_df = fill_in_static_na(tables_df, "mem")
         
         # add tables_df to table_runs_df
-        tables_df = update_df_IOPS_naming(tables_df)
+        tables_df = rename_tables(tables_df)
         tables_df.insert(0,'run_id', run['run_uuid'])
         tables_df.insert(0,'run_index', index)
         dfs_list.append(tables_df)
@@ -219,10 +256,8 @@ def get_tables_for_one_run(runs_df, run_index, as_one_df=False, only_include_wor
     # get tables class to be able to use methods for querying tables
     tables_class = Tables(namespace=NAMESPACE)
 
-    # get run start times as datetimes
+    # get run start times as datetimes and select run to use
     runs_df['start'] = runs_df['start'].apply(datetime_ify)
-
-    # get run from run_index
     run = runs_df.iloc[run_index]
 
     # get duration and start of run
@@ -241,6 +276,8 @@ def get_tables_for_one_run(runs_df, run_index, as_one_df=False, only_include_wor
         # fill in missing values in requests and limits
         tables_df = fill_in_static_na(tables_df, "cpu")
         tables_df = fill_in_static_na(tables_df, "mem")
+        # rename tables
+        tables_df = rename_tables(tables_df)
         return tables_df
 
     # otherwise get tables as dict of dfs
@@ -251,11 +288,8 @@ def get_tables_for_one_run(runs_df, run_index, as_one_df=False, only_include_wor
     # fill in missing values in requests and limits
     tables_dict['CPU Quota'] = fill_in_static_na(tables_dict['CPU Quota'], "cpu")
     tables_dict['Memory Quota'] = fill_in_static_na(tables_dict['Memory Quota'], "mem")
-    # rename "Current Storage IO" to be "Storage IO" and "Current Netowrk Usage" to be "Network Usage"
-    tables_dict['Storage IO'] = tables_dict.pop('Current Storage IO')
-    tables_dict['Network Usage'] = tables_dict.pop('Current Network Usage')
-    # update IOPS column names in Storage IO df to be IO instead of IOPS
-    tables_dict['Storage IO'] = update_df_IOPS_naming(tables_dict['Storage IO'])
+    # rename tables
+    tables_dict = rename_tables(tables_dict)
 
     return tables_dict
 
@@ -355,7 +389,7 @@ run_tables = get_tables_for_one_run(
     as_one_df=True, # if set to False, returns a dictionary of titles, tables
     only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
     )
-print(run_tables_df)
+print(run_tables)
 
 
 '''
