@@ -349,7 +349,7 @@ runs_df = pd.read_csv(read_file, index_col=0)
 
 # get tables data for one run
 run_index = 50 # can pick any run between 0 and len(df)-1 inclusive
-run_tables_df = get_tables_for_one_run(
+run_tables = get_tables_for_one_run(
     runs_df=runs_df,
     run_index=run_index,
     as_one_df=True, # if set to False, returns a dictionary of titles, tables
