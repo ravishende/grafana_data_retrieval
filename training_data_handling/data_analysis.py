@@ -2,6 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import sys
+import os
+# get set up to be able to import helper files from parent directory (grafana_data_retrieval)
+sys.path.append("../grafana_data_retrieval")
+current = os.path.dirname(os.path.realpath("data_analysis.py"))
+parent = os.path.dirname(current)
+sys.path.append(parent)
+from helpers.time_functions import datetime_ify
 
 # csv files
 runs_csv = "csv_files/summed.csv"
@@ -43,6 +51,21 @@ plt.ylabel('Frequency')
 plt.legend()
 plt.show()
 
+
+# get start times as seconds since epoch (01/01/1970)
+zero_runs['start'] = zero_runs['start'].apply(datetime_ify)
+zero_runs['start_seconds'] = zero_runs['start'].apply(lambda time: time.timestamp())
+non_zero_runs['start'] = non_zero_runs['start'].apply(datetime_ify)
+non_zero_runs['start_seconds'] = non_zero_runs['start'].apply(lambda time: time.timestamp())
+# Plotting the distribution of start times for non_zero runs
+plt.figure(figsize=(12, 6))
+sns.histplot(zero_runs['start'], color="red", label='Zero Runs')
+sns.histplot(non_zero_runs['start'], color="blue", label='Non-Zero Runs')
+plt.title('Distribution of Start times for Zero vs Non-Zero Runs')
+plt.xlabel('Start Time')
+plt.ylabel('Frequency')
+plt.legend()
+plt.show()
 
 # ===============================
 #     plot totals vs runtime
