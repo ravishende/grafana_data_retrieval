@@ -16,8 +16,9 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
-csv_file = 'csv_files/queried_all_metrics.csv'
-NUM_ROWS = 40
+# csv_file = 'csv_files/queried_all_metrics.csv'
+csv_file = 'csv_files/nonzero_queried_all_metrics.csv'
+NUM_ROWS = 2
 NAMESPACE = 'wifire-quicfire'
 
 # display settings
