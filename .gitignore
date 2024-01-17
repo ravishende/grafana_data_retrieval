@@ -9,6 +9,12 @@ training_data_handling/csv_files/queried.csv
 training_data_handling/csv_files/ratios_added.csv
 training_data_handling/csv_files/testing_summed.csv
 training_data_handling/collect_runs/.ipynb_checkpoints/
+training_data_handling/csv_files/all_metrics_ratios_added.csv
+training_data_handling/csv_files/negative_all_metrics.csv
+training_data_handling/csv_files/nonnegative_all_metrics.csv
+training_data_handling/csv_files/nonzero_queried_all_metrics.csv
+training_data_handling/csv_files/queried_all_metrics.csv
+training_data_handling/csv_files/summed_all_metrics.csv
 extras/.DS_Store
 .DS_Store
 __pycache__/
