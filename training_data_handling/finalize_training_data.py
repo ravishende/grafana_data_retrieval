@@ -7,8 +7,8 @@ and dressing up anything else to help
 '''
 
 # settings
-read_file = 'csv_files/ratios_added.csv'
-write_file = 'csv_files/training_data.csv'
+read_file = 'csv_files/all_metrics_ratios_added.csv'
+write_file = 'csv_files/all_metrics_training_data.csv'
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -22,11 +22,11 @@ useless_columns = [
     'stop', 
     'timestep',  # no variations in values - all 600
     'ensemble_uuid', 
-    'run_uuid', 
-    'cpu_t1',  # with the ratio columns added, these no longer become useful
-    'mem_t1',
-    'cpu_t2',
-    'mem_t2'
+    # 'run_uuid', 
+    'cpu_usage_t1',  # with the ratio columns added, these no longer become useful
+    'mem_usage_t1',
+    'cpu_usage_t2',
+    'mem_usage_t2'
 ]
 
 # read csv and drop unnecessary columns

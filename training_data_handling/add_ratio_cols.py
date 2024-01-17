@@ -11,8 +11,8 @@ from helpers.printing import print_title
 
 
 # settings and constants
-read_file = "csv_files/non_zeros.csv"
-write_file = "csv_files/ratios_added.csv"
+read_file = "csv_files/nonnegative_all_metrics.csv"
+write_file = "csv_files/all_metrics_ratios_added.csv"
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -35,11 +35,11 @@ print_title("Original DataFrame")
 print(training_data, "\n"*5)
 
 # insert ratio columns
-training_data = insert_ratio_col(training_data, "cpu_t1_ratio", "cpu_t1", "duration_t1")
-training_data = insert_ratio_col(training_data, "mem_t1_ratio", "mem_t1", "duration_t1")
-training_data = insert_ratio_col(training_data, "cpu_t2_ratio", "cpu_t2", "duration_t2")
-training_data = insert_ratio_col(training_data, "mem_t2_ratio", "mem_t2", "duration_t2")
+training_data = insert_ratio_col(training_data, "cpu_usage_t1_ratio", "cpu_usage_t1", "duration_t1")
+training_data = insert_ratio_col(training_data, "cpu_usage_t2_ratio", "cpu_usage_t2", "duration_t2")
+training_data = insert_ratio_col(training_data, "mem_usage_t1_ratio", "mem_usage_t1", "duration_t1")
+training_data = insert_ratio_col(training_data, "mem_usage_t2_ratio", "mem_usage_t2", "duration_t2")
 
-# training_data.to_csv(write_file)
+training_data.to_csv(write_file)
 print_title("DataFrame with Columns Inserted")
 print(training_data)

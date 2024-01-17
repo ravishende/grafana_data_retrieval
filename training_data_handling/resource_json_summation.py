@@ -12,6 +12,7 @@ current = os.path.dirname(os.path.realpath("resource_json_summation.py"))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.filtering import get_worker_id
+from helpers.printing import print_heading
 
 '''
 NOTE:
@@ -27,19 +28,28 @@ terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
 
-read_file = "csv_files/queried_w_ids.csv" 
-write_file = "csv_files/new_summed.csv"
+read_file = "csv_files/nonzero_queried_all_metrics.csv" 
+write_file = "csv_files/summed_all_metrics.csv"
 # success_write_file = "csv_files/summed_success.csv"
 # na_write_file = "csv_files/summed_na.csv"
 
+
+def get_columns_from_metrics(metric_list):
+    summary_columns = []
+    for name in metric_list:
+        summary_columns.append(name + "_total")
+        summary_columns.append(name + "_t1")
+        summary_columns.append(name + "_t2")
+    return summary_columns
 
 
 # Given a json result_list (json-like data) of a queried metric (cpu or mem usage),
 # Return:
     # a float summation over all pods' values in that ensemble (if all conditions are met)
-    # result_list (if there is no ensemnble id provided)
+        # or -1 if no pods match ensemble_id
+    # result_list (if there is no ensemble id provided)
     # None (if there are no bp3d-workers to sum over in result_list)
-def sum_pods_for_ensemble(result_list, ensemble):
+def sum_pods_for_ensemble(result_list, ensemble, static=False):
     # handle if there is no ensemble id
     if not ensemble:
         return result_list
@@ -61,6 +71,8 @@ def sum_pods_for_ensemble(result_list, ensemble):
             value = item["value"][1]
             total += float(value)
             worker_found = True
+            if static:
+                return total
 
         # if there are no worker pods that match the ensemble id, return -1
         if total == 0 and not worker_found:
@@ -72,16 +84,26 @@ def sum_pods_for_ensemble(result_list, ensemble):
 # return a new dataframe with the edited column being float values instead of json data
 # in every row where there was an ensemble id in the ensemble column, or None if there are
 # no bp3d-worker-pods
-def update_col(df, update_col_title, ensemble_col_title):
+def update_col(df, update_col_title, ensemble_col_title, static=False):
+    df = df.dropna(subset=update_col_title)
     # change result_list strings to python lists
     df[update_col_title] = df[update_col_title].apply(literal_eval)
 
     # calculate totals summed over the ensemble for given column
     df[update_col_title] = df.apply(
-        lambda row: sum_pods_for_ensemble(row[update_col_title], row[ensemble_col_title]) \
+        lambda row: sum_pods_for_ensemble(row[update_col_title], row[ensemble_col_title], static=False) \
         if row[ensemble_col_title] else row[update_col_title],axis=1)
 
-    return df[update_col_title]
+    return df
+
+# given a dataframe, list of column names to update, and title of the ensemble_id column,
+# return a new dataframe with the edited columns being float values of the summed over json data
+def update_columns(df, update_col_names, ensemble_col_title, static=False):
+    len_cols_to_update = len(update_col_names)
+    for i, col_name in enumerate(update_col_names):
+        print(f"\n\nUpdating {col_name}", colored(f"({i+1}/{len_cols_to_update})", "green"))
+        df = update_col(df, col_name, ensemble_col_title, static=static)
+    return df
 
 
 
@@ -91,28 +113,71 @@ def update_col(df, update_col_title, ensemble_col_title):
 ============================================
 '''
 
+# rename cpu and mem columns for consistent naming conventions
+rename_cols_dict = {
+    "cpu_total":"cpu_usage_total",
+    "cpu_t1":"cpu_usage_t1",
+    "cpu_t2":"cpu_usage_t2",
+    "mem_total":"mem_usage_total",
+    "mem_t1":"mem_usage_t1",
+    "mem_t2":"mem_usage_t2",
+}
+
+# all queried metrics
+metrics = [
+    # "cpu_usage",
+    # "mem_usage",
+    # "cpu_request",
+    # "mem_request",
+    "transmitted_packets",
+    "received_packets",
+    "transmitted_bandwidth",
+    "received_bandwidth"
+]
+
+# get all columns to sum
+columns_to_sum = get_columns_from_metrics(metrics)
+
+# total static columns (the static columns that have been queried)
+static_columns_total = [
+    "cpu_request_total",
+    "mem_request_total",
+]
 
 # select columns to update (sum over) as well as ensemble ids column
 ensemble_col = "ensemble_uuid"
-cpu_tot = "cpu_total"
-mem_tot = "mem_total"
-cpu_t1 = "cpu_t1"
-mem_t1 = "mem_t1"
-cpu_t2 = "cpu_t2"
-mem_t2 = "mem_t2"
 
-# get the csv file as a pandas dataframe
+# get the csv file as a pandas dataframe, and fix naming conventions
 summed_runs = pd.read_csv(read_file, index_col=0)
+summed_runs = summed_runs.rename(columns=rename_cols_dict)
 
-# update columns (sum json-like data to get single float)
-# cpu
-summed_runs[cpu_tot] = update_col(summed_runs, cpu_tot, ensemble_col)
-summed_runs[cpu_t1] = update_col(summed_runs, cpu_t1, ensemble_col)
-summed_runs[cpu_t2] = update_col(summed_runs, cpu_t2, ensemble_col)
-# memory
-summed_runs[mem_tot] = update_col(summed_runs, mem_tot, ensemble_col)
-summed_runs[mem_t1] = update_col(summed_runs, mem_t1, ensemble_col)
-summed_runs[mem_t2] = update_col(summed_runs, mem_t2, ensemble_col)
+# add in non queried static runs
+static_columns_t1 = [name.replace("total", "t1") for name in static_columns_total]
+static_columns_t2 = [name.replace("total", "t2") for name in static_columns_total]
+for i, col_name in enumerate(static_columns_total):
+    summed_runs[static_columns_t1[i]] = summed_runs[col_name]
+    summed_runs[static_columns_t2[i]] = summed_runs[col_name]
+all_static_columns = static_columns_total + static_columns_t1 + static_columns_t2
+
+# update columns to get float values from json
+print_heading("Summing Up Normal Columns")
+summed_runs = update_columns(summed_runs, columns_to_sum, ensemble_col, static=False)
+print_heading("Getting Floats for Static Columns")
+summed_runs = update_columns(summed_runs, all_static_columns, ensemble_col, static=True)
+
+# get percentage metrics in a format of [%_col, numerator_col, denominator_col]
+percentage_column_formats = [
+    ["cpu_request_%_total", "cpu_usage_total", "cpu_request_total"],
+    ["cpu_request_%_t1", "cpu_usage_t1", "cpu_request_t1"],
+    ["cpu_request_%_t2", "cpu_usage_t2", "cpu_request_t2"],
+    ["mem_request_%_total", "mem_usage_total", "mem_request_total"],
+    ["mem_request_%_t1", "mem_usage_t1", "mem_request_t1"],
+    ["mem_request_%_t2", "mem_usage_t2", "mem_request_t2"],
+]
+# calculate percentage columns
+for metric_list in percentage_column_formats:
+    summed_runs[metric_list[0]] = 100 * summed_runs[metric_list[1]] / summed_runs[metric_list[2]]
+
 '''
 # split the summed_runs into runs that had data for total resources and for ones that didn't (no bp3d-workers)
 # in other words, if cpu_tot or mem_tot are none, add row to na_mask
@@ -123,12 +188,9 @@ valid_worker_runs = summed_runs[~na_mask]
 
 # save dataframes to new files and print summed_runs
 summed_runs.to_csv(write_file)
+print(summed_runs)
 # valid_worker_runs.to_csv(success_write_file)
 # na_worker_runs.to_csv(na_write_file)
-
-print(summed_runs)
-
-
 
 # can be used to find the worker ids of each run for analysis/debugging purposes
 # def get_ids(res_list):
@@ -136,3 +198,14 @@ print(summed_runs)
 #     for item in res_list:
 #         ids.append(get_worker_id(item['metric']['pod']))
 #     return ids
+
+
+# update columns (sum json-like data to get single float)
+# cpu
+# summed_runs = update_col(summed_runs, cpu_tot, ensemble_col)
+# summed_runs = update_col(summed_runs, cpu_t1, ensemble_col)
+# summed_runs = update_col(summed_runs, cpu_t2, ensemble_col)
+# memory
+# summed_runs = update_col(summed_runs, mem_tot, ensemble_col)
+# summed_runs = update_col(summed_runs, mem_t1, ensemble_col)
+# summed_runs = update_col(summed_runs, mem_t2, ensemble_col)

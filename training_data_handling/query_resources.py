@@ -18,7 +18,7 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
 # csv_file = 'csv_files/queried_all_metrics.csv'
 csv_file = 'csv_files/nonzero_queried_all_metrics.csv'
-NUM_ROWS = 2
+NUM_ROWS = 100
 NAMESPACE = 'wifire-quicfire'
 
 # display settings
@@ -278,9 +278,11 @@ for col_name in all_column_names:
     if col_name not in training_data.columns:
         training_data[col_name] = None
 
-# query everything and insert the new columns into the dataframe
+# query everything and insert the new columns into the dataframe, saving after each insertion
 training_data = insert_columns(training_data, metrics_total, col_names_total, duration_col_total, NUM_ROWS)
+training_data.to_csv(csv_file)  # in case program gets stopped before finishing, save partial progress
 training_data = insert_columns(training_data, metrics_non_total, col_names_t1, duration_col_t1, NUM_ROWS)
+training_data.to_csv(csv_file)  # in case program gets stopped before finishing, save partial progress
 training_data = insert_columns(training_data, metrics_non_total, col_names_t2, duration_col_t2, NUM_ROWS)
 
 # print and write the updated dataframe to a csv file
