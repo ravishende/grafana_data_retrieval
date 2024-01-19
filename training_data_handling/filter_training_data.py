@@ -11,8 +11,8 @@ information as well as calculating area and runtime from the data.
 '''
 
 # settings and constants
-read_file = "csv_files/unfiltered.csv" #training_data_initial.csv
-write_file = "csv_files/area_runtime_filtered.csv" #"cleaned_training_data.csv"
+read_file = "csv_files/unfiltered.csv"
+write_file = "csv_files/filtered.csv"
 
 # display settings
 pd.set_option("display.max_columns", None)
