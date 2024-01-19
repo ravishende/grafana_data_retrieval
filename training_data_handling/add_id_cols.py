@@ -13,13 +13,13 @@ It could be done earlier, but all previous py files to this would have to be rer
 '''
 
 
-queried_csv = 'csv_files/queried.csv'
-successful_runs_csv = 'csv_files/successful_bp3d_runs.csv'
-write_file = 'csv_files/queried_w_ids.csv'
+read_queried_csv = 'csv_files/filtered.csv'
+read_successful_runs_csv = 'csv_files/successful_bp3d_runs.csv'
+write_file = 'csv_files/filtered_w_ids.csv'
 
 # get csv files as dataframes
-successful_runs = pd.read_csv(successful_runs_csv, index_col=0)
-queried_runs = pd.read_csv(queried_csv, index_col=0)
+successful_runs = pd.read_csv(read_successful_runs_csv, index_col=0)
+queried_runs = pd.read_csv(read_queried_csv, index_col=0)
 
 # choose columns of successful_runs to add to queried_runs, then merge those columns to queried_runs in a new df
 successful_runs_subset = successful_runs[['ensemble_uuid', 'run_uuid']]
