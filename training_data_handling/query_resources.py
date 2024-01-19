@@ -16,9 +16,10 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
-# csv_file = 'csv_files/queried_all_metrics.csv'
-csv_file = 'csv_files/nonzero_queried_all_metrics.csv'
-NUM_ROWS = 100
+# Note: read file and write file should be the same once the write file has some data.
+read_file = 'csv_files/filtered_w_ids.csv'
+write_file = 'csv_files/queried.csv'
+NUM_ROWS = 5
 NAMESPACE = 'wifire-quicfire'
 
 # display settings
@@ -26,9 +27,6 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-
-# For printing rows. Do not edit.
-CURRENT_ROW = 1
 
 '''
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -45,6 +43,11 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 '''
+
+# Internal Global Variables. Do not edit.
+CURRENT_ROW = 1  # for printing
+STATIC_METRICS = ["cpu_request", "mem_request"]
+
 
 
 '''
@@ -81,9 +84,14 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 # receive/transmit bandwidth
 
 
-def get_static_query_suffix(metric, start, duration_seconds):
-     # static metrics only need to be requested for one datapoint at the beginning of the run (in this case 5 seconds in)
-    offset = calculate_offset(start, 5)
+def get_static_query_suffix(metric, start, duration_seconds, requery=False):
+    # static metrics only need to be requested for one datapoint
+    if requery:
+        # query at the beginning of the run (10 seconds in)
+        offset = calculate_offset(start, 10)
+    else:
+        # query at halfway through the run
+        offset = calculate_offset(start, duration_seconds//2)
 
     suffixes = {
         # set resource to cpu and multiply by duration seconds to get metric from measuring cpu cores to cpu seconds
@@ -100,7 +108,7 @@ def get_static_query_suffix(metric, start, duration_seconds):
 
 # given a metric (one of the keys in query_bodies), start (datetime), and duration (float)
 # return a query for the metric over the given duration of the run
-def get_resource_query(metric, start, duration_seconds):
+def get_resource_query(metric, start, duration_seconds, is_static, requery=False):
     # all resources and the heart of their queries
     query_bodies = {
         "cpu_usage":"increase(container_cpu_usage_seconds_total",  # increase metric
@@ -113,10 +121,14 @@ def get_resource_query(metric, start, duration_seconds):
         "received_bandwidth":"increase(container_network_receive_bytes_total"  # increase metric
     }
     
-    # check if user input metric is in known resources
+    # check proper user inputs
+    # make sure user input metric is in known resources
     metrics = query_bodies.keys()
     if metric not in metrics:
         raise ValueError(f'query metric "{metric}" must be within one of the following metrics:\n{metric}')
+    # can only requery static metrics
+    if requery and not is_static:
+        raise ValueError("Can only requery static metrics - requery can only be True if is_static is True")
 
     # get all the pieces necessary to assemble the query
     offset = calculate_offset(start, duration_seconds)    
@@ -125,21 +137,25 @@ def get_resource_query(metric, start, duration_seconds):
     prefix = 'sum by (node, pod) ('
 
     # static metrics have a different suffix. Update suffix if metric is a static metric
-    static_metrics = ["cpu_request", "mem_request"]
-    if metric in static_metrics:
-        suffix = get_static_query_suffix(metric, start, duration_seconds)
+    if is_static:
+        # if requery is set to True, we get a slightly different query that hopefully does have data.
+        suffix = get_static_query_suffix(metric, start, duration_seconds, requery=requery)
 
     # assemble the final query
     query = prefix + query_bodies[metric] + suffix
     return query
 
-# Given a metric,, start of a run (time string), and duration_seconds (float or int)
+
+# Given a metric, start of a run (time string), and duration_seconds (float or int)
 # (Also takes in row_index and n_rows for printing purposes)
 # return the queried data of that metric over the duration of the run
 def query_resource(metric, start, duration_seconds, row_index, n_rows):
+    # determine if the metric is static or not
+    is_static = (metric in STATIC_METRICS)
+
     # query for data
     start = datetime_ify(start)
-    query = get_resource_query(metric, start, duration_seconds)
+    query = get_resource_query(metric, start, duration_seconds, is_static)
     resource_data = query_data(query)
 
     # print row information
@@ -149,8 +165,14 @@ def query_resource(metric, start, duration_seconds, row_index, n_rows):
     print("Row index:", row_index)
     CURRENT_ROW += 1
 
+    # if it is a static metric and resource data is empty, requery it
+    if is_static and (resource_data == []):
+        query = get_resource_query(metric, start, duration_seconds, is_static, requery=True)
+        resource_data = query_data(query)
+
     # return queried data
     return resource_data
+
 
 
 '''
@@ -159,13 +181,20 @@ def query_resource(metric, start, duration_seconds, row_index, n_rows):
 ---------------------------------------
 '''
 # generate random values between run_start and some end time, put into duration1
-def insert_rand_refresh_col(df, refresh_title):
+def insert_rand_refresh_col(df, refresh_title, method=0):
     duration_seconds = df['runtime']
-    # generate random values between 45sec and half of the duration
-    # df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time // 2) if time // 2 >= 45 else time)
 
-    # generate random values between 45sec and 5min
-    df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, 300) if time >= 300 else time)
+    if method == 0:
+        # generate random values between 45sec and 5min
+        df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, 300) if time >= 300 else time)
+    elif method == 1:
+        # generate random values between 45sec and half of the duration
+        df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time // 2) if time // 2 >= 45 else time)
+    elif method == 2:
+        # generate random values between 45sec and the full duration
+        df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time))
+    else:
+        raise ValueError("method must be: 0, 1, or 2")
 
     return df
 
@@ -206,7 +235,7 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
     df[insert_col] = df.apply(
         lambda row: query_resource(metric, row['start'], row[duration_col], row.name, n_rows) \
         if start_row <= row.name <= end_row else row[insert_col], axis=1)  
-        # Note: row.name is just the index of the row
+        # Note: row.name is just the index of the row.
     
     return df
 
@@ -240,54 +269,61 @@ def insert_columns(df, query_metrics_list, col_names_list, duration_col, n_rows)
 '''
 
 # get the csv file as a pandas dataframe
-training_data = pd.read_csv(csv_file, index_col=0)
+training_data = pd.read_csv(read_file, index_col=0)
+training_data = training_data.reset_index(drop=True)
 
-'''
-# list of all metrics you can query (in insert_columns)
+
+# list of all metrics you can query (with insert_columns())
 all_metrics = [
-    "cpu_usage","mem_usage",
-    "cpu_request","mem_request",
-    "transmitted_packets","received_packets",
-    "transmitted_bandwidth","received_bandwidth"
-    ]
-'''
-
-# list of metrics to pass into insert_columns()
-metrics_total = [
+    "cpu_usage",
+    "mem_usage",
     "cpu_request",
     "mem_request",
     "transmitted_packets",
     "received_packets",
     "transmitted_bandwidth",
-    "received_bandwidth"]
-# list of metrics to pass into insert_columns that doesn't contain static columns (request metrics) which will be the same as the total columns
-metrics_non_total = metrics_total[2:]
+    "received_bandwidth"
+    ]
+
+# get all non static metrics to then get _total, _t1, and _t2 columns
+non_static_metrics = [metric for metric in all_metrics if metric not in STATIC_METRICS]
 # names of columns to pass into insert_columns()
-col_names_total = [name + "_total" for name in metrics_total]
-col_names_t1 = [name + "_t1" for name in metrics_non_total]
-col_names_t2 = [name + "_t2" for name in metrics_non_total]
+col_names_static = STATIC_METRICS
+col_names_total = [name + "_total" for name in non_static_metrics]
+col_names_t1 = [name + "_t1" for name in non_static_metrics]
+col_names_t2 = [name + "_t2" for name in non_static_metrics]
 
 # name of duration column to pass into insert_columns()
 duration_col_total = "runtime"
 duration_col_t1 = "duration_t1"
 duration_col_t2 = "duration_t2"
 
+# insert t1 and t2 duration columns if they don't exist
+if duration_col_t1 not in training_data.columns:
+    training_data = insert_rand_refresh_col(training_data, duration_col_t1, method=0)
+if duration_col_t2 not in training_data.columns:
+    training_data = insert_rand_refresh_col(training_data, duration_col_t2, method=1)
+
 # initialize columns if they aren't already
-all_column_names = col_names_total + col_names_t1 + col_names_t2
+all_column_names = col_names_static + col_names_total + col_names_t1 + col_names_t2
 for col_name in all_column_names:
     if col_name not in training_data.columns:
         training_data[col_name] = None
 
 # query everything and insert the new columns into the dataframe, saving after each insertion
-training_data = insert_columns(training_data, metrics_total, col_names_total, duration_col_total, NUM_ROWS)
-training_data.to_csv(csv_file)  # in case program gets stopped before finishing, save partial progress
-training_data = insert_columns(training_data, metrics_non_total, col_names_t1, duration_col_t1, NUM_ROWS)
-training_data.to_csv(csv_file)  # in case program gets stopped before finishing, save partial progress
-training_data = insert_columns(training_data, metrics_non_total, col_names_t2, duration_col_t2, NUM_ROWS)
+training_data = insert_columns(training_data, STATIC_METRICS, col_names_static, duration_col_total, NUM_ROWS)
+training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+training_data = insert_columns(training_data, non_static_metrics, col_names_total, duration_col_total, NUM_ROWS)
+training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+training_data = insert_columns(training_data, non_static_metrics, col_names_t1, duration_col_t1, NUM_ROWS)
+training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+training_data = insert_columns(training_data, non_static_metrics, col_names_t2, duration_col_t2, NUM_ROWS)
 
 # print and write the updated dataframe to a csv file
 print("\n"*5, training_data)
-training_data.to_csv(csv_file)
+training_data.to_csv(write_file)
+
+
 
 
 
@@ -299,35 +335,14 @@ For using insert_column() to insert one metric at a time
 '''
 # query total performance data
 # cpu columns
-# training_data = insert_column(training_data, "cpu", "cpu_total", 'runtime', n_rows)
-# training_data = insert_column(training_data, "cpu", "cpu_t1", 'duration_t1', n_rows)
-# training_data = insert_column(training_data, "cpu", "cpu_t2", 'duration_t2', n_rows)
+# training_data = insert_column(training_data, "cpu_usage", "cpu_total", 'runtime', n_rows)
+# training_data = insert_column(training_data, "cpu_usage", "cpu_t1", 'duration_t1', n_rows)
+# training_data = insert_column(training_data, "cpu_usage", "cpu_t2", 'duration_t2', n_rows)
 # memory columns
-# training_data = insert_column(training_data, "mem", "mem_total", 'runtime', n_rows)
-# training_data = insert_column(training_data, "mem", "mem_t1", 'duration_t1', n_rows)
-# training_data = insert_column(training_data, "mem", "mem_t2", 'duration_t2', n_rows)
+# training_data = insert_column(training_data, "mem_usage", "mem_total", 'runtime', n_rows)
+# training_data = insert_column(training_data, "mem_usage", "mem_t1", 'duration_t1', n_rows)
+# training_data = insert_column(training_data, "mem_usage", "mem_t2", 'duration_t2', n_rows)
 
 # print and write updated df to a csv file
 # print("\n"*5, training_data)
-# training_data.to_csv(csv_file)
-
-
-'''
-======================================================
-For inserting another duration and more metric columns
-
-Note: make sure to edit insert_rand_refresh_col() to 
-be within the time range you want it to be.
-======================================================
-'''
-'''
-# add new columns and insert duration col
-# training_data['duration_t3'] = None
-# training_data['cpu_t3'] = None
-# training_data['mem_t3'] = None
-# training_data = insert_rand_refresh_col(training_data, "duration_t3")
-
-training_data = insert_column(training_data, "cpu", "cpu_t3", 'duration_t3', n_rows)
-training_data = insert_column(training_data, "mem", "mem_t3", 'duration_t3', n_rows)
-'''
-
+# training_data.to_csv(write_file)
