@@ -11,8 +11,8 @@ from helpers.printing import print_title
 
 
 # settings and constants
-read_file = "csv_files/nonnegative_all_metrics.csv"
-write_file = "csv_files/all_metrics_ratios_added.csv"
+read_file = "csv_files/non_neg_updated_requests.csv"
+write_file = "csv_files/non_neg_updated_requests_w_ratios.csv"
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -29,14 +29,14 @@ pd.set_option('display.width', terminal_width)
 # given a dataframe, name of a new column to insert, numerator column, and denominator column
 # return the updated dataframe with a new column inserted as a ratio of numerator_col/denominator_col
 def insert_ratio_col(df, col_to_insert, numerator_col, denominator_col):
-    df[col_to_insert] = df[numerator_col] / df[denominator_col]
+    df[col_to_insert] = df[numerator_col].astype(float) / df[denominator_col].astype(float)
     return df
 
 # given a dataframe, name of a new columns to insert, numerator columns, and duration column (denominator)
 # return the updated dataframe with new columns inserted as a ratio of numerator_col/denominator_col
 def insert_ratio_columns(df, cols_to_insert, numerator_cols, duration_col):
     for insert_col, numerator_col in zip(cols_to_insert, numerator_cols):
-        df[insert_col] = df[numerator_col] / df[duration_col]
+        df[insert_col] = df[numerator_col].astype(float) / df[duration_col].astype(float)
     return df
 
 '''
