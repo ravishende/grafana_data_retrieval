@@ -4,7 +4,7 @@ training_data_handling/.DS_Store
 training_data_handling/find_ensembles.py
 training_data_handling/add_ids_col.py
 training_data_handling/investigate.py
-training_data_handling/collect_runs/.ipynb_checkpoints/
+training_data_handling/collect_runs/
 training_data_handling/csv_files/queried_w_ids.csv
 training_data_handling/csv_files/queried.csv
 training_data_handling/csv_files/ratios_added.csv
