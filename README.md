@@ -10,8 +10,11 @@ Running main.py will collect and print all current information for the header, t
 
 Other Features:
 1. For getting training data for runs over a time period
+    
     &nbsp; &nbsp; training_data_handling/
+    
 2. For getting all data from tables.py for a run
+    
     &nbsp; &nbsp; table_for_run.py
 ___
 
