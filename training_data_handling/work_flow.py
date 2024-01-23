@@ -24,10 +24,10 @@ Phase 1: PreProcessing
     - run_selection.py
 2. collect runs from successful bp3d runs
     - gather.ipynb in collect_runs/
-3. add in ensemble uuid
+3. calculate area and runtime
+    - filter_training_data.py 
+4. add in ensemble uuid
     - add_id_cols.py
-4. calculate area and runtime
-    - filter_training_data.py
 5. drop drop_cols_1
     - filter_training_data.py
 6. add duration_t1, duration_t2 columns
