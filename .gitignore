@@ -1,3 +1,8 @@
+.env
+.DS_Store
+__pycache__/
+extras/.DS_Store
+helpers/__pycache__/
 training_data_handling/.ipynb_checkpoints
 training_data_handling/__pycache__/
 training_data_handling/.DS_Store
@@ -16,8 +21,3 @@ training_data_handling/csv_files/nonzero_queried_all_metrics.csv
 training_data_handling/csv_files/queried_all_metrics.csv
 training_data_handling/csv_files/summed_all_metrics.csv
 training_data_handling/csv_files/partial_summed_all_metrics.csv
-extras/.DS_Store
-.DS_Store
-__pycache__/
-training_data_handling/__pycache__/
-helpers/__pycache__/
