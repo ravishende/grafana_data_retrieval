@@ -17,9 +17,9 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
 # Note: read file and write file should be the same once the write file has some data.
-read_file = 'csv_files/filtered_w_ids.csv'
+read_file = 'csv_files/test_w_ids.csv'
 write_file = 'csv_files/queried.csv'
-NUM_ROWS = 5
+NUM_ROWS = 10
 NAMESPACE = 'wifire-quicfire'
 
 # display settings

@@ -29,13 +29,11 @@ pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
 
 read_file = "csv_files/queried.csv" 
-# read_file = "csv_files/updated_requests.csv" 
 write_file = "csv_files/summed.csv"
-# write_file = "csv_files/updated_requests.csv"
-# success_write_file = "csv_files/summed_success.csv"
-# na_write_file = "csv_files/summed_na.csv"
 
 
+# given a list of metrics, return a new list that has _total, _t1, and _t2 appended to each metric
+# to create a new list that is 3 times the size of metrics_list
 def get_columns_from_metrics(metric_list):
     summary_columns = []
     for name in metric_list:
@@ -43,6 +41,41 @@ def get_columns_from_metrics(metric_list):
         summary_columns.append(name + "_t1")
         summary_columns.append(name + "_t2")
     return summary_columns
+
+
+# insert percent columns into a dataframe and return the updated dataframe
+# parameters:
+    # df: a dataframe with columns that have a _total, _t1, and _t2 appended for each metric in the following metric lists
+    # percent_metrics: a list of names of metrics that will become the percent columns after appending _total, _t1, and _t2 to it
+    # numerator_metrics: a list of metrics that are are the base (will add the _total, _t1, _t2), for the columns that will be used as the numerator for the percent operation
+    # denominator_metrics: a list of static metrics that the columns that will be used as the numerator for the percent operation
+        # NOTE: percent_metrics, numerator_metrics, denominator_metrics must all be the same length, with each index corresponding to each other
+# returns:
+    # an updated df with inserted percent columns
+        # percent columns are formed by: 
+        # get a columns list from each of the three input metric lists (by adding _total, _t1, and _t2 to each metric name)
+        # insert the percent columns into the dataframe as 100 * numerator columns / denominator columns
+def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics):
+    # make sure that all metrics lists are the same size
+    if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
+        raise ValueError("percent_metrics, numerator_metrics, denominator_metrics must all be the same length")
+
+    # get columns lists by adding _total, _t1, and _t2 to each metric in each metric_list in percent_metrics_format
+    percent_cols = get_columns_from_metrics(percent_metrics)
+    numerator_cols = get_columns_from_metrics(numerator_metrics)
+    denominator_cols = []
+    # check if denominator metrics are the static metrics, since the use case often is
+    if denominator_metrics == STATIC_METRICS:
+        # since denominator cols are for static metrics, they don't need to be 
+        denominator_cols = [metric for metric in denominator_metrics for _ in range(3)]  # copy metrics 3 times each to account for added _total, _t1, _t2 in non static metric lists
+    else:
+        denominator_cols = get_columns_from_metrics(denominator_metrics)
+
+    # calculate percentage columns
+    for i in range(len(percent_cols)):
+        df[percent_cols[i]] = 100 * df[numerator_cols[i]] / df[denominator_cols[i]]
+
+    return df
 
 
 # Given a json result_list (json-like data) of a queried metric (cpu or mem usage),
@@ -81,6 +114,7 @@ def sum_pods_for_ensemble(result_list, ensemble, static=False):
             total = -1
 
     return total
+
 
 # given a dataframe, title of a column to update, and title of the ensemble_id column,
 # return a new dataframe with the edited column being float values instead of json data
@@ -130,40 +164,37 @@ all_metrics = [
     "received_bandwidth"
 ]
 
-static_metrics = [
+STATIC_METRICS = [
     "cpu_request",
     "mem_request",
 ]
 
-metrics_to_sum = [metric for metric in all_metrics if metric not in static_metrics]
-# get all columns to sum
+
+
+# get a list of metrics that need to be summed (all metrics - static metrics)
+metrics_to_sum = [metric for metric in all_metrics if metric not in STATIC_METRICS]
+# get names of all columns to sum
 columns_to_sum = get_columns_from_metrics(metrics_to_sum)
 
-# select columns to update (sum over) as well as ensemble ids column
-ensemble_col = "ensemble_uuid"
 
 # get the csv file as a pandas dataframe
 summed_runs = pd.read_csv(read_file, index_col=0)
+# specify the ensemble ids column name
+ensemble_col = "ensemble_uuid"
 
 # update columns to get float values from json
 print_heading("Summing Up Columns")
 summed_runs = update_columns(summed_runs, columns_to_sum, ensemble_col, static=False)
-print_heading("Getting Floats for Static Columns")
-summed_runs = update_columns(summed_runs, static_metrics, ensemble_col, static=True)
+print_heading("Getting Values for Static Columns")
+summed_runs = update_columns(summed_runs, STATIC_METRICS, ensemble_col, static=True)
 
-# get percentage metrics in a format of [%_col, numerator_col, denominator_col]
-percentage_column_formats = [
-    ["cpu_request_%_total", "cpu_usage_total", "cpu_request"],
-    ["cpu_request_%_t1", "cpu_usage_t1", "cpu_request"],
-    ["cpu_request_%_t2", "cpu_usage_t2", "cpu_request"],
-    ["mem_request_%_total", "mem_usage_total", "mem_request"],
-    ["mem_request_%_t1", "mem_usage_t1", "mem_request"],
-    ["mem_request_%_t2", "mem_usage_t2", "mem_request"],
-]
-# calculate percentage columns
-for metric_list in percentage_column_formats:
-    summed_runs[metric_list[0]] = 100 * summed_runs[metric_list[1]] / summed_runs[metric_list[2]]
+# insert percent columns into the dataframe
+percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
+numerator_metrics = ["cpu_usage", "mem_usage"]
+denominator_metrics = ["cpu_request", "mem_request"]
+summed_runs = insert_percent_cols(summed_runs, percent_metrics, numerator_metrics, denominator_metrics)
 
+# save the dataframe to a file and print it
 summed_runs.to_csv(write_file)
 print(summed_runs)
 
