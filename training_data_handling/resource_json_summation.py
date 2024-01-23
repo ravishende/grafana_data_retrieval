@@ -29,7 +29,7 @@ pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
 
 read_file = "csv_files/queried.csv" 
-write_file = "csv_files/summed.csv"
+write_file = "csv_files/partial_summed_all_metrics.csv"
 
 
 # given a list of metrics, return a new list that has _total, _t1, and _t2 appended to each metric
@@ -116,6 +116,40 @@ def sum_pods_for_ensemble(result_list, ensemble, static=False):
     return total
 
 
+def fill_in_static_na(df, static_metrics):
+    # Group df by 'ensemble_uuid'
+    ensemble_groups = df.groupby('ensemble_uuid')
+
+    # Create a subset of df with rows where any static metric is NA
+    na_static_df = df[df[static_metrics].isna().any(axis=1)]
+
+    # Iterate over the rows in the subset
+    for i, row in na_static_df.iterrows():
+        ensemble_uuid = row['ensemble_uuid']
+
+        # For each static metric, try to find a non-NA value from the same ensemble
+        for metric in static_metrics:
+            # if the row's metric is not na, move on
+            if not pd.isna(row[metric]):
+                continue
+
+            # Get all rows with the same ensemble_uuid
+            ensemble_rows = ensemble_groups.get_group(ensemble_uuid)
+
+            # find the first row in the ensemble that doesn't have NA for this metric
+            valid_rows = ensemble_rows[ensemble_rows[metric].notna()].iloc[0]
+
+            if not valid_rows.empty:
+                # get the metric's value for the valid row
+                valid_value = valid_rows[metric]
+                na_static_df.at[i, metric] = valid_value
+
+    # Update the original df with filled values
+    df.update(na_static_df)
+
+    return df
+
+
 # given a dataframe, title of a column to update, and title of the ensemble_id column,
 # return a new dataframe with the edited column being float values instead of json data
 # in every row where there was an ensemble id in the ensemble column, or None if there are
@@ -187,6 +221,9 @@ print_heading("Summing Up Columns")
 summed_runs = update_columns(summed_runs, columns_to_sum, ensemble_col, static=False)
 print_heading("Getting Values for Static Columns")
 summed_runs = update_columns(summed_runs, STATIC_METRICS, ensemble_col, static=True)
+
+# try to fill in any na values in static columns by looking at other runs with same ensemble
+summed_runs = fill_in_static_na(summed_runs, STATIC_METRICS)
 
 # insert percent columns into the dataframe
 percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
