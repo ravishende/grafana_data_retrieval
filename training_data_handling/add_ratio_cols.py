@@ -11,8 +11,8 @@ from helpers.printing import print_title
 
 
 # settings and constants
-read_file = "csv_files/non_neg_updated_requests.csv"
-write_file = "csv_files/non_neg_updated_requests_w_ratios.csv"
+read_file = "csv_files/summed.csv"
+write_file = "csv_files/summed_w_ratios.csv"
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -37,6 +37,11 @@ def insert_ratio_col(df, col_to_insert, numerator_col, denominator_col):
 def insert_ratio_columns(df, cols_to_insert, numerator_cols, duration_col):
     for insert_col, numerator_col in zip(cols_to_insert, numerator_cols):
         df[insert_col] = df[numerator_col].astype(float) / df[duration_col].astype(float)
+    return df
+
+# given a list of numerator columns, return a df without those numerator columns in it
+def drop_numerator_columns(df, numerator_cols):
+    df = df.drop(columns=numerator_cols)
     return df
 
 '''
@@ -79,6 +84,9 @@ print(training_data, "\n"*5)
 # insert ratio columns
 training_data = insert_ratio_columns(training_data, t1_insert_columns, t1_metric_columns, "duration_t1")
 training_data = insert_ratio_columns(training_data, t2_insert_columns, t2_metric_columns, "duration_t2")
+# with the ratio columns added, the numerators of the ratio columns no longer become useful
+df = drop_numerator_columns(t1_metric_columns)
+df = drop_numerator_columns(t2_metric_columns)
 
 # print updated dataframe and save it to a file
 print_title("DataFrame with Columns Inserted")

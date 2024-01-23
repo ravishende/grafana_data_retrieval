@@ -7,8 +7,8 @@ and dressing up anything else to help
 '''
 
 # settings
-read_file = 'csv_files/all_metrics_ratios_added.csv'
-write_file = 'csv_files/all_metrics_training_data.csv'
+read_file = 'csv_files/non_neg_updated_requests_w_ratios.csv'
+write_file = 'csv_files/updated_requests_training_data.csv'
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -20,17 +20,6 @@ pd.set_option('display.width', terminal_width)
         Columns Creation
 =================================
 '''
-# queried metrics that have been used to create ratio columns
-metrics = [
-    "cpu_usage",
-    "mem_usage",
-    "cpu_request_%",
-    "mem_request_%",
-    "transmitted_packets",
-    "received_packets",
-    "transmitted_bandwidth",
-    "received_bandwidth"
-]
 
 # columns to drop
 useless_columns = [
@@ -39,17 +28,8 @@ useless_columns = [
     'stop', 
     'timestep',  # no variations in values - all 600
     'ensemble_uuid', 
-    # 'run_uuid', 
+    # 'run_uuid',  # not needed for giving to a model, but useful for knowing which run is which
 ]
-
-# get the numerator column of each ratio column. 
-# It will be dropped since it isn't useful with the newly added ratio columns.
-numerator_columns_t1 = [name + "_t1" for name in metrics]
-numerator_columns_t2 = [name + "_t2" for name in metrics]
-numerator_columns = numerator_columns_t1 + numerator_columns_t2
-
-# with the ratio columns added, the numerators of the ratio columns no longer become useful
-useless_columns = useless_columns + numerator_columns
 
 
 '''
@@ -66,3 +46,4 @@ training_data = whole_df.drop(columns=useless_columns)
 training_data.to_csv(write_file)
 print("\n"*3)
 print(training_data, "\n"*3)
+
