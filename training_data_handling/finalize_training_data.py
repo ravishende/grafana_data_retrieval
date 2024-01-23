@@ -15,11 +15,6 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-'''
-=================================
-        Columns Creation
-=================================
-'''
 
 # columns to drop
 useless_columns = [
@@ -31,12 +26,6 @@ useless_columns = [
     # 'run_uuid',  # not needed for giving to a model, but useful for knowing which run is which
 ]
 
-
-'''
-=============================
-        Main Program
-=============================
-'''
 
 # read csv and drop unnecessary columns
 whole_df = pd.read_csv(read_file, index_col=0)
