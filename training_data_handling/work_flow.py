@@ -5,7 +5,8 @@ phase1_read_file = "csv_files/"
 phase1_write_file = "csv_files/"
 phase2_read_file = "csv_files/"
 phase2_write_file = "csv_files/"
-phase
+phase3_read_file = "csv_files/"
+phase3_write_file = "csv_files/"
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -35,7 +36,7 @@ Phase 1: PreProcessing
 =================
 Phase 2: Querying
 =================
-7. query resource metrics (cpu/mem total, t1, t2)
+7. query resource metrics (metrics total, t1, t2)
     - query_resources.py
 
 ====================================
