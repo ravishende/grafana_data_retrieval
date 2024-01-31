@@ -51,11 +51,13 @@ Phase 3: Sum and Ready Training Data
 ====================================
 8. sum over json to get floats for resource metrics
     - resource_json_summation.py
-9. drop rows with zeros in cpu & mem total
+9. add in percent columns
+    - resource_json_summation.py
+10. drop rows with zeros in cpu & mem total
     - investigate_zero_usage.py
-10. add ratio cols for t1 & t2
+11. add ratio cols for t1 & t2
     - add_ratio_cols.py
-11. drop drop_cols_2
+12. drop drop_cols_2
     - finalize_training_data.py
 '''
 
@@ -106,24 +108,24 @@ successful_runs_df = get_successful_runs(runs_df, reset_index=True)
 
 # 2. collect runs from successful bp3d runs
     # - gather.ipynb in collect_runs/
-collected_runs_df = 
+collected_runs_df = collect_runs(successful_runs_df)  # write collect_runs() function logic
 
 # 3. add in ensemble uuid
 ids_included_df = add_id_cols(successful_runs_df, collected_runs_df)
 
 # 4. calculate area and runtime
-calculated_df = add_area_and_runtime(df)
+calculated_df = add_area_and_runtime(ids_included_df)
 
 # 5. drop drop_cols_1
 filtered_df = drop_columns(calculated_df, drop_cols_1)
 
 # 6. add duration_t1, duration_t2 columns
-num_duration_cols = 2
+num_duration_cols = 2  # number of duration columns to insert and query for (doesn't include "runtime")
 preprocessed_df = insert_n_duration_columns(filtered_df, num_duration_cols, single_method=False)
 
 # save preprocessed_df to file
 preprocessed_df.to_csv(phase1_write_file)
-
+PHASE_1_COMPLETE = True
 
 '''
 =================
@@ -135,9 +137,29 @@ Phase 2: Querying
 temporary_save_file = "csv_files/query_progress.csv"
 rows_batch_size = 20
 queried_df = query_metrics(preprocessed_df, num_duration_cols, rows_batch_size, temporary_save_file)
+PHASE_2_COMPLETE = True
+
+'''
+====================================
+Phase 3: Sum and Ready Training Data
+====================================
+'''
+
+# 8. sum over json to get floats for resource metrics
+summed_df = update_queried_cols(queried_df)
+
+# 9. add in percent columns
+percents_included_df = add_percent_columns(summed_df, num_duration_cols)
+
+# 10. drop rows with zeros in cpu & mem total
+    # - investigate_zero_usage.py
 
 
+# 11. add ratio cols for t1 & t2
+    # - add_ratio_cols.py
 
 
+# 12. drop drop_cols_2
+    # - finalize_training_data.py
 
 

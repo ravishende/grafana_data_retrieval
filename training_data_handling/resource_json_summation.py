@@ -34,12 +34,14 @@ write_file = "csv_files/partial_summed_all_metrics.csv"
 
 # given a list of metrics, return a new list that has _total, _t1, and _t2 appended to each metric
 # to create a new list that is 3 times the size of metrics_list
-def get_columns_from_metrics(metric_list):
+def get_columns_from_metrics(metric_list, num_inserted_duration_cols=3):
     summary_columns = []
     for name in metric_list:
+        # get total duration column names
         summary_columns.append(name + "_total")
-        summary_columns.append(name + "_t1")
-        summary_columns.append(name + "_t2")
+        # get duration_t_i column names - append num_inserted_duraion_cols added to the name
+        for i in range(1, len(num_inserted_duration_cols)+1):
+            summary_columns.append(name + "_t" + i)
     return summary_columns
 
 
@@ -55,21 +57,24 @@ def get_columns_from_metrics(metric_list):
         # percent columns are formed by: 
         # get a columns list from each of the three input metric lists (by adding _total, _t1, and _t2 to each metric name)
         # insert the percent columns into the dataframe as 100 * numerator columns / denominator columns
-def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics):
+def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics, static_metrics, num_inserted_duration_cols=3):
     # make sure that all metrics lists are the same size
     if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
         raise ValueError("percent_metrics, numerator_metrics, denominator_metrics must all be the same length")
 
     # get columns lists by adding _total, _t1, and _t2 to each metric in each metric_list in percent_metrics_format
-    percent_cols = get_columns_from_metrics(percent_metrics)
-    numerator_cols = get_columns_from_metrics(numerator_metrics)
+    percent_cols = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols)
+    numerator_cols = get_columns_from_metrics(numerator_metrics, num_inserted_duration_cols)
+    
     denominator_cols = []
-    # check if denominator metrics are the static metrics, since the use case often is
-    if denominator_metrics == STATIC_METRICS:
-        # since denominator cols are for static metrics, they don't need to be 
-        denominator_cols = [metric for metric in denominator_metrics for _ in range(3)]  # copy metrics 3 times each to account for added _total, _t1, _t2 in non static metric lists
-    else:
-        denominator_cols = get_columns_from_metrics(denominator_metrics)
+    # check if any denominator metrics are static metrics. 
+    for metric in denominator_metrics:
+        if metric in static_metrics:
+            # If they are, don't add _t_i to the end of them and just repeat them num_inserted_duration_cols times
+            denominator_cols += [metric]*num_inserted_duration_cols
+        else:
+            # get column names for the one metric
+            denominator_cols += get_columns_from_metrics([metric])
 
     # calculate percentage columns
     for i in range(len(percent_cols)):
@@ -199,7 +204,7 @@ if __name__ == "__main__":
         "received_bandwidth"
     ]
 
-    STATIC_METRICS = [
+    static_metrics = [
         "cpu_request",
         "mem_request",
     ]
@@ -207,7 +212,7 @@ if __name__ == "__main__":
 
 
     # get a list of metrics that need to be summed (all metrics - static metrics)
-    metrics_to_sum = [metric for metric in all_metrics if metric not in STATIC_METRICS]
+    metrics_to_sum = [metric for metric in all_metrics if metric not in static_metrics]
     # get names of all columns to sum
     columns_to_sum = get_columns_from_metrics(metrics_to_sum)
 
@@ -221,16 +226,16 @@ if __name__ == "__main__":
     print_heading("Summing Up Columns")
     summed_runs = update_columns(summed_runs, columns_to_sum, ensemble_col, static=False)
     print_heading("Getting Values for Static Columns")
-    summed_runs = update_columns(summed_runs, STATIC_METRICS, ensemble_col, static=True)
+    summed_runs = update_columns(summed_runs, static_metrics, ensemble_col, static=True)
 
     # try to fill in any na values in static columns by looking at other runs with same ensemble
-    summed_runs = fill_in_static_na(summed_runs, STATIC_METRICS)
+    summed_runs = fill_in_static_na(summed_runs, static_metrics)
 
     # insert percent columns into the dataframe
     percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
     numerator_metrics = ["cpu_usage", "mem_usage"]
     denominator_metrics = ["cpu_request", "mem_request"]
-    summed_runs = insert_percent_cols(summed_runs, percent_metrics, numerator_metrics, denominator_metrics)
+    summed_runs = insert_percent_cols(summed_runs, percent_metrics, numerator_metrics, denominator_metrics, static_metrics)
 
     # save the dataframe to a file and print it
     summed_runs.to_csv(write_file)

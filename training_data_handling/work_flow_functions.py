@@ -2,14 +2,13 @@ import pandas as pd
 import warnings
 import ast
 from query_resources import query_and_insert_columns
-from resource_json_summation.py import 
+from resource_json_summation import update_columns
 
 '''
 ========================
         Phase 1
 ========================
 '''
-
 
 '''
 ------
@@ -232,6 +231,7 @@ def query_metrics(df, num_inserted_duration_cols, batch_size, temporary_save_fil
     return df
 
 
+
 '''
 ========================
         Phase 3
@@ -244,4 +244,43 @@ step 8 - sum over json to get floats for resource metrics
 ------
 '''
 
+# given a df with a column titled "ensemble_uuid" and queried columns with json-like data
+# return a df with all queried columns updated to be a single float value
+def update_queried_cols(df):
+    # get metrics lists
+    static_metrics, non_static_metrics = _get_metrics()
+    ensemble_col = "ensemble_uuid"
+    
+    # update columns - sum non_static columns, get values for static columns
+    df = update_columns(df, non_static_metrics, ensemble_col, static=False)
+    df = update_columns(df, static_metrics, ensemble_col, static=True)
+
+    return df
+
+
+'''
+------
+step 9 - add in percent columns
+------
+'''
+
+def add_percent_columns(df, num_inserted_duration_cols):
+    # metrics lists that will be used to get/calculate percentages
+    percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
+    numerator_metrics = ["cpu_usage", "mem_usage"]
+    denominator_metrics = ["cpu_request", "mem_request"]
+
+    # insert percentage columns as df[percent_metric_col] = 100 * df[numerator_metric_col] / df[denominator_metric_col]
+    df = insert_percent_cols(
+        df, percent_metrics, numerator_metrics, denominator_metrics, 
+        num_inserted_duration_cols, static_metrics)
+
+    return df
+
+
+'''
+------
+step 10 - drop rows with zeros in cpu & mem usage total
+------
+'''
 
