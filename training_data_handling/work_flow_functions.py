@@ -309,7 +309,7 @@ def drop_zero_cpu_mem(df, reset_index=True):
 
 '''
 -------
-step 11 - add ratio cols for duration_t_i columns
+step 11 - add ratio cols for duration_t_i columns and drop numerator columns
 -------
 '''
 
@@ -335,7 +335,11 @@ def _get_ratio_components(i):
 
 # given a dataframe, return the updated dataframe 
 # with new columns inserted as a ratio of numerator_col/duration_col
-def insert_ratio_columns(df):
+def insert_ratio_columns(df, drop_numerators=True, reset_index=True):
+    # handle improper user input
+    if reset_index and not drop_numerators:
+        raise ValueError("reset_index can only be True if drop_numerators is also True")
+
     # get number of duration columns
     num_duration_cols = _get_num_duration_cols()
 
@@ -348,7 +352,19 @@ def insert_ratio_columns(df):
         for insert_col, numerator_col in zip(cols_to_insert, numerator_cols):
             df[insert_col] = df[numerator_col].astype(float) / df[duration_col].astype(float)
 
+        # drop numerator columns if requested
+        if drop_numerators:
+            df.drop(columns=numerator_cols)
+            # reset index if requested
+            if reset_index:
+                df = df.reset_index(drop=True)
+
     return df
 
 
+'''
+-------
+step 12 - drop drop_cols2
+-------
+'''
 

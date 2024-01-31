@@ -150,13 +150,10 @@ percents_included_df = add_percent_columns(summed_df)
 # 10. drop rows with zeros in cpu & mem total
 nonzero_df = drop_zero_cpu_mem(percents_included_df, reset_index=True)
 
-# 11. add ratio cols for duration_t_i columns
-ratios_added_df = insert_ratio_columns(nonzero_df)
+# 11. add ratio cols for duration_t_i columns and drop numerator columns of ratio cols
+ratios_added_df = insert_ratio_columns(nonzero_df, drop_numerators=True, reset_index=True)
 
-# 12. drop numerator columns of ratio cols
-    # - add_ratio_cols.py
-
-# 13. drop_cols_2
+# 12. drop_cols_2
     # - finalize_training_data.py
 
 PHASE_3_COMPLETE = True
