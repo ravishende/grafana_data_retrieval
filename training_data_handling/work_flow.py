@@ -95,13 +95,13 @@ drop_cols_2 = [
 
 
 '''
-=======
-Phase 1
-=======
+======================
+Phase 1: Preprocessing
+======================
 '''
 
 # 1. get successful bp3d runs from bp3d-runs
-runs_df = pd.read_csv(phase1_read_file)
+runs_df = pd.read_csv(phase1_read_file, index_col=0)
 successful_runs_df = get_successful_runs(runs_df, reset_index=True)
 
 # 2. collect runs from successful bp3d runs
@@ -116,3 +116,28 @@ calculated_df = add_area_and_runtime(df)
 
 # 5. drop drop_cols_1
 filtered_df = drop_columns(calculated_df, drop_cols_1)
+
+# 6. add duration_t1, duration_t2 columns
+num_duration_cols = 2
+preprocessed_df = insert_n_duration_columns(filtered_df, num_duration_cols, single_method=False)
+
+# save preprocessed_df to file
+preprocessed_df.to_csv(phase1_write_file)
+
+
+'''
+=================
+Phase 2: Querying
+=================
+'''
+
+# 7. query resource metrics (metrics total, t1, t2)
+temporary_save_file = "csv_files/query_progress.csv"
+rows_batch_size = 20
+queried_df = query_metrics(preprocessed_df, num_duration_cols, rows_batch_size, temporary_save_file)
+
+
+
+
+
+
