@@ -154,7 +154,7 @@ nonzero_df = drop_zero_cpu_mem(percents_included_df, reset_index=True)
 ratios_added_df = insert_ratio_columns(nonzero_df, drop_numerators=True, reset_index=True)
 
 # 12. drop_cols_2
-    # - finalize_training_data.py
+final_df = drop_columns(ratios_added_df, drop_cols_2)
 
 PHASE_3_COMPLETE = True
 
