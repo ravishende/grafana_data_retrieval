@@ -1,6 +1,12 @@
 import pandas as pd
 import warnings
 import ast
+import sys
+import os
+sys.path.append("../grafana_data_retrieval")
+current = os.path.dirname(os.path.realpath("work_flow_functions.py"))
+parent = os.path.dirname(current)
+sys.path.append(parent)
 from query_resources import query_and_insert_columns
 from resource_json_summation import update_columns
 
@@ -17,7 +23,7 @@ step 1 - get successful bp3d runs
 '''
 # given a dataframe of runs with ens_status and run_status columns,
 # return a new dataframe with only the successful runs 
-def get_successful_runs(runs_df, reset_index=True):
+def get_successful_runs(df, reset_index=True):
     # get a df with only the successful runs
     successful_runs = df[(df["ens_status"]=="Done") & (df["run_status"]=="Done")]
     # if requested, reset the indices to 0 through end of new df after selection
@@ -28,10 +34,25 @@ def get_successful_runs(runs_df, reset_index=True):
 
 '''
 ------
-step 3 - add in ensemble_uuid
+step 2 - collect runs
 ------
 '''
 
+def collect_runs(df):
+    pass
+
+
+'''
+========================
+        Phase 2
+========================
+'''
+
+'''
+------
+step 3 - add in ensemble_uuid
+------
+'''
 # given a dataframe of successful runs (that have run_uuid, ensemble_uuid) and a dataframe of runs collected (with information on each run)
 # return a dataframe of the two merged to include all information on the run and id columns
 def add_id_cols(successful_runs_df, collected_runs_df):
@@ -156,7 +177,7 @@ def insert_n_duration_columns(df, n, single_method=False):
 
 '''
 ========================
-        Phase 2
+        Phase 3
 ========================
 '''
 
@@ -245,7 +266,7 @@ def query_metrics(df, batch_size, temporary_save_file):
 
 '''
 ========================
-        Phase 3
+        Phase 4
 ========================
 '''
 
@@ -361,10 +382,4 @@ def insert_ratio_columns(df, drop_numerators=True, reset_index=True):
 
     return df
 
-
-'''
--------
-step 12 - drop drop_cols2
--------
-'''
 

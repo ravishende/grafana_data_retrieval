@@ -32,6 +32,10 @@ Phase 1: PreProcessing
     - run_selection.py
 2. collect runs from successful bp3d runs  # needs new phase?
     - gather.ipynb in collect_runs/
+
+===================
+Phase 2: Collecting
+===================
 3. add in ensemble uuid
     - add_id_cols.py 
 4. calculate area and runtime
@@ -42,13 +46,13 @@ Phase 1: PreProcessing
     - query_resources.py
 
 =================
-Phase 2: Querying
+Phase 3: Querying
 =================
 7. query resource metrics (metrics total, t1, t2)
     - query_resources.py
 
 ====================================
-Phase 3: Sum and Ready Training Data
+Phase 4: Sum and Ready Training Data
 ====================================
 8. sum over json to get floats for resource metrics
     - resource_json_summation.py
@@ -133,6 +137,9 @@ Phase 2: Querying
 temporary_save_file = "csv_files/query_progress.csv"
 rows_batch_size = 20
 queried_df = query_metrics(preprocessed_df, rows_batch_size, temporary_save_file)
+
+# save df to a csv file
+queried_df.to_csv(phase2_write_file)
 PHASE_2_COMPLETE = True
 
 '''
@@ -156,5 +163,7 @@ ratios_added_df = insert_ratio_columns(nonzero_df, drop_numerators=True, reset_i
 # 12. drop_cols_2
 final_df = drop_columns(ratios_added_df, drop_cols_2)
 
+# save df to a csv file
+queried_df.to_csv(phase2_write_file)
 PHASE_3_COMPLETE = True
 
