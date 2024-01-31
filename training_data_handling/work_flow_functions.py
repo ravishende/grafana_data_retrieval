@@ -2,6 +2,7 @@ import pandas as pd
 import warnings
 import ast
 from query_resources import query_and_insert_columns
+from resource_json_summation.py import 
 
 '''
 ========================
@@ -151,6 +152,13 @@ def insert_n_duration_columns(df, n, single_method=False):
 ========================
 '''
 
+
+'''
+------
+step 7 -  query resource metrics (metrics total, t1, t2)
+------
+'''
+
 # get the static and non_static metrics lists
 def _get_metrics():
     # define the metrics to be queried
@@ -222,3 +230,18 @@ def query_metrics(df, num_inserted_duration_cols, batch_size, temporary_save_fil
         df.to_csv(temporary_save_file)
 
     return df
+
+
+'''
+========================
+        Phase 3
+========================
+'''
+
+'''
+------
+step 8 - sum over json to get floats for resource metrics
+------
+'''
+
+

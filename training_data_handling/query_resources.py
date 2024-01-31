@@ -267,61 +267,61 @@ def query_and_insert_columns(df, query_metrics_list, col_names_list, duration_co
             Main Program
 ---------------------------------------
 '''
+if __name__ == "__main__":
+    # get the csv file as a pandas dataframe
+    training_data = pd.read_csv(read_file, index_col=0)
+    training_data = training_data.reset_index(drop=True)
 
-# get the csv file as a pandas dataframe
-training_data = pd.read_csv(read_file, index_col=0)
-training_data = training_data.reset_index(drop=True)
 
+    # list of all metrics you can query (with query_and_insert_columns())
+    all_metrics = [
+        "cpu_usage",
+        "mem_usage",
+        "cpu_request",
+        "mem_request",
+        "transmitted_packets",
+        "received_packets",
+        "transmitted_bandwidth",
+        "received_bandwidth"
+        ]
 
-# list of all metrics you can query (with query_and_insert_columns())
-all_metrics = [
-    "cpu_usage",
-    "mem_usage",
-    "cpu_request",
-    "mem_request",
-    "transmitted_packets",
-    "received_packets",
-    "transmitted_bandwidth",
-    "received_bandwidth"
-    ]
+    # get all non static metrics to then get _total, _t1, and _t2 columns
+    non_static_metrics = [metric for metric in all_metrics if metric not in STATIC_METRICS]
+    # names of columns to pass into query_and_insert_columns()
+    col_names_static = STATIC_METRICS
+    col_names_total = [name + "_total" for name in non_static_metrics]
+    col_names_t1 = [name + "_t1" for name in non_static_metrics]
+    col_names_t2 = [name + "_t2" for name in non_static_metrics]
 
-# get all non static metrics to then get _total, _t1, and _t2 columns
-non_static_metrics = [metric for metric in all_metrics if metric not in STATIC_METRICS]
-# names of columns to pass into query_and_insert_columns()
-col_names_static = STATIC_METRICS
-col_names_total = [name + "_total" for name in non_static_metrics]
-col_names_t1 = [name + "_t1" for name in non_static_metrics]
-col_names_t2 = [name + "_t2" for name in non_static_metrics]
+    # name of duration column to pass into query_and_insert_columns()
+    duration_col_total = "runtime"
+    duration_col_t1 = "duration_t1"
+    duration_col_t2 = "duration_t2"
 
-# name of duration column to pass into query_and_insert_columns()
-duration_col_total = "runtime"
-duration_col_t1 = "duration_t1"
-duration_col_t2 = "duration_t2"
+    # insert t1 and t2 duration columns if they don't exist
+    if duration_col_t1 not in training_data.columns:
+        training_data = insert_rand_refresh_col(training_data, duration_col_t1, method=0)
+    if duration_col_t2 not in training_data.columns:
+        training_data = insert_rand_refresh_col(training_data, duration_col_t2, method=1)
 
-# insert t1 and t2 duration columns if they don't exist
-if duration_col_t1 not in training_data.columns:
-    training_data = insert_rand_refresh_col(training_data, duration_col_t1, method=0)
-if duration_col_t2 not in training_data.columns:
-    training_data = insert_rand_refresh_col(training_data, duration_col_t2, method=1)
+    # initialize columns if they aren't already
+    all_column_names = col_names_static + col_names_total + col_names_t1 + col_names_t2
+    for col_name in all_column_names:
+        if col_name not in training_data.columns:
+            training_data[col_name] = None
 
-# initialize columns if they aren't already
-all_column_names = col_names_static + col_names_total + col_names_t1 + col_names_t2
-for col_name in all_column_names:
-    if col_name not in training_data.columns:
-        training_data[col_name] = None
+    # query everything and insert the new columns into the dataframe, saving after each insertion
+    training_data = query_and_insert_columns(training_data, STATIC_METRICS, col_names_static, duration_col_total, NUM_ROWS)
+    training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+    training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_total, duration_col_total, NUM_ROWS)
+    training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+    training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_t1, duration_col_t1, NUM_ROWS)
+    training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+    training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_t2, duration_col_t2, NUM_ROWS)
 
-# query everything and insert the new columns into the dataframe, saving after each insertion
-training_data = query_and_insert_columns(training_data, STATIC_METRICS, col_names_static, duration_col_total, NUM_ROWS)
-training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
-training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_total, duration_col_total, NUM_ROWS)
-training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
-training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_t1, duration_col_t1, NUM_ROWS)
-training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
-training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_t2, duration_col_t2, NUM_ROWS)
-
-# print and write the updated dataframe to a csv file
-print("\n"*5, training_data)
-training_data.to_csv(write_file)
+    # print and write the updated dataframe to a csv file
+    print("\n"*5, training_data)
+    training_data.to_csv(write_file)
 
 
 

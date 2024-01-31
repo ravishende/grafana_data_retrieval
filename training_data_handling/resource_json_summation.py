@@ -185,55 +185,56 @@ def update_columns(df, update_col_names, ensemble_col_title, static=False):
 ============================================
 '''
 
+if __name__ == "__main__":
 
-# all queried metrics
-all_metrics = [
-    "cpu_usage",
-    "mem_usage",
-    "cpu_request",
-    "mem_request",
-    "transmitted_packets",
-    "received_packets",
-    "transmitted_bandwidth",
-    "received_bandwidth"
-]
+    # all queried metrics
+    all_metrics = [
+        "cpu_usage",
+        "mem_usage",
+        "cpu_request",
+        "mem_request",
+        "transmitted_packets",
+        "received_packets",
+        "transmitted_bandwidth",
+        "received_bandwidth"
+    ]
 
-STATIC_METRICS = [
-    "cpu_request",
-    "mem_request",
-]
-
-
-
-# get a list of metrics that need to be summed (all metrics - static metrics)
-metrics_to_sum = [metric for metric in all_metrics if metric not in STATIC_METRICS]
-# get names of all columns to sum
-columns_to_sum = get_columns_from_metrics(metrics_to_sum)
+    STATIC_METRICS = [
+        "cpu_request",
+        "mem_request",
+    ]
 
 
-# get the csv file as a pandas dataframe
-summed_runs = pd.read_csv(read_file, index_col=0)
-# specify the ensemble ids column name
-ensemble_col = "ensemble_uuid"
 
-# update columns to get float values from json
-print_heading("Summing Up Columns")
-summed_runs = update_columns(summed_runs, columns_to_sum, ensemble_col, static=False)
-print_heading("Getting Values for Static Columns")
-summed_runs = update_columns(summed_runs, STATIC_METRICS, ensemble_col, static=True)
+    # get a list of metrics that need to be summed (all metrics - static metrics)
+    metrics_to_sum = [metric for metric in all_metrics if metric not in STATIC_METRICS]
+    # get names of all columns to sum
+    columns_to_sum = get_columns_from_metrics(metrics_to_sum)
 
-# try to fill in any na values in static columns by looking at other runs with same ensemble
-summed_runs = fill_in_static_na(summed_runs, STATIC_METRICS)
 
-# insert percent columns into the dataframe
-percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
-numerator_metrics = ["cpu_usage", "mem_usage"]
-denominator_metrics = ["cpu_request", "mem_request"]
-summed_runs = insert_percent_cols(summed_runs, percent_metrics, numerator_metrics, denominator_metrics)
+    # get the csv file as a pandas dataframe
+    summed_runs = pd.read_csv(read_file, index_col=0)
+    # specify the ensemble ids column name
+    ensemble_col = "ensemble_uuid"
 
-# save the dataframe to a file and print it
-summed_runs.to_csv(write_file)
-print(summed_runs)
+    # update columns to get float values from json
+    print_heading("Summing Up Columns")
+    summed_runs = update_columns(summed_runs, columns_to_sum, ensemble_col, static=False)
+    print_heading("Getting Values for Static Columns")
+    summed_runs = update_columns(summed_runs, STATIC_METRICS, ensemble_col, static=True)
+
+    # try to fill in any na values in static columns by looking at other runs with same ensemble
+    summed_runs = fill_in_static_na(summed_runs, STATIC_METRICS)
+
+    # insert percent columns into the dataframe
+    percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
+    numerator_metrics = ["cpu_usage", "mem_usage"]
+    denominator_metrics = ["cpu_request", "mem_request"]
+    summed_runs = insert_percent_cols(summed_runs, percent_metrics, numerator_metrics, denominator_metrics)
+
+    # save the dataframe to a file and print it
+    summed_runs.to_csv(write_file)
+    print(summed_runs)
 
 
 '''
