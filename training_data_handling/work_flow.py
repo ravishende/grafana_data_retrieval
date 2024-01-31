@@ -132,7 +132,7 @@ Phase 2: Querying
 # 7. query resource metrics (metrics total, t1, t2)
 temporary_save_file = "csv_files/query_progress.csv"
 rows_batch_size = 20
-queried_df = query_metrics(preprocessed_df, num_duration_cols, rows_batch_size, temporary_save_file)
+queried_df = query_metrics(preprocessed_df, rows_batch_size, temporary_save_file)
 PHASE_2_COMPLETE = True
 
 '''
@@ -145,13 +145,13 @@ Phase 3: Sum and Ready Training Data
 summed_df = update_queried_cols(queried_df)
 
 # 9. add in percent columns
-percents_included_df = add_percent_columns(summed_df, num_duration_cols)
+percents_included_df = add_percent_columns(summed_df)
 
 # 10. drop rows with zeros in cpu & mem total
 nonzero_df = drop_zero_cpu_mem(percents_included_df, reset_index=True)
 
 # 11. add ratio cols for duration_t_i columns
-    # - add_ratio_cols.py
+ratios_added_df = insert_ratio_columns(nonzero_df)
 
 # 12. drop numerator columns of ratio cols
     # - add_ratio_cols.py

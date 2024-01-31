@@ -124,9 +124,18 @@ def _insert_rand_refresh_col(df, refresh_title, method=0):
     return df
 
 
+NUM_DURATION_COLS = 0
+
+def _get_num_duration_cols():
+    return NUM_DURATION_COLS
+
 # given a dataframe and number of duration columns to insert, (also single_method, which is either False or some int between 0 and 2)
 # return an updated dataframe with an added n duration columns of various insert methods
 def insert_n_duration_columns(df, n, single_method=False):
+    # initialize NUM_DURATION_COLS to be n for later steps
+    global NUM_DURATION_COLS
+    NUM_DURATION_COLS = n
+
     num_insert_methods = 3
     # warn the user if they are expecting more insert methods than are available in _insert_rand_refresh_col
     if n > num_insert_methods and not single_method:
@@ -194,19 +203,19 @@ def _get_metric_column_names():
 
 # given: 
     # df - a dataframe 
-    # num_inserted_duration_cols - the number previously passed in as n in insert_n_duration_columns
     # batch_size - number of rows to query at a time until the df is filled out
     # temporary_save_file - name of a csv file to save df to after each big insert in case the program is stopped
 # query all important metrics, saving to the temporary_save_file after inserting columns of the same duration column.
     # Note: this function assumes the total duration column is "runtime" and duration columns 
-    # are in the form "duration_t{N}" where {N} is an int from 1 to num_inserted_duration_cols inclusive
+    # are in the form "duration_t{N}" where {N} is an int from 1 to num_duration_cols inclusive
 # return the updated dataframe with all columns queried
-def query_metrics(df, num_inserted_duration_cols, batch_size, temporary_save_file):
-    # get metrics lists
+def query_metrics(df, batch_size, temporary_save_file):
+    # get metrics lists and number of duration columns
     static_metrics, non_static_metrics = _get_metrics()
-    
+    num_duration_cols = _get_num_duration_cols()
+
     # get duration column names
-    duration_col_names = ["duration_t" + num for num in range(1,num_inserted_duration_cols+1)]
+    duration_col_names = ["duration_t" + num for num in range(1,num_duration_cols+1)]
     duration_col_total = "runtime"
 
     # get metric column names
@@ -266,7 +275,10 @@ step 9 - add in percent columns
 ------
 '''
 
-def add_percent_columns(df, num_inserted_duration_cols):
+def add_percent_columns(df):
+    # get number of duration columns
+    num_duration_cols = _get_num_duration_cols()
+
     # metrics lists that will be used to get/calculate percentages
     percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
     numerator_metrics = ["cpu_usage", "mem_usage"]
@@ -275,7 +287,7 @@ def add_percent_columns(df, num_inserted_duration_cols):
     # insert percentage columns as df[percent_metric_col] = 100 * df[numerator_metric_col] / df[denominator_metric_col]
     df = insert_percent_cols(
         df, percent_metrics, numerator_metrics, denominator_metrics, 
-        num_inserted_duration_cols, static_metrics)
+        num_duration_cols, static_metrics)
 
     return df
 
@@ -301,12 +313,42 @@ step 11 - add ratio cols for duration_t_i columns
 -------
 '''
 
-# # given a dataframe
-# # return the updated dataframe with new columns inserted as a ratio of numerator_col/denominator_col
-# def insert_ratio_columns(df):
-#     cols_to_insert, numerator_cols, duration_col
+# given an i (1 through num_duration_cols inclusive), 
+# return 
+    # insert_ratio_cols - a list of ratio column names at i to be inserted
+    # numerator_cols - a list of numerator column names at i to use for calculation (that already exist)
+    # duration_col - a column name of the duration column at i
+def _get_ratio_components(i):
+    if i < 1:
+        warnings.warn("i should only be 1 through num_duration_cols inclusive. Otherwise, there may be unexpected behaviors")
 
-#     for insert_col, numerator_col in zip(cols_to_insert, numerator_cols):
-#         df[insert_col] = df[numerator_col].astype(float) / df[duration_col].astype(float)
-#     return df
+    # get non static metrics which will be used to find numerator columns
+    _, non_static_metrics = _get_metrics()
+
+    # get numerator column names, new insert column names, and duration column name
+    numerator_cols = [f"{metric}_t{i}" for metric in non_static_metrics]
+    insert_ratio_cols = [f"{name}_ratio" for name in numerator_cols]
+    duration_col = f"duration_t{i}"
+
+    return insert_ratio_cols, numerator_cols, duration_col
+
+
+# given a dataframe, return the updated dataframe 
+# with new columns inserted as a ratio of numerator_col/duration_col
+def insert_ratio_columns(df):
+    # get number of duration columns
+    num_duration_cols = _get_num_duration_cols()
+
+    # get column names, then calculate and insert ratio columns
+    for i in range(1, num_duration_cols+1):
+        # get column names for ratio cols to be inserted, numerator cols, duration (denominator) col
+        cols_to_insert, numerator_cols, duration_col = _get_ratio_components(i)
+
+        # calculate and insert ratio columns
+        for insert_col, numerator_col in zip(cols_to_insert, numerator_cols):
+            df[insert_col] = df[numerator_col].astype(float) / df[duration_col].astype(float)
+
+    return df
+
+
 
