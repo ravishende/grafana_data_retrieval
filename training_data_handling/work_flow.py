@@ -1,13 +1,14 @@
+import shutil
 import pandas as pd
 from work_flow_functions import *
 
-# settings
-phase1_read_file = "csv_files/phase1_read.csv"
-phase1_write_file = "csv_files/phase1_write.csv"
-phase2_read_file = "csv_files/phase2_read.csv"
-phase2_write_file = "csv_files/phase2_write.csv"
-phase3_read_file = "csv_files/phase3_read.csv"
-phase3_write_file = "csv_files/phase2_write.csv"
+# file settings
+phase1_read_file    = "csv_files/phase_1_read.csv"
+phase1_write_file   = "csv_files/phase_1_write.csv"
+phase2_read_file    = "csv_files/phase_2_read.csv"
+phase2_write_file   = "csv_files/phase_2_write.csv"
+phase3_read_file    = "csv_files/phase_3_read.csv"
+phase3_write_file   = "csv_files/phase_3_write.csv"
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -80,12 +81,7 @@ drop_cols_2 = [
     "start",
     "stop", 
     "ensemble_uuid", 
-    "run_uuid"
-    # with the ratio columns added, the following no longer become useful 
-    "cpu_t1", 
-    "mem_t1",
-    "cpu_t2",
-    "mem_t2"
+    # "run_uuid"
 ]
 
 
@@ -152,14 +148,16 @@ summed_df = update_queried_cols(queried_df)
 percents_included_df = add_percent_columns(summed_df, num_duration_cols)
 
 # 10. drop rows with zeros in cpu & mem total
-    # - investigate_zero_usage.py
+nonzero_df = drop_zero_cpu_mem(percents_included_df, reset_index=True)
 
-
-# 11. add ratio cols for t1 & t2
+# 11. add ratio cols for duration_t_i columns
     # - add_ratio_cols.py
 
+# 12. drop numerator columns of ratio cols
+    # - add_ratio_cols.py
 
-# 12. drop drop_cols_2
+# 13. drop_cols_2
     # - finalize_training_data.py
 
+PHASE_3_COMPLETE = True
 

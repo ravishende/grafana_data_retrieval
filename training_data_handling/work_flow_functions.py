@@ -218,15 +218,17 @@ def query_metrics(df, num_inserted_duration_cols, batch_size, temporary_save_fil
         if column not in df.columns:
             df[column] = None
 
-    # query and insert static and total columns
-    df = query_and_insert_columns(df, static_metrics, col_names_static, duration_col_total, batch_size)
-    df.to_csv(temporary_save_file)
-    df = query_and_insert_columns(df, non_static_metrics, col_names_total, duration_col_total, batch_size)
-    df.to_csv(temporary_save_file)
-    # query and insert duration_t_i columns
-    for i, col_names_t_i in enumerate(col_names_by_time):
-        df = query_and_insert_columns(df, non_static_metrics, col_names_t_i, duration_cols[i], batch_size)
+    # while there are still unqueried rows, keep querying batch_size rows at a time
+    while df[non_static_metrics[0]].iloc[len(df)-1].isna():
+        # query and insert static and total columns
+        df = query_and_insert_columns(df, static_metrics, col_names_static, duration_col_total, batch_size)
         df.to_csv(temporary_save_file)
+        df = query_and_insert_columns(df, non_static_metrics, col_names_total, duration_col_total, batch_size)
+        df.to_csv(temporary_save_file)
+        # query and insert duration_t_i columns
+        for i, col_names_t_i in enumerate(col_names_by_time):
+            df = query_and_insert_columns(df, non_static_metrics, col_names_t_i, duration_cols[i], batch_size)
+            df.to_csv(temporary_save_file)
 
     return df
 
@@ -279,8 +281,32 @@ def add_percent_columns(df, num_inserted_duration_cols):
 
 
 '''
-------
+-------
 step 10 - drop rows with zeros in cpu & mem usage total
-------
+-------
 '''
+
+# given a dataframe with the columns "cpu_usage_total" and "mem_usage_total", drop all rows where those columns are 0
+# return the updated dataframe
+def drop_zero_cpu_mem(df, reset_index=True):
+    zero_mask = (summed['cpu_usage_total'] == 0) | (summed['mem_usage_total'] == 0)
+    non_zeros = summed[~zero_mask]
+    if reset_index:
+        non_zeros = non_zeros.reset_index(drop=True)
+
+
+'''
+-------
+step 11 - add ratio cols for duration_t_i columns
+-------
+'''
+
+# # given a dataframe
+# # return the updated dataframe with new columns inserted as a ratio of numerator_col/denominator_col
+# def insert_ratio_columns(df):
+#     cols_to_insert, numerator_cols, duration_col
+
+#     for insert_col, numerator_col in zip(cols_to_insert, numerator_cols):
+#         df[insert_col] = df[numerator_col].astype(float) / df[duration_col].astype(float)
+#     return df
 
