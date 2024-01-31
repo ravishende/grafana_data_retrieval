@@ -41,13 +41,6 @@ step 2 - collect runs
 def collect_runs(df):
     pass
 
-
-'''
-========================
-        Phase 2
-========================
-'''
-
 '''
 ------
 step 3 - add in ensemble_uuid
@@ -59,6 +52,12 @@ def add_id_cols(successful_runs_df, collected_runs_df):
     successful_runs_subset = successful_runs_df[['ensemble_uuid', 'run_uuid']]
     merged_df = pd.merge(collected_runs_df, successful_runs_subset, left_index=True, right_index=True)
     return merged_df
+
+'''
+========================
+        Phase 2
+========================
+'''
 
 
 '''

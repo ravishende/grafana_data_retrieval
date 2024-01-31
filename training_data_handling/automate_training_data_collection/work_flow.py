@@ -1,14 +1,7 @@
 import shutil
 import pandas as pd
 from work_flow_functions import *
-
-# file settings
-phase1_read_file    = "csv_files/phase_1_read.csv"
-phase1_write_file   = "csv_files/phase_1_write.csv"
-phase2_read_file    = "csv_files/phase_2_read.csv"
-phase2_write_file   = "csv_files/phase_2_write.csv"
-phase3_read_file    = "csv_files/phase_3_read.csv"
-phase3_write_file   = "csv_files/phase_3_write.csv"
+from workflow_files import phase1_files, phase2_files, phase3_files, phase4files
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -25,19 +18,20 @@ PHASE_3_COMPLETE = False
 '''
 Work Flow
 
-======================
-Phase 1: PreProcessing
-======================
+=========================
+Phase 1:  Collecting Runs
+=========================
 1. get successful bp3d runs from bp3d-runs
     - run_selection.py
 2. collect runs from successful bp3d runs  # needs new phase?
     - gather.ipynb in collect_runs/
-
-===================
-Phase 2: Collecting
-===================
 3. add in ensemble uuid
     - add_id_cols.py 
+
+
+======================
+Phase 2: Preprocessing
+======================
 4. calculate area and runtime
     - filter_training_data.py 
 5. drop drop_cols_1
@@ -97,13 +91,13 @@ drop_cols_2 = [
 
 
 '''
-======================
-Phase 1: Preprocessing
-======================
+========================
+Phase 1: Collecting Runs
+========================
 '''
 
 # 1. get successful bp3d runs from bp3d-runs
-runs_df = pd.read_csv(phase1_read_file, index_col=0)
+runs_df = pd.read_csv(phase1_files['read'], index_col=0)
 successful_runs_df = get_successful_runs(runs_df, reset_index=True)
 
 # 2. collect runs from successful bp3d runs
@@ -112,6 +106,14 @@ collected_runs_df = collect_runs(successful_runs_df)  # write collect_runs() fun
 
 # 3. add in ensemble uuid
 ids_included_df = add_id_cols(successful_runs_df, collected_runs_df)
+
+ids_included_df.to_csv()
+
+'''
+======================
+Phase 2: PreProcessing
+======================
+'''
 
 # 4. calculate area and runtime
 calculated_df = add_area_and_runtime(ids_included_df)
@@ -124,12 +126,13 @@ num_duration_cols = 2  # number of duration columns to insert and query for (doe
 preprocessed_df = insert_n_duration_columns(filtered_df, num_duration_cols, single_method=False)
 
 # save preprocessed_df to file
-preprocessed_df.to_csv(phase1_write_file)
+preprocessed_df.to_csv(phase2_files['write'])
 PHASE_1_COMPLETE = True
+
 
 '''
 =================
-Phase 2: Querying
+Phase 3: Querying
 =================
 '''
 
@@ -139,8 +142,9 @@ rows_batch_size = 20
 queried_df = query_metrics(preprocessed_df, rows_batch_size, temporary_save_file)
 
 # save df to a csv file
-queried_df.to_csv(phase2_write_file)
+queried_df.to_csv(phase3_files['write'])
 PHASE_2_COMPLETE = True
+
 
 '''
 ====================================
@@ -164,6 +168,6 @@ ratios_added_df = insert_ratio_columns(nonzero_df, drop_numerators=True, reset_i
 final_df = drop_columns(ratios_added_df, drop_cols_2)
 
 # save df to a csv file
-queried_df.to_csv(phase2_write_file)
+queried_df.to_csv(phase4files['write'])
 PHASE_3_COMPLETE = True
 
