@@ -8,7 +8,8 @@ import pickle
 from pprint import pprint
 import os
 from dotenv import load_dotenv
-from workflow_files import save
+from workflow_files import phase1_files
+from termcolor import colored
 
 
 '''
@@ -27,7 +28,6 @@ save df to a file
 
 
 
-'''
 if not load_dotenv():
     raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY")
 
@@ -51,7 +51,7 @@ bucket = 'burnpro3d/d'
 root = list(fs.ls(bucket))
 
 simulation_paths = []
-print("successfully authenticated")
+print(colored("successfully authenticated", "green"))
 
 
 def get_paths(rangestart,rangeend):
@@ -70,15 +70,17 @@ def get_child_directories(path):
         if "run_" in p:
             simulation_paths.append(p)
 
-def read_paths(df):
-    # csv_file = "csv_files/successful_bp3d_runs.csv"
-    # df = pd.read_csv(csv_file, index_col=0)
-    paths_df = df["s3_path"]
-    paths_list = paths_df.tolist()
-    return paths_list
+# def read_paths(df):
+#     # df = pd.read_csv(read_file, index_col=0)
+#     paths_df = df["s3_path"]
+#     paths_list = paths_df.tolist()
+#     return paths_list
 
-simulation_paths = read_paths()
-print("simulation paths length:", len(simulation_paths))
+def read_paths():
+    paths = []
+    with open("paths.txt","r") as f:
+        paths = f.read().splitlines() 
+    return paths
 
 KEEP_ATTRIBUTES = {
     'path': lambda d: None,
@@ -108,7 +110,7 @@ KEEP_ATTRIBUTES = {
 }
 filenotfound = []
 
-def get_df_chunk(stop):
+def get_df_chunk(stop, paths):
     with open("vars.txt", "r") as file:
         start = int(file.read())
         print("start: line" , start)
@@ -144,35 +146,66 @@ def get_df_chunk(stop):
             print("\nRead from ", start, " to ", stop,"\n")
     return df
 
-pd.set_option('display.max_columns', None)
-print(filenotfound)
+# given a dataframe of runs with ens_status and run_status columns,
+# return a new dataframe with only the successful runs 
+def get_successful_runs(df, reset_index=True):
+    # get a df with only the successful runs
+    successful_runs = df[(df["ens_status"]=="Done") & (df["run_status"]=="Done")]
+    # if requested, reset the indices to 0 through end of new df after selection
+    if reset_index:
+        successful_runs = successful_runs.reset_index(drop=True)
+    return successful_runs
 
-simulation_paths = read_paths()
-df = get_df_chunk(1889)
+# given a df returns an updated df with the NaN time rows removed
+def remove_na_rows(df):
+    # crucial columns that need to have data. If they do not, that means the run failed somewhere
+    time_cols = ['run_start', 'run_end', 'sim_time']
 
+    # Create a new DataFrame that includes rows with NA values in 'start', 'stop', or 'runtime'
+    # Then store it in a csv file called na_times
+    na_mask = df[time_cols].isna()
+    na_rows_df = df[na_mask.any(axis=1)]
+    if len(na_rows_df > 0):
+        na_rows_df.to_csv('csv_files/na_times.csv', mode='a')
 
+    # Drop columns with NA values in any of the time columns
+    df = df.dropna(subset=time_cols)
 
-# remove NaN rows
-# crucial columns that need to have data. If they do not, that means the run failed somewhere
-time_cols = ['run_start', 'run_end', 'sim_time']
+    # Rename the 'run_end' column to stop and run_start column to 'start'
+    df = df.rename(columns={"run_end": "stop", "run_start": "start"})
+    df = df.drop(columns=["ignition","fuel"], axis=1)
+    return df
 
-# Create a new DataFrame that includes rows with NA values in 'start', 'stop', or 'runtime'
-# Then store it in a csv file called na_times
-na_mask = df[time_cols].isna()
-na_rows_df = df[na_mask.any(axis=1)]
-if len(na_rows_df > 0):
-    na_rows_df.to_csv('csv_files/na_times.csv', mode='a')
-
-# Drop columns with NA values in any of the time columns
-df = df.dropna(subset=time_cols)
-
-# Rename the 'run_end' column to stop and run_start column to 'start'
-df = df.rename(columns={"run_end": "stop", "run_start": "start"})
-df = df.drop(columns=["ignition","fuel"], axis=1)
-
-
-if len(df > 0):
-    df.to_csv('csv_files/unfiltered.csv', mode='a')
 
 
 '''
+======================
+    Main Program
+======================
+'''
+
+pd.set_option('display.max_columns', None)
+print("file_not_found: \n\t", filenotfound)
+
+# get a df that only contains the ids and status of successful runs
+runs_list_df = pd.read_csv(phase1_files['read'])
+successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
+
+# get the paths of the successful runs
+simulation_paths = read_paths()
+print("simulation paths length:", len(simulation_paths))
+
+# get the actual runs from the successful runs paths
+batch_size = 100
+num_batches = len(successful_runs_list_df) // batch_size
+for i in range(num_batches):
+    # if its the last iteration, get the paths until the end of the run
+    if i == num_batches-1:
+        runs_df = get_df_chunk(len(successful_runs_list_df), simulation_paths)
+    else:
+        runs_df = get_df_chunk(batch_size*num_batches, simulation_paths)
+    # save the df to a file
+    if len(runs_df > 0):
+        runs_df.to_csv(phase1_files['write'], mode='a')
+
+print(runs_df)
