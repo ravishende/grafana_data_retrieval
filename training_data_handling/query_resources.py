@@ -6,10 +6,11 @@ import shutil
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
-sys.path.append("../grafana_data_retrieval")
-current = os.path.dirname(os.path.realpath("query_resources.py"))
+sys.path.append("../grafana_data_retrieval")  # Adjust the path to go up one level
+current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
+from helpers.querying import query_data
 from helpers.querying import query_data
 from helpers.printing import print_heading, print_title
 from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_offset
