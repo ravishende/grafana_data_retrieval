@@ -54,21 +54,58 @@ simulation_paths = []
 print(colored("successfully authenticated", "green"))
 
 
-def get_paths(rangestart,rangeend):
-    global fs, bucket
-    paths = fs.ls(bucket)
-    for path in paths[rangestart:rangeend]:
-        paths = fs.ls(path)
-        for path in paths:
-            get_child_directories(path)
-
-def get_child_directories(path):
-    global fs
-    global simulation_paths
+def get_child_directories(fs, path):
+    sim_paths = []
     paths = fs.ls(path)
     for p in paths:
         if "run_" in p:
-            simulation_paths.append(p)
+            sim_paths.append(p)
+    return sim_paths
+
+
+# Given paths_batch (a list of paths to append to the file),
+# appends a batch of paths to 'paths.txt'. Each path is written on a new line.
+# If 'paths.txt' does not exist, it is created.
+def append_paths_txt(paths_batch):
+    with open("paths.txt", "a") as file:  # Open the file in append mode ('a')
+        for path in paths_batch:
+            file.write(path + "\n")  # Write each path on a new line
+
+
+def get_paths_batch(start_index, end_index, fs, bucket):
+    paths_batch = []
+    paths = fs.ls(bucket)
+    for path in tqdm(paths[start_index:end_index]):
+        paths = fs.ls(path)
+        for path in paths:
+            paths_batch += get_child_directories(fs, path)
+    return paths_batch
+
+# batch size is a number of paths per batch to get
+def get_all_paths(fs, bucket, batch_size=None):
+    paths_len = len(fs.ls(bucket))
+    if batch_size is None:
+        sim_paths = get_paths_batch(0, paths_len, fs, bucket)
+        append_paths_txt(sim_paths)
+        return sim_paths
+
+    all_simulation_paths = []
+    start_index = 0
+    end_index = batch_size
+    finished_collecting = False
+    while not finished_collecting:
+        if end_index >= paths_len:
+            end_index = paths_len
+            finished_collecting = True
+        sim_paths_batch = get_paths_batch(start_index, end_index, fs, bucket)
+        all_simulation_paths += sim_paths_batch
+        append_paths_txt(sim_paths_batch)
+        start_index = end_index
+        end_index = start_index + batch_size
+
+    return all_simulation_paths
+
+
 
 # def read_paths(df):
 #     # df = pd.read_csv(read_file, index_col=0)
@@ -192,7 +229,9 @@ runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 # get the paths of the successful runs
-simulation_paths = read_paths()
+print("\n\n\n\nGetting all paths:\n")
+simulation_paths = get_all_paths(fs, bucket)
+# simulation_paths = read_paths()
 print("simulation paths length:", len(simulation_paths))
 
 # get the actual runs from the successful runs paths
@@ -206,6 +245,6 @@ for i in range(num_batches):
         runs_df = get_df_chunk(batch_size*num_batches, simulation_paths)
     # save the df to a file
     if len(runs_df > 0):
-        runs_df.to_csv(phase1_files['write'], mode='a')
+        # runs_df.to_csv(phase1_files['write'], mode='a')
 
-print(runs_df)
+         print(runs_df)
