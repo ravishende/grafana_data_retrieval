@@ -84,24 +84,32 @@ def get_paths_batch(start_index, end_index, fs, bucket):
 # batch size is a number of paths per batch to get
 def get_all_paths(fs, bucket, batch_size=None):
     paths_len = len(fs.ls(bucket))
+    
+    # if we're not using batches, run everything at once
     if batch_size is None:
         sim_paths = get_paths_batch(0, paths_len, fs, bucket)
         append_paths_txt(sim_paths)
         return sim_paths
 
+    # collect runs in batches
     all_simulation_paths = []
-    start_index = 0
-    end_index = batch_size
-    finished_collecting = False
-    while not finished_collecting:
-        if end_index >= paths_len:
+    num_batches = paths_len//batch_size
+    for i in range(0, num_batches):
+        # define indices to get paths batch for
+        start_index = i*batch_size
+        end_index = (i+1)*batch_size
+
+        # make sure to get all of the paths on the final batch
+        if end_index == num_batches-1:
             end_index = paths_len
-            finished_collecting = True
+
+        # get simulation paths for this batch
+        print(f"\nGetting batch for indices {start_index} up to {end_index}.", colored(f"Batch {i+1}/{num_batches}", "blue"))
         sim_paths_batch = get_paths_batch(start_index, end_index, fs, bucket)
         all_simulation_paths += sim_paths_batch
+
+        # append newly collected paths to the paths.txt file
         append_paths_txt(sim_paths_batch)
-        start_index = end_index
-        end_index = start_index + batch_size
 
     return all_simulation_paths
 
@@ -222,15 +230,16 @@ def remove_na_rows(df):
 '''
 
 pd.set_option('display.max_columns', None)
-print("file_not_found: \n\t", filenotfound)
+if len(filenotfound)>0:
+    print("file_not_found: \n\t", filenotfound)
 
 # get a df that only contains the ids and status of successful runs
 runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 # get the paths of the successful runs
-print("\n\n\n\nGetting all paths:\n")
-simulation_paths = get_all_paths(fs, bucket)
+print("\nGetting all paths:")
+simulation_paths = get_all_paths(fs, bucket, batch_size=5)
 # simulation_paths = read_paths()
 print("simulation paths length:", len(simulation_paths))
 
