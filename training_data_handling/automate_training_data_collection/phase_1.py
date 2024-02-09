@@ -51,15 +51,15 @@ bucket = 'burnpro3d/d'
 root = list(fs.ls(bucket))
 
 simulation_paths = []
-print(colored("successfully authenticated", "green"))
+print(colored("\n\nsuccessfully authenticated", "green"))
 
 
 def get_child_directories(fs, path):
     sim_paths = []
     paths = fs.ls(path)
-    for p in paths:
-        if "run_" in p:
-            sim_paths.append(p)
+    for path in paths:
+        if "run_" in path:
+            sim_paths.append(path)
     return sim_paths
 
 
@@ -153,26 +153,31 @@ KEEP_ATTRIBUTES = {
     'wind_direction': lambda d: d['wind_direction'],
     'wind_speed': lambda d: d['wind_speed']
 }
-filenotfound = []
 
-def get_df_chunk(stop, paths):
+
+def get_df_chunk(stop, paths, files_not_found):
+    filenotfound = []
     with open("vars.txt", "r") as file:
         start = int(file.read())
-        print("start: line" , start)
-    global simulation_paths, KEEP_ATTRIBUTES, incomplete, filenotfound
+        
+    global KEEP_ATTRIBUTES
 
     df = pd.DataFrame([], columns=KEEP_ATTRIBUTES.keys())
     time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
-    i = 0
+    
     if stop > len(paths):
         stop = len(paths)
-    for p in tqdm(simulation_paths[start:stop]):
+
+    print(f"Reading from line {start} to {stop}")
+
+    row_index = 0
+    for path in tqdm(paths[start:stop]):
         try:
-            with fs.open(p + '/' + name + '/.zattrs') as f:
-                data=json.load(f)
+            with fs.open(path + '/' + name + '/.zattrs') as file:
+                data=json.load(file)
         except:
-            filenotfound.append(p)
-            print("FileNotFound error on path {",p,"}")
+            filenotfound.append(path)
+            # print("FileNotFound error on path {",path,"}")
             continue
             
         row = []
@@ -182,14 +187,49 @@ def get_df_chunk(stop, paths):
             except KeyError:
                 value = None
             row.append(value)
-        row[0] = p
+        row[0] = path
         row[1] = time
-        df.loc[i] = row
-        i+=1
+        df.loc[row_index] = row
+        row_index+=1
     with open("vars.txt", "w") as f:
-            f.write(str(stop))
-            print("\nRead from ", start, " to ", stop,"\n")
-    return df
+        f.write(str(stop))
+
+    print("FileNotFound Error on the following Files:")
+    for file_path in filenotfound:
+        print("\t" + file_path)
+
+    print(colored(f"\nRead from {start} to {stop}\n", "green"))
+    files_not_found += filenotfound
+    return df, files_not_found
+
+
+def get_df_from_paths(simulation_paths, batch_size=1000):
+    # calculate how many batches to run
+    num_batches = len(simulation_paths) // batch_size
+    files_not_found = []
+
+    # get df_chunk and append it to a csv file for each batch
+    for batch_i in range(1, num_batches):
+        print(colored(f"batch {batch_i}/{num_batches}:", "green"))
+        
+        # get the index to stop at in get_df_chunk
+        # if its the last iteration, get the paths until the end of the run
+        stop_index = batch_i*batch_size
+        if batch_i == num_batches:
+            stop_index = len(simulation_paths)
+        
+        # get the df from the runs
+        partial_runs_df, files_not_found = get_df_chunk(stop_index, simulation_paths, files_not_found)
+
+        # save the df to a file
+        if len(partial_runs_df) > 0:
+            partial_runs_df.to_csv(phase1_files['temp'], mode='a')
+            print(partial_runs_df)
+
+    # get the total runs df and return it
+    runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
+    return runs_df
+
 
 # given a dataframe of runs with ens_status and run_status columns,
 # return a new dataframe with only the successful runs 
@@ -200,6 +240,7 @@ def get_successful_runs(df, reset_index=True):
     if reset_index:
         successful_runs = successful_runs.reset_index(drop=True)
     return successful_runs
+
 
 # given a df returns an updated df with the NaN time rows removed
 def remove_na_rows(df):
@@ -230,30 +271,16 @@ def remove_na_rows(df):
 '''
 
 pd.set_option('display.max_columns', None)
-if len(filenotfound)>0:
-    print("file_not_found: \n\t", filenotfound)
 
 # get a df that only contains the ids and status of successful runs
 runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 # get the paths of the successful runs
-print("\nGetting all paths:")
-simulation_paths = get_all_paths(fs, bucket, batch_size=5)
-# simulation_paths = read_paths()
+simulation_paths = read_paths()
 print("simulation paths length:", len(simulation_paths))
 
 # get the actual runs from the successful runs paths
-batch_size = 100
-num_batches = len(successful_runs_list_df) // batch_size
-for i in range(num_batches):
-    # if its the last iteration, get the paths until the end of the run
-    if i == num_batches-1:
-        runs_df = get_df_chunk(len(successful_runs_list_df), simulation_paths)
-    else:
-        runs_df = get_df_chunk(batch_size*num_batches, simulation_paths)
-    # save the df to a file
-    if len(runs_df > 0):
-        # runs_df.to_csv(phase1_files['write'], mode='a')
+runs_df = get_df_from_paths(simulation_paths, batch_size=1000)
 
-         print(runs_df)
+
