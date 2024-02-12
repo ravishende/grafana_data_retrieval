@@ -197,20 +197,25 @@ def get_df_chunk(stop, paths, files_not_found):
         row[1] = time
         df.loc[row_index] = row
         row_index+=1
+
+    # update vars.txt with the next start
     with open("vars.txt", "w") as f:
         f.write(str(stop))
 
+    # print file not found files
     print("FileNotFound Error on the following Files:")
     for file_path in filenotfound:
         print("\t" + file_path)
-
     print(colored(f"\nRead from {start} to {stop}\n", "green"))
+
+    # return df and files not found
     files_not_found += filenotfound
     return df, files_not_found
 
 
 
-
+# given the simulation paths, create a df containing runs
+# for all paths that have corresponding files
 def get_df_from_paths(simulation_paths, batch_size=1000):
     # calculate how many batches to run
     num_batches = len(simulation_paths) // batch_size
