@@ -165,13 +165,9 @@ KEEP_ATTRIBUTES = {
 }
 
 
-def get_df_chunk(stop, paths, files_not_found):
+def get_df_chunk(start, stop, paths, files_not_found):
     # initialize a list of paths that cause filenotfound errors
     filenotfound = []
-    
-    # get start value from vars.txt
-    with open("vars.txt", "r") as file:
-        start = int(file.read())
     
     # initialize dataframe
     global KEEP_ATTRIBUTES
@@ -203,6 +199,7 @@ def get_df_chunk(stop, paths, files_not_found):
             except KeyError:
                 value = None
             row.append(value)
+
         row[0] = path
         row[1] = time
         df.loc[row_index] = row
@@ -230,19 +227,37 @@ def get_df_from_paths(simulation_paths, batch_size=1000):
     # calculate how many batches to run
     num_batches = len(simulation_paths) // batch_size
     files_not_found = []
+    
+    # find out how many runs are previously collected
+    try:
+        runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
+        num_gathered_runs = len(runs_df)
+    except FileNotFoundError:
+        num_collected_runs = 0
+
 
     # get df_chunk and append it to a csv file for each batch
     for batch_i in range(1, num_batches):
         print(colored(f"batch {batch_i}/{num_batches}:", "green"))
-        
-        # get the index to stop at in get_df_chunk
-        # if its the last iteration, get the paths until the end of the run
+
+        # get the index to start and stop at in get_df_chunk
         stop_index = batch_i*batch_size
+        start_index = stop_index-batch_size
+
+        # if this is the last iteration, get the df for the rest of the paths
         if batch_i == num_batches:
             stop_index = len(simulation_paths)
         
+        # don't regather already collected runs
+        if stop_index < num_gathered_runs:
+            print("\truns already gathered - skipping batch")
+            continue
+        # update start_index if it's less than what's been gathered
+        if start_index < num_gathered_runs:
+            start_index = num_gathered_runs
+
         # get the df from the runs
-        partial_runs_df, files_not_found = get_df_chunk(stop_index, simulation_paths, files_not_found)
+        partial_runs_df, files_not_found = get_df_chunk(start_index, stop_index, simulation_paths, files_not_found)
 
         # save the df to a file
         if len(partial_runs_df) > 0:
