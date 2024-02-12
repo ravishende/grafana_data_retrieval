@@ -72,6 +72,15 @@ def append_paths_txt(paths_batch):
             file.write(path + "\n")  # Write each path on a new line
 
 
+def read_paths():
+    paths = []
+    with open("paths.txt","r") as f:
+        paths = f.read().splitlines() 
+    return paths
+
+
+# given a start and end index as well as the file system and bucket, 
+# return all the paths in that index range.
 def get_paths_batch(start_index, end_index, fs, bucket):
     paths_batch = []
     paths = fs.ls(bucket)
@@ -91,13 +100,27 @@ def get_all_paths(fs, bucket, batch_size=None):
         append_paths_txt(sim_paths)
         return sim_paths
 
+    # intialize a list to hold all simulation paths
+    try:
+        all_simulation_paths = read_paths()
+    except FileNotFoundError:    
+        all_simulation_paths = []
+
     # collect runs in batches
-    all_simulation_paths = []
     num_batches = paths_len//batch_size
     for i in range(0, num_batches):
         # define indices to get paths batch for
         start_index = i*batch_size
         end_index = (i+1)*batch_size
+
+        num_gathered_paths = len(all_simulation_paths)
+        
+        # don't re-gather already found paths
+        if end_index > num_gathered_paths:
+            continue
+        # update start index if it's less than what has been gathered
+        if start_index < num_gathered_paths:
+            start_index = num_gathered_paths
 
         # make sure to get all of the paths on the final batch
         if end_index == num_batches-1:
@@ -113,19 +136,6 @@ def get_all_paths(fs, bucket, batch_size=None):
 
     return all_simulation_paths
 
-
-
-# def read_paths(df):
-#     # df = pd.read_csv(read_file, index_col=0)
-#     paths_df = df["s3_path"]
-#     paths_list = paths_df.tolist()
-#     return paths_list
-
-def read_paths():
-    paths = []
-    with open("paths.txt","r") as f:
-        paths = f.read().splitlines() 
-    return paths
 
 KEEP_ATTRIBUTES = {
     'path': lambda d: None,
