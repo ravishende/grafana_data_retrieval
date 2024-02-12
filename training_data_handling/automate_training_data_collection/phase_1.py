@@ -156,15 +156,19 @@ KEEP_ATTRIBUTES = {
 
 
 def get_df_chunk(stop, paths, files_not_found):
+    # initialize a list of paths that cause filenotfound errors
     filenotfound = []
+    
+    # get start value from vars.txt
     with open("vars.txt", "r") as file:
         start = int(file.read())
-        
+    
+    # initialize dataframe
     global KEEP_ATTRIBUTES
-
     df = pd.DataFrame([], columns=KEEP_ATTRIBUTES.keys())
     time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
     
+    # don't try to access out of bounds of path
     if stop > len(paths):
         stop = len(paths)
 
@@ -172,18 +176,20 @@ def get_df_chunk(stop, paths, files_not_found):
 
     row_index = 0
     for path in tqdm(paths[start:stop]):
+        # try to get the file from the path
         try:
             with fs.open(path + '/' + name + '/.zattrs') as file:
                 data=json.load(file)
+        # if the file isn't there, append path to filenotfound
         except:
             filenotfound.append(path)
-            # print("FileNotFound error on path {",path,"}")
             continue
-            
+        
+
         row = []
-        for k,expr in KEEP_ATTRIBUTES.items():
+        for attribute in KEEP_ATTRIBUTES.keys():
             try:
-                value = KEEP_ATTRIBUTES[k](data)
+                value = KEEP_ATTRIBUTES[attribute](data)
             except KeyError:
                 value = None
             row.append(value)
@@ -201,6 +207,8 @@ def get_df_chunk(stop, paths, files_not_found):
     print(colored(f"\nRead from {start} to {stop}\n", "green"))
     files_not_found += filenotfound
     return df, files_not_found
+
+
 
 
 def get_df_from_paths(simulation_paths, batch_size=1000):
