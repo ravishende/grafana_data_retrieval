@@ -18,40 +18,34 @@ Phase 1:  Collecting Runs
 =========================
 1. get successful bp3d runs from bp3d-runs
     - run_selection.py
-2. collect runs from successful bp3d runs  # needs new phase?
+2. collect runs from successful bp3d runs
     - gather.ipynb in collect_runs/
 
 FINISH:
 save df to a file
 '''
 
+def get_fs_and_bucket():
+    # get login details from .env file
+    if not load_dotenv():
+        raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY")
+    endpoint = 'https://wifire-data.sdsc.edu:9000'
+    access_key = os.getenv("ACCESS_KEY")
+    secret_key = os.getenv("SECRET_KEY")
 
+    # login and get fs (file system) and bucket
+    fs = s3fs.S3FileSystem(key=access_key,
+        secret=secret_key,
+        client_kwargs={
+            'endpoint_url': endpoint,
+            'verify': False
+        },
+        skip_instance_cache=False
+    )
+    bucket = 'burnpro3d/d'
 
-
-if not load_dotenv():
-    raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY")
-
-endpoint = 'https://wifire-data.sdsc.edu:9000'
-access_key = os.getenv("ACCESS_KEY")
-secret_key = os.getenv("SECRET_KEY")
-
-# get fs and bucket
-fs = s3fs.S3FileSystem(key=access_key,
-    secret=secret_key,
-    client_kwargs={
-        'endpoint_url': endpoint,
-        'verify': False
-    },
-    skip_instance_cache=False
-)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
-
-name = 'quicfire.zarr'
-bucket = 'burnpro3d/d'
-
-root = list(fs.ls(bucket))
-
-simulation_paths = []
-print(colored("\n\nsuccessfully authenticated", "green"))
+    print(colored("\n\nsuccessfully authenticated", "green"))
+    return fs, bucket
 
 
 def get_child_directories(fs, path):
@@ -91,20 +85,22 @@ def get_paths_batch(start_index, end_index, fs, bucket):
     return paths_batch
 
 # batch size is a number of paths per batch to get
-def get_all_paths(fs, bucket, batch_size=None):
+def gather_all_paths(fs, bucket, batch_size=None):
     paths_len = len(fs.ls(bucket))
     
-    # if we're not using batches, run everything at once
-    if batch_size is None:
-        sim_paths = get_paths_batch(0, paths_len, fs, bucket)
-        append_paths_txt(sim_paths)
-        return sim_paths
-
     # intialize a list to hold all simulation paths
     try:
         all_simulation_paths = read_paths()
+        num_gathered_paths = len(all_simulation_paths)
     except FileNotFoundError:    
         all_simulation_paths = []
+        num_gathered_paths = 0
+
+    # if we're not using batches, run everything at once
+    if batch_size is None:
+        sim_paths = get_paths_batch(num_gathered_paths, paths_len, fs, bucket)
+        append_paths_txt(sim_paths)
+        return all_simulation_paths + sim_paths
 
     # collect runs in batches
     num_batches = paths_len//batch_size
@@ -112,11 +108,10 @@ def get_all_paths(fs, bucket, batch_size=None):
         # define indices to get paths batch for
         start_index = i*batch_size
         end_index = (i+1)*batch_size
-
-        num_gathered_paths = len(all_simulation_paths)
         
         # don't re-gather already found paths
-        if end_index > num_gathered_paths:
+        if end_index < num_gathered_paths:
+            print(f"\tpaths already gathered for batch {i} - skipping batch")
             continue
         # update start index if it's less than what has been gathered
         if start_index < num_gathered_paths:
@@ -184,6 +179,7 @@ def get_df_chunk(start, stop, paths, files_not_found):
     for path in tqdm(paths[start:stop]):
         # try to get the file from the path
         try:
+            name = 'quicfire.zarr'
             with fs.open(path + '/' + name + '/.zattrs') as file:
                 data=json.load(file)
         # if the file isn't there, append path to filenotfound
@@ -307,6 +303,10 @@ def remove_na_rows(df):
     Main Program
 ======================
 '''
+
+# gather simulation paths to be read
+fs, bucket = get_fs_and_bucket()
+gather_all_paths(fs, bucket, batch_size=1000)
 
 pd.set_option('display.max_columns', None)
 
