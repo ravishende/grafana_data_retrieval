@@ -1,16 +1,18 @@
+import os
 import s3fs
 import zarr
 import json
-from datetime import datetime
-from tqdm import tqdm
-import pandas as pd
+import math
 import pickle
+import pandas as pd
+from tqdm import tqdm
 from pprint import pprint
-import os
+from termcolor import colored
+from datetime import datetime
 from dotenv import load_dotenv
 from workflow_files import phase1_files
-from termcolor import colored
 
+pd.set_option('display.max_columns', None)
 
 '''
 =========================
@@ -72,6 +74,16 @@ def read_paths():
         paths = f.read().splitlines() 
     return paths
 
+def get_parents_paths_gathered():
+    parent_paths_gathered = 0
+    with open("vars.txt","r") as file:
+        parent_paths_gathered = int(file.read())
+    return parent_paths_gathered
+
+def update_parents_paths_gathered(parent_paths_gathered):
+    with open("vars.txt", "w") as file:
+        file.write(str(parent_paths_gathered))
+
 
 # given a start and end index as well as the file system and bucket, 
 # return all the paths in that index range.
@@ -86,50 +98,49 @@ def get_paths_batch(start_index, end_index, fs, bucket):
 
 # batch size is a number of paths per batch to get
 def gather_all_paths(fs, bucket, batch_size=None):
-    paths_len = len(fs.ls(bucket))
-    
+    # way of keeping track of if all runs have been added yet
+    parent_paths_len = len(fs.ls(bucket))
+    parent_paths_gathered = get_parents_paths_gathered()
+
     # intialize a list to hold all simulation paths
     try:
-        all_simulation_paths = read_paths()
-        num_gathered_paths = len(all_simulation_paths)
+        all_simulation_paths_list = read_paths()
     except FileNotFoundError:    
-        all_simulation_paths = []
-        num_gathered_paths = 0
+        all_simulation_paths_list = []
 
     # if we're not using batches, run everything at once
     if batch_size is None:
-        sim_paths = get_paths_batch(num_gathered_paths, paths_len, fs, bucket)
-        append_paths_txt(sim_paths)
-        return all_simulation_paths + sim_paths
+        sim_paths_list = get_paths_batch(parent_paths_gathered, parent_paths_len, fs, bucket)
+        append_paths_txt(sim_paths_list)
+        return all_simulation_paths_list + sim_paths_list
 
     # collect runs in batches
-    num_batches = paths_len//batch_size
+    parent_paths_left = parent_paths_len-parent_paths_gathered
+    num_batches = math.ceil(parent_paths_left/batch_size)
     for i in range(0, num_batches):
         # define indices to get paths batch for
-        start_index = i*batch_size
-        end_index = (i+1)*batch_size
-        
-        # don't re-gather already found paths
-        if end_index < num_gathered_paths:
-            print(f"\tpaths already gathered for batch {i} - skipping batch")
-            continue
-        # update start index if it's less than what has been gathered
-        if start_index < num_gathered_paths:
-            start_index = num_gathered_paths
+        start_index = parent_paths_gathered + 1
+        end_index = start_index + batch_size
 
-        # make sure to get all of the paths on the final batch
-        if end_index == num_batches-1:
-            end_index = paths_len
+        # start_index should be 0 if parent_paths_gathered is 0
+        if parent_paths_gathered == 0:
+            start_index = 0
+        # make sure to get all of the paths and no more on the final batch
+        if i == num_batches-1:
+            end_index = parent_paths_len
 
         # get simulation paths for this batch
-        print(f"\nGetting batch for indices {start_index} up to {end_index}.", colored(f"Batch {i+1}/{num_batches}", "blue"))
+        print(f"\nGetting batch for indices {start_index} up to {end_index}.", colored(f"Batch {i+1}/{num_batches}", "magenta"))
         sim_paths_batch = get_paths_batch(start_index, end_index, fs, bucket)
-        all_simulation_paths += sim_paths_batch
+        all_simulation_paths_list += sim_paths_batch
+        
+        # update parent paths gathered
+        parent_paths_gathered += batch_size
+        update_parents_paths_gathered(parent_paths_gathered)
 
         # append newly collected paths to the paths.txt file
         append_paths_txt(sim_paths_batch)
-
-    return all_simulation_paths
+    return all_simulation_paths_list
 
 
 KEEP_ATTRIBUTES = {
@@ -275,6 +286,17 @@ def get_successful_runs(df, reset_index=True):
         successful_runs = successful_runs.reset_index(drop=True)
     return successful_runs
 
+'''
+# given a df that contains all successful runs and a df that 
+def merge_dfs(runs_data_df, runs_list_df):
+    # Selecting the required columns from successful_runs_list_df
+    successful_runs_cols = successful_runs_list_df[['ensemble_uuid', 'run_uuid']]
+    
+    # Merging the dataframes on 'run_uuid' with an inner join
+    merged_df = pd.merge(successful_runs_cols, all_runs_df, on='run_uuid', how='inner')
+    
+    return merged_df
+'''
 
 # given a df returns an updated df with the NaN time rows removed
 def remove_na_rows(df):
@@ -298,27 +320,37 @@ def remove_na_rows(df):
 
 
 
+
 '''
 ======================
     Main Program
 ======================
 '''
 
-# gather simulation paths to be read
+# authenticate and get file system and bucket
 fs, bucket = get_fs_and_bucket()
-gather_all_paths(fs, bucket, batch_size=1000)
 
-pd.set_option('display.max_columns', None)
+# gather simulation paths to be read
+print("\nGathering simulation paths")
+# simulation_paths_list = gather_all_paths(fs, bucket, batch_size=25)
+simulation_paths_list = read_paths()
+print("simulation paths length:", len(simulation_paths_list))
 
+'''
 # get a df that only contains the ids and status of successful runs
 runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
-# get the paths of the successful runs
-simulation_paths = read_paths()
-print("simulation paths length:", len(simulation_paths))
-
 # get the actual runs from the successful runs paths
-runs_df = get_df_from_paths(simulation_paths, batch_size=1000)
+all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=1000)
+# all_runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
 
+# only get the current runs that were successful
+merged_df = merge_dfs(all_runs_df, successful_runs_list_df)
+merged_df = remove_na_rows(merged_df)
+merged_df = get_new_runs_df(merged_df)
 
+# save final_df
+print(merged_df)
+# merged_df.to_csv(phase1_files['write'])
+'''
