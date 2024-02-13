@@ -186,6 +186,7 @@ def get_df_chunk(start, stop, paths, files_not_found):
 
     print(f"Reading from line {start} to {stop}")
 
+    # get each path in the chunk and get the run from that path
     row_index = 0
     for path in tqdm(paths[start:stop]):
         # try to get the file from the path
@@ -199,6 +200,7 @@ def get_df_chunk(start, stop, paths, files_not_found):
             continue
         
 
+        # add all the important attributes of the run to the row
         row = []
         for attribute in KEEP_ATTRIBUTES.keys():
             try:
@@ -207,14 +209,11 @@ def get_df_chunk(start, stop, paths, files_not_found):
                 value = None
             row.append(value)
 
+        # add row to df
         row[0] = path
         row[1] = time
         df.loc[row_index] = row
         row_index+=1
-
-    # update vars.txt with the next start
-    with open("vars.txt", "w") as f:
-        f.write(str(stop))
 
     # print file not found files
     print("FileNotFound Error on the following Files:")
