@@ -286,7 +286,7 @@ def get_successful_runs(df, reset_index=True):
         successful_runs = successful_runs.reset_index(drop=True)
     return successful_runs
 
-'''
+
 # given a df that contains all successful runs and a df that 
 def merge_dfs(runs_data_df, runs_list_df):
     # Selecting the required columns from successful_runs_list_df
@@ -296,19 +296,19 @@ def merge_dfs(runs_data_df, runs_list_df):
     merged_df = pd.merge(successful_runs_cols, all_runs_df, on='run_uuid', how='inner')
     
     return merged_df
-'''
+
 
 # given a df returns an updated df with the NaN time rows removed
 def remove_na_rows(df):
     # crucial columns that need to have data. If they do not, that means the run failed somewhere
-    time_cols = ['run_start', 'run_end', 'sim_time']
+    time_cols = ['run_start', 'run_end']
 
     # Create a new DataFrame that includes rows with NA values in 'start', 'stop', or 'runtime'
     # Then store it in a csv file called na_times
     na_mask = df[time_cols].isna()
     na_rows_df = df[na_mask.any(axis=1)]
-    if len(na_rows_df > 0):
-        na_rows_df.to_csv('csv_files/na_times.csv', mode='a')
+    if len(na_rows_df)>0:
+        na_rows_df.to_csv('csvs/na_times.csv', mode='a')
 
     # Drop columns with NA values in any of the time columns
     df = df.dropna(subset=time_cols)
@@ -319,7 +319,16 @@ def remove_na_rows(df):
     return df
 
 
+# given a df of runs, keep only the runs that aren't already in training_data
+# these runs are checked by the "run_uuid" column in the df and training_data
+def get_new_runs_df(df):
+    training_data = pd.read_csv(phase1_files['training_data'], index_col=0)
 
+    # find runs in df that are not already in training_data by "run_uuid"
+    new_runs_mask = ~df['run_uuid'].isin(training_data['run_uuid'])
+    new_runs_df = df[new_runs_mask]
+
+    return new_runs_df
 
 '''
 ======================
@@ -332,25 +341,28 @@ fs, bucket = get_fs_and_bucket()
 
 # gather simulation paths to be read
 print("\nGathering simulation paths")
-# simulation_paths_list = gather_all_paths(fs, bucket, batch_size=25)
-simulation_paths_list = read_paths()
+simulation_paths_list = gather_all_paths(fs, bucket, batch_size=25)
+# simulation_paths_list = read_paths()
 print("simulation paths length:", len(simulation_paths_list))
 
-'''
+
 # get a df that only contains the ids and status of successful runs
+print("\ngetting successful runs\n")
 runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
+print("getting df from paths\n")
 # get the actual runs from the successful runs paths
 all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=1000)
 # all_runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
 
+print("getting finalized df")
 # only get the current runs that were successful
-merged_df = merge_dfs(all_runs_df, successful_runs_list_df)
+# merged_df = merge_dfs(all_runs_df, successful_runs_list_df)
+merged_df = all_runs_df
 merged_df = remove_na_rows(merged_df)
 merged_df = get_new_runs_df(merged_df)
 
 # save final_df
 print(merged_df)
-# merged_df.to_csv(phase1_files['write'])
-'''
+merged_df.to_csv(phase1_files['write'])

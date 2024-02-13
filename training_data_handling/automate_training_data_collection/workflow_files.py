@@ -1,7 +1,9 @@
 # file settings
 phase1_files = { 
     "read": "csvs/phase_1_read.csv",
-    "write": "csvs/phase_1_write.csv"}
+    "write": "csvs/phase_1_write.csv",
+    "temp": "csvs/phase_1_temp.csv",
+    "training_data": "csvs/training_data.csv"}
 phase2_files = { 
     "read": "csvs/phase_2_read.csv",
     "write": "csvs/phase_2_write.csv"}
