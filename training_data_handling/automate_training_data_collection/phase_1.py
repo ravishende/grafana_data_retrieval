@@ -142,10 +142,36 @@ def gather_all_paths(fs, bucket, batch_size=None):
         append_paths_txt(sim_paths_batch)
     return all_simulation_paths_list
 
+KEEP_ATTRIBUTES = [
+    'run_id',
+    'canopy_moisture',
+    'dz',
+    'extent',
+    'extent_fmt',
+    'fire_grid',
+    'fuel',
+    'ignition',
+    'output',
+    'resolution',
+    'resolution_units',
+    'run_binary',
+    'run_end',
+    'run_max_mem_rss_bytes',
+    'run_start',
+    'seed',
+    'sim_time',
+    'surface_moisture',
+    'threads',
+    'timestep',
+    'topo',
+    'wind_direction',
+    'wind_speed'
+]
 
+'''
 KEEP_ATTRIBUTES = {
     'path': lambda d: None,
-    'time_scraped': lambda d: None,
+
     'canopy_moisture': lambda d: d['canopy_moisture'],
     'dz':lambda d: d['dz'],
     'extent': lambda d: d['extent'],
@@ -169,51 +195,54 @@ KEEP_ATTRIBUTES = {
     'wind_direction': lambda d: d['wind_direction'],
     'wind_speed': lambda d: d['wind_speed']
 }
-
+'''
 
 def get_df_chunk(start, stop, paths, files_not_found):
+    global KEEP_ATTRIBUTES
     # initialize a list of paths that cause filenotfound errors
     filenotfound = []
-    
-    # initialize dataframe
-    global KEEP_ATTRIBUTES
-    df = pd.DataFrame([], columns=KEEP_ATTRIBUTES.keys())
-    time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
     
     # don't try to access out of bounds of path
     if stop > len(paths):
         stop = len(paths)
 
     print(f"Reading from line {start} to {stop}")
-
     # get each path in the chunk and get the run from that path
-    row_index = 0
+    rows = [] # list that will collect row dictionaries to be put into the df
     for path in tqdm(paths[start:stop]):
         # try to get the file from the path
         try:
             name = 'quicfire.zarr'
             with fs.open(path + '/' + name + '/.zattrs') as file:
-                data=json.load(file)
+                run_data=json.load(file)
         # if the file isn't there, append path to filenotfound
         except:
             filenotfound.append(path)
             continue
-        
 
         # add all the important attributes of the run to the row
-        row = []
-        for attribute in KEEP_ATTRIBUTES.keys():
-            try:
-                value = KEEP_ATTRIBUTES[attribute](data)
-            except KeyError:
-                value = None
-            row.append(value)
+        row = run_data
 
-        # add row to df
-        row[0] = path
-        row[1] = time
-        df.loc[row_index] = row
-        row_index+=1
+        # only include valid runs in df
+        valid_run = True
+        for attr in KEEP_ATTRIBUTES:
+            if attr not in run_data:
+                print(colored(f"\n\n{attr} not in run_data", "red"))
+                valid_run=False
+                break
+        if not valid_run:
+            print(run_data.keys(), "\n")
+            continue
+
+        print(colored(run_data, "green"))
+        row['path'] = path
+        rows.append(row)
+    
+    # create the df from all of the rows
+    df = pd.DataFrame(rows)
+    columns_to_keep = ['path'] + KEEP_ATTRIBUTES
+    df['path'] = None
+    # df = df[columns_to_keep]
 
     # print file not found files
     print("FileNotFound Error on the following Files:")
@@ -224,7 +253,6 @@ def get_df_chunk(start, stop, paths, files_not_found):
     # return df and files not found
     files_not_found += filenotfound
     return df, files_not_found
-
 
 
 # given the simulation paths, create a df containing runs
@@ -238,8 +266,8 @@ def get_df_from_paths(simulation_paths, batch_size=1000):
     try:
         runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
         num_gathered_runs = len(runs_df)
-    except FileNotFoundError:
-        num_collected_runs = 0
+    except:
+        num_gathered_runs = 0
 
 
     # get df_chunk and append it to a csv file for each batch
@@ -340,19 +368,17 @@ fs, bucket = get_fs_and_bucket()
 
 # gather simulation paths to be read
 print("\nGathering simulation paths")
-simulation_paths_list = gather_all_paths(fs, bucket, batch_size=25)
-# simulation_paths_list = read_paths()
+# simulation_paths_list = gather_all_paths(fs, bucket, batch_size=25)
+simulation_paths_list = read_paths()
 print("simulation paths length:", len(simulation_paths_list))
 
-
 # get a df that only contains the ids and status of successful runs
-print("\ngetting successful runs\n")
 runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
-all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=1000)
+all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=10) #normally batch size is 1000
 # all_runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
 
 print("getting finalized df")
@@ -365,3 +391,4 @@ merged_df = get_new_runs_df(merged_df)
 # save final_df
 print(merged_df)
 merged_df.to_csv(phase1_files['write'])
+
