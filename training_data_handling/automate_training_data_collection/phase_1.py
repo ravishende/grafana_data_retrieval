@@ -143,64 +143,39 @@ def gather_all_paths(fs, bucket, batch_size=None):
     return all_simulation_paths_list
 
 KEEP_ATTRIBUTES = [
-    'run_id',
     'canopy_moisture',
-    'dz',
     'extent',
-    'extent_fmt',
-    'fire_grid',
-    'fuel',
-    'ignition',
-    'output',
-    'resolution',
-    'resolution_units',
-    'run_binary',
     'run_end',
     'run_max_mem_rss_bytes',
     'run_start',
-    'seed',
     'sim_time',
     'surface_moisture',
     'threads',
-    'timestep',
-    'topo',
     'wind_direction',
     'wind_speed'
 ]
 
-'''
-KEEP_ATTRIBUTES = {
-    'path': lambda d: None,
 
-    'canopy_moisture': lambda d: d['canopy_moisture'],
-    'dz':lambda d: d['dz'],
-    'extent': lambda d: d['extent'],
-    'extent_fmt': lambda d: d['extent_fmt'],
-    'fire_grid': lambda d: d['fire_grid'],
-    'fuel': lambda d: d['fuel'],
-    'ignition': lambda d: d['ignition'],
-    'output': lambda d: d['output'],
-    'resolution': lambda d: d['resolution'],
-    'resolution_units': lambda d: d['resolution_units'],
-    'run_binary': lambda d: d['run_binary'],
-    'run_end': lambda d: d['run_end'],
-    'run_max_mem_rss_bytes': lambda d: d['run_max_mem_rss_bytes'],
-    'run_start': lambda d: d['run_start'],
-    'seed': lambda d: d['seed'],
-    'sim_time': lambda d: d['sim_time'],
-    'surface_moisture': lambda d: d['surface_moisture'],
-    'threads': lambda d: d['threads'],
-    'timestep': lambda d: d['timestep'],
-    'topo': lambda d: d['topo'],
-    'wind_direction': lambda d: d['wind_direction'],
-    'wind_speed': lambda d: d['wind_speed']
-}
-'''
+# get the run_uuid (str) from a path (str)
+def run_id_from_path(path):
+    run_uuid = path.split('/')[-1]
+    return run_uuid
+
+# given a df with a 'path' column, add a new column called 'run_uuid' 
+# which gets the run_uuid from the path. Return the new df.
+def add_run_uuid_col(df):
+    path_col = df['path']
+    df['run_uuid'] = df['path'].apply(run_id_from_path)
+    return df
+
 
 def get_df_chunk(start, stop, paths, files_not_found):
     global KEEP_ATTRIBUTES
     # initialize a list of paths that cause filenotfound errors
     filenotfound = []
+
+    # variable to count the amount of runs missing data (columns)
+    runs_missing_data = 0
     
     # don't try to access out of bounds of path
     if stop > len(paths):
@@ -223,26 +198,25 @@ def get_df_chunk(start, stop, paths, files_not_found):
         # add all the important attributes of the run to the row
         row = run_data
 
-        # only include valid runs in df
-        valid_run = True
+        # if an attribute is not in the row, add it as None
+        complete_run=True
         for attr in KEEP_ATTRIBUTES:
             if attr not in run_data:
-                print(colored(f"\n\n{attr} not in run_data", "red"))
-                valid_run=False
-                break
-        if not valid_run:
-            print(run_data.keys(), "\n")
-            continue
+                row[attr] = None
+                complete_run=False
+        # increment runs_missing_data if the run has columns missing
+        if not complete_run:
+            runs_missing_data += 1
 
-        print(colored(run_data, "green"))
+        # add a path column to the row
         row['path'] = path
         rows.append(row)
     
     # create the df from all of the rows
     df = pd.DataFrame(rows)
     columns_to_keep = ['path'] + KEEP_ATTRIBUTES
-    df['path'] = None
-    # df = df[columns_to_keep]
+    df = df[columns_to_keep]
+    df = add_run_uuid_col(df)
 
     # print file not found files
     print("FileNotFound Error on the following Files:")
@@ -378,7 +352,7 @@ successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
-all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=10) #normally batch size is 1000
+all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=1000) #normally batch size is 1000
 # all_runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
 
 print("getting finalized df")
