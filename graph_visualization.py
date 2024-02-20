@@ -24,7 +24,7 @@ def display_graphs(graphs_dict=None, sum_by=None):
     else:
         hue_column = sum_by
 
-    print(colored("\nDisplaying graphs in popup window. To exit program, go to window and close all graphs.", "green"))
+    print(colored("\nDisplaying graphs in popup window. To exit program, go to window and close all graphs.\n", "green"))
     for graph_title, graph_df in graphs_dict.items():
         # skip empty graphs
         if graph_df is None:
