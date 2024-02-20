@@ -47,77 +47,6 @@ class Graphs():
             ]
         }
 
-    '''
-    # given a timedelta, get it in the form 2d4h12m30s for use with querying (time_step)
-    def _get_time_str_from_timedelta(self, delta):
-        days = delta.days
-        hours, remainder = divmod(delta.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        time_str = f"{days}d{hours}h{minutes}m{seconds}s"
-        return time_str
-    
-
-    # given a string in the form 5w3d6h30m5s, save the times to a dict accesible
-    # by the unit as their key. The int times can be any length (500m160s is allowed)
-    # works given as many or few of the time units. (e.g. 12h also works and sets everything but h to None)
-    def _get_timedelta_from_str(self, time_str):
-        # define regex pattern (groups by optional int+unit but only keeps the int)
-        pattern = r"(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?"
-        feedback = re.search(pattern, time_str)
-
-        # save time variables (if not in time_str they will be set to None)
-        w, d, h, m, s = feedback.groups()
-        # put time variables into a dictionary
-        time_dict = {
-            'weeks': w,
-            'days': d,
-            'hours': h,
-            'minutes': m,
-            'seconds': s
-        }
-
-        # get rid of null values in time_dict
-        time_dict = {
-            unit: float(value) for unit, value
-            in time_dict.items() if value is not None
-        }
-        # create new datetime timedelta to represent the time
-        # and pass in parameters as values from time_dict
-        time_delta = timedelta(**time_dict)
-
-        return time_delta
-
-
-    # given an end_time (datetime) and an offset_str (string) (e.g. "12h5m30s"),
-    # return a new datetime object offset away from the end_time
-    def _find_time_from_offset(self, end_time, offset_str):
-        # get the offset in a usable form: {..., 'hours':____, 'minutes':___, 'seconds':____}
-        time_offset = self._get_timedelta_from_str(offset_str)
-        # return the start time
-        return end_time-time_offset
-
-    
-    # takes in a time in seconds since epoch (float or int), pandas Timestamp(), or datetime object formats
-    # returns the time as a datetime object
-    def _convert_to_datetime(self, time):
-        # check if time is a pandas Timestamp()
-        # technically this counts as an instance of type datetime but is not the same
-        # so we must check if time is a pandas Timestamp() before checking if it's a datetime object
-        if isinstance(time, pd.Timestamp):
-            return time.to_pydatetime(warn=False)
-        
-        # check if time is a float (seconds since the epoch: 01/01/1970)
-        if isinstance(time, float) or isinstance(time, int):
-            return datetime.fromtimestamp(time)
-        
-        # check if time is a datetime object
-        if isinstance(time, datetime):
-            return time
-        
-        # if time is of unsupported type, raise error
-        raise TypeError("argument for _convert_to_datetime() must be of type float, int, pandas.Timestamp, or datetime.datetime")
-    '''
-
     # assembles string for the time filter to be passed into query_data_for_graph()
     def _assemble_time_filter(self, start=None, end=None, time_step=None):
         # set default values if not given
@@ -144,12 +73,14 @@ class Graphs():
 
     # returns a dataframe containing Time, Node, Pod, and value (value is titled something different for each graph)
     # returns none if there is no data
-    def _generate_graph_df(self, query_title, query, start=None, end=None, time_step=None, show_runtimes=False):
+    # note: sum_by is a string that makes it get rid of Node and Pod, and instead of the sum_by column
+            # this is only used by get_graphs_from_queries
+    def _generate_graph_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=None, show_runtimes=False):
         # create time filter to then generate list of all datapoints for the graph
         time_filter = self._assemble_time_filter(start=start, end=end, time_step=time_step)
 
         if show_runtimes:
-            start = time.time()
+            runtime_start = time.time()
 
         # query for data
         result_list = query_data_for_graph(query, time_filter)
@@ -157,14 +88,17 @@ class Graphs():
             return None
 
         if show_runtimes:
-            end = time.time()
-            print("\ntime elapsed for querying:", colored(end-start, "green"))
+            runtime_end = time.time()
+            print("\ntime elapsed for querying:", colored(runtime_end-runtime_start, "green"))
 
         # prepare columns for graph. columns will be appended to one pod at a time
         times_column = []
         values_column = []
-        pods_column = []
-        nodes_column = []
+        if sum_by is None:
+            pods_column = []
+            nodes_column = []
+        else:
+            sum_by_column = []
 
         # loop through the data for each pod. The data has: node, pod, values, timestamps
         for datapoint in result_list:
@@ -176,22 +110,35 @@ class Graphs():
             for time_value_pair in datapoint['values']:
                 times_list.append(time_value_pair[0])
                 values_list.append(float(time_value_pair[1]))
+
+
             # There is only one node and pod per pod, so these columns will be constant for each pod.
-            node_list = [datapoint['metric']['node']]*len(times_list)
-            pod_list = [datapoint['metric']['pod']]*len(times_list)
+            if sum_by is None:
+                node_list = [datapoint['metric']['node']]*len(times_list)
+                pod_list = [datapoint['metric']['pod']]*len(times_list)
+                # add pod's lists to the graph's columns
+                nodes_column.extend(node_list)
+                pods_column.extend(pod_list)
+            else:
+                sum_by_list = [datapoint['metric'][sum_by]]*len(times_list)
+                # add list to graph's columns
+                sum_by_column.extend(sum_by_list)
 
             # add pod's lists to the graph's columns
             times_column.extend(times_list)
             values_column.extend(values_list)
-            nodes_column.extend(node_list)
-            pods_column.extend(pod_list)
+           
 
         # create and populate graph dataframe
         graph_df = pd.DataFrame()
         graph_df['Time'] = times_column
-        graph_df['Node'] = nodes_column
-        graph_df['Pod'] = pods_column
         graph_df[query_title] = values_column
+
+        if sum_by is None:
+            graph_df['Node'] = nodes_column
+            graph_df['Pod'] = pods_column
+        else:
+            graph_df[sum_by] = sum_by_column
 
         return graph_df
 
@@ -236,6 +183,23 @@ class Graphs():
                 print("total time elapsed:", colored(end_time-start_time, "green"), "\n\n")
 
         return graphs_dict
+
+
+    '''
+    ==============================
+            User Functions
+    ==============================
+    '''
+
+    # Given a dictionary of queries, generate graphs based on those queries
+    # Note: if the queries do not start with "sum by(Node, pod)", then you must set sum_by
+    #       to be what the query has in sum by(_____)   
+    # Return a dictionary of graphs of the same names as the queries
+    def get_graphs_from_queries(self, queries_dict, sum_by=None):
+        for title, query in queries_dict.items():
+            graphs_dict[title] = self._generate_graph_df(title, query, sum_by=sum_by)
+        return graphs_dict
+
 
     # generate and return a list of all the graphs
     def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_datetime=True, show_runtimes=False):
@@ -283,10 +247,12 @@ class Graphs():
 
         return total_df
 
-# _________________________________________
-#
-#           Requery Methods
-# _________________________________________
+
+    '''
+    =========================================
+              Requery Methods
+    =========================================
+    '''
 
     # convert a dataframe containing all graphs data into a dictionary with several graphs
     # used when a graphs_df is passed in instead of a graphs_dict in check_for_losses
