@@ -186,14 +186,15 @@ class Graphs():
 
 
     '''
-    ==============================
-            User Functions
-    ==============================
+    ============================
+            User Methods
+    ============================
     '''
 
     # Given a dictionary of queries, generate graphs based on those queries
     # Note: if the queries do not start with "sum by(Node, pod)", then you must set sum_by
-    #       to be what the query has in sum by(_____)   
+    #       to be what the query has in "sum by(_____)""
+    #       This function does not work if queries do not start with "sum by("
     # Return a dictionary of graphs of the same names as the queries
     def get_graphs_from_queries(self, queries_dict, sum_by=None):
         graphs_dict={}
@@ -202,7 +203,7 @@ class Graphs():
         return graphs_dict
 
 
-    # generate and return a list of all the graphs
+    # generate and return a dictionary of all the graphs
     def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_datetime=True, show_runtimes=False):
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
         # loop through graphs
@@ -221,6 +222,7 @@ class Graphs():
             graphs_dict[graph_title] = graph
 
         return graphs_dict
+
 
     # combines all graph dataframes into one large dataframe. Each graph is represented as a column
     # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
