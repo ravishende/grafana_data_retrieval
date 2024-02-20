@@ -196,6 +196,7 @@ class Graphs():
     #       to be what the query has in sum by(_____)   
     # Return a dictionary of graphs of the same names as the queries
     def get_graphs_from_queries(self, queries_dict, sum_by=None):
+        graphs_dict={}
         for title, query in queries_dict.items():
             graphs_dict[title] = self._generate_graph_df(title, query, sum_by=sum_by)
         return graphs_dict
