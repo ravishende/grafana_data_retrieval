@@ -2,15 +2,6 @@ import requests
 import json
 from termcolor import colored
 
-# reset total query count
-QUERY_COUNT = 0
-
-
-# retrieves global variable for total number of queries
-# since the start of the program
-def get_query_count():
-    global QUERY_COUNT
-    return QUERY_COUNT
 
 
 # Use url and a given query to request data from the website
@@ -20,14 +11,12 @@ def query_data(query, handle_fail=True):
     # this parameter set to True will re request to deal with that
     # It is highly recommended that handle_fail is always set to True.
 
-    global QUERY_COUNT
     # set up url
     base_url = "https://thanos.nrp-nautilus.io/api/v1/"
     endpoint = f"query?query={query}"
     full_url = base_url + endpoint
     # query database
     queried_data = requests.get(full_url).json()
-    QUERY_COUNT += 1
 
     # re-request data if it comes back with no value
     if handle_fail:
@@ -50,14 +39,12 @@ def query_data_for_graph(query, time_filter, handle_fail=True):
     # this parameter set to True will re request to deal with that
     # It is highly recommended that handle_fail is always set to True.
 
-    global QUERY_COUNT
     # set up url
     base_url = 'https://thanos.nrp-nautilus.io/api/v1/'
     endpoint = f'query_range?query={query}&{time_filter}'
     full_url = base_url + endpoint
     # query database
     queried_data = requests.get(full_url).json()
-    QUERY_COUNT += 1
 
     # re-request data if it comes back with no value
     if (handle_fail):
