@@ -12,7 +12,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 from workflow_files import phase1_files
 
+# settings
 pd.set_option('display.max_columns', None)
+# pd.set_option('display.width', None)
 
 '''
 =========================
@@ -60,19 +62,19 @@ def get_child_directories(fs, path):
 
 
 # Given paths_batch (a list of paths to append to the file),
-# appends a batch of paths to 'paths.txt'. Each path is written on a new line.
-# If 'paths.txt' does not exist, it is created.
-def append_paths_txt(paths_batch):
-    with open("paths.txt", "a") as file:  # Open the file in append mode ('a')
-        for path in paths_batch:
-            file.write(path + "\n")  # Write each path on a new line
+# appends a batch of entries to txt_file. Each entry is written on a new line.
+# If txt_file does not exist, it is created.
+def append_txt_file(txt_title, batch):
+    with open(txt_title, "a") as file:  # Open the file in append mode ('a')
+        for entry in batch:
+            file.write(entry + "\n")  # Write each entry on a new line
 
 
-def read_paths():
-    paths = []
-    with open("paths.txt","r") as f:
-        paths = f.read().splitlines() 
-    return paths
+def read_txt_file(txt_file):
+    contents = []
+    with open(txt_file,"r") as f:
+        contents = f.read().splitlines() 
+    return contents
 
 def get_parents_paths_gathered():
     parent_paths_gathered = 0
@@ -104,14 +106,14 @@ def gather_all_paths(fs, bucket, batch_size=None):
 
     # intialize a list to hold all simulation paths
     try:
-        all_simulation_paths_list = read_paths()
+        all_simulation_paths_list = read_txt_file(phase1_files['paths'])
     except FileNotFoundError:    
         all_simulation_paths_list = []
 
     # if we're not using batches, run everything at once
     if batch_size is None:
         sim_paths_list = get_paths_batch(parent_paths_gathered, parent_paths_len, fs, bucket)
-        append_paths_txt(sim_paths_list)
+        append_txt_file(phase1_files['paths'], sim_paths_list)
         return all_simulation_paths_list + sim_paths_list
 
     # collect runs in batches
@@ -139,7 +141,7 @@ def gather_all_paths(fs, bucket, batch_size=None):
         update_parents_paths_gathered(parent_paths_gathered)
 
         # append newly collected paths to the paths.txt file
-        append_paths_txt(sim_paths_batch)
+        append_txt_file(phase1_files['paths'], sim_paths_batch)
     return all_simulation_paths_list
 
 KEEP_ATTRIBUTES = [
@@ -155,7 +157,6 @@ KEEP_ATTRIBUTES = [
     'wind_speed'
 ]
 
-
 # get the run_uuid (str) from a path (str)
 def run_id_from_path(path):
     run_uuid = path.split('/')[-1]
@@ -169,10 +170,10 @@ def add_run_uuid_col(df):
     return df
 
 
-def get_df_chunk(start, stop, paths, files_not_found):
+def get_df_chunk(start, stop, paths):
     global KEEP_ATTRIBUTES
     # initialize a list of paths that cause filenotfound errors
-    filenotfound = []
+    bad_paths = []
 
     # variable to count the amount of runs missing data (columns)
     runs_missing_data = 0
@@ -190,28 +191,34 @@ def get_df_chunk(start, stop, paths, files_not_found):
             name = 'quicfire.zarr'
             with fs.open(path + '/' + name + '/.zattrs') as file:
                 run_data=json.load(file)
-        # if the file isn't there, append path to filenotfound
+        # if the file isn't there, append path to bad_paths
         except:
-            filenotfound.append(path)
+            bad_paths.append(path)
             continue
 
         # add all the important attributes of the run to the row
         row = run_data
 
         # if an attribute is not in the row, add it as None
-        complete_run=True
+        complete_run = True
         for attr in KEEP_ATTRIBUTES:
             if attr not in run_data:
                 row[attr] = None
-                complete_run=False
+                complete_run = False
         # increment runs_missing_data if the run has columns missing
         if not complete_run:
             runs_missing_data += 1
 
-        # add a path column to the row
+        # add a path column to the row, then append it to rows
         row['path'] = path
         rows.append(row)
     
+
+    # if there are no successful rows, return an empty dataframe
+    if len(rows) == 0:
+        print(colored("No runs found for this batch", "red"))
+        return pd.DataFrame()
+
     # create the df from all of the rows
     df = pd.DataFrame(rows)
     columns_to_keep = ['path'] + KEEP_ATTRIBUTES
@@ -219,14 +226,17 @@ def get_df_chunk(start, stop, paths, files_not_found):
     df = add_run_uuid_col(df)
 
     # print file not found files
-    print("FileNotFound Error on the following Files:")
-    for file_path in filenotfound:
-        print("\t" + file_path)
+    if len(bad_paths) > 0:
+        print("FileNotFound Error on the following Files:")
+        for file_path in bad_paths:
+            print("\t" + file_path)
     print(colored(f"\nRead from {start} to {stop}\n", "green"))
 
-    # return df and files not found
-    files_not_found += filenotfound
-    return df, files_not_found
+    # append bad paths to files not found
+    append_txt_file(phase1_files['files_not_found'], bad_paths)
+
+    # return df
+    return df
 
 
 # given the simulation paths, create a df containing runs
@@ -234,18 +244,18 @@ def get_df_chunk(start, stop, paths, files_not_found):
 def get_df_from_paths(simulation_paths, batch_size=1000):
     # calculate how many batches to run
     num_batches = len(simulation_paths) // batch_size
-    files_not_found = []
     
-    # find out how many runs are previously collected
+    # find out how many runs have been looked at already
     try:
         runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
-        num_gathered_runs = len(runs_df)
+        files_not_found = read_txt_file(phase1_files['files_not_found'])
+        num_gathered_runs = len(runs_df) + len(files_not_found)
     except:
         num_gathered_runs = 0
 
 
     # get df_chunk and append it to a csv file for each batch
-    for batch_i in range(1, num_batches):
+    for batch_i in range(1, num_batches+1):
         print(colored(f"batch {batch_i}/{num_batches}:", "green"))
 
         # get the index to start and stop at in get_df_chunk
@@ -257,7 +267,7 @@ def get_df_from_paths(simulation_paths, batch_size=1000):
             stop_index = len(simulation_paths)
         
         # don't regather already collected runs
-        if stop_index < num_gathered_runs:
+        if stop_index <= num_gathered_runs:
             print("\truns already gathered - skipping batch")
             continue
         # update start_index if it's less than what's been gathered
@@ -265,7 +275,7 @@ def get_df_from_paths(simulation_paths, batch_size=1000):
             start_index = num_gathered_runs
 
         # get the df from the runs
-        partial_runs_df, files_not_found = get_df_chunk(start_index, stop_index, simulation_paths, files_not_found)
+        partial_runs_df = get_df_chunk(start_index, stop_index, simulation_paths)
 
         # save the df to a file
         if len(partial_runs_df) > 0:
@@ -316,7 +326,6 @@ def remove_na_rows(df):
 
     # Rename the 'run_end' column to stop and run_start column to 'start'
     df = df.rename(columns={"run_end": "stop", "run_start": "start"})
-    df = df.drop(columns=["ignition","fuel"], axis=1)
     return df
 
 
@@ -341,9 +350,8 @@ def get_new_runs_df(df):
 fs, bucket = get_fs_and_bucket()
 
 # gather simulation paths to be read
-print("\nGathering simulation paths")
 # simulation_paths_list = gather_all_paths(fs, bucket, batch_size=25)
-simulation_paths_list = read_paths()
+simulation_paths_list = read_txt_file(phase1_files['paths'])
 print("simulation paths length:", len(simulation_paths_list))
 
 # get a df that only contains the ids and status of successful runs
@@ -352,15 +360,15 @@ successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
-all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=1000) #normally batch size is 1000
+all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=50)
 # all_runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
 
-print("getting finalized df")
+print("getting finalized dataframe")
 # only get the current runs that were successful
-# merged_df = merge_dfs(all_runs_df, successful_runs_list_df)
-merged_df = all_runs_df
+merged_df = merge_dfs(all_runs_df, successful_runs_list_df)
 merged_df = remove_na_rows(merged_df)
 merged_df = get_new_runs_df(merged_df)
+merged_df = merged_df.reset_index(drop=True)
 
 # save final_df
 print(merged_df)
