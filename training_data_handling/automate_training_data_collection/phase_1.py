@@ -52,15 +52,6 @@ def get_fs_and_bucket():
     return fs, bucket
 
 
-def get_child_directories(fs, path):
-    sim_paths = []
-    paths = fs.ls(path)
-    for path in paths:
-        if "run_" in path:
-            sim_paths.append(path)
-    return sim_paths
-
-
 # Given paths_batch (a list of paths to append to the file),
 # appends a batch of entries to txt_file. Each entry is written on a new line.
 # If txt_file does not exist, it is created.
@@ -76,73 +67,94 @@ def read_txt_file(txt_file):
         contents = f.read().splitlines() 
     return contents
 
-def get_parents_paths_gathered():
-    parent_paths_gathered = 0
-    with open("vars.txt","r") as file:
-        parent_paths_gathered = int(file.read())
-    return parent_paths_gathered
 
-def update_parents_paths_gathered(parent_paths_gathered):
-    with open("vars.txt", "w") as file:
-        file.write(str(parent_paths_gathered))
+# given the fs and a subdirectory, return all of the run simulation paths
+def get_sim_paths(fs, subdir):
+    sim_paths = []
+    paths = fs.ls(subdir)
+    for path in paths:
+        if "run_" in path:
+            sim_paths.append(path)
+    return sim_paths
 
 
-# given a start and end index as well as the file system and bucket, 
-# return all the paths in that index range.
-def get_paths_batch(start_index, end_index, fs, bucket):
-    paths_batch = []
-    paths = fs.ls(bucket)
-    for path in tqdm(paths[start_index:end_index]):
-        paths = fs.ls(path)
-        for path in paths:
-            paths_batch += get_child_directories(fs, path)
-    return paths_batch
+# given an item type ('paths' or 'path_directories')
+# return all of the previously gathered items of that type.
+# note: only works if workflow_files.phase1_files is set up so
+# that item_title and "old"+item_title are both keys of phase1_files
+def get_gathered_items(item_title):
+    # make sure user input is valid
+    valid_item_titles = ['path_directories', 'paths']
+    if item_title not in valid_item_titles:
+        raise ValueError(f'item_title must be one of the following: {valid_item_titles}')
+    
+    # if no previously gathered items, get previously gathered items from past gatherings
+    gathered_items = read_txt_file(phase1_files[item_title])
+    if len(gathered_items) == 0:
+            # update gathered_items to contain the old gathered items
+            old_item_title = 'old_' + item_title
+            gathered_items = read_txt_file(phase1_files[old_item_title])
+            append_txt_file(phase1_files[item_title], gathered_items)
+    return gathered_items
+
+
+# given a list of ungathered directories as well as the file system, 
+# return all the paths from those directories.
+def get_paths_from_directories(directories, fs):
+    paths = []
+    for directory in tqdm(directories):
+        subdirectories = fs.ls(directory)
+        for subdir in subdirectories:
+            paths += get_sim_paths(fs, subdir)
+    # write newly gathered directories to a file so they don't ever have to be regenerated
+    append_txt_file(phase1_files['path_directories'], directories)
+    return paths
+
 
 # batch size is a number of paths per batch to get
 def gather_all_paths(fs, bucket, batch_size=None):
     # way of keeping track of if all runs have been added yet
-    parent_paths_len = len(fs.ls(bucket))
-    parent_paths_gathered = get_parents_paths_gathered()
-
+    directories = fs.ls(bucket)
+    gathered_directories = get_gathered_items("path_directories")
+    # get list of directories that have not been gathered
+    ungathered_directories = [d for d in directories if d not in gathered_directories]
     # intialize a list to hold all simulation paths
-    try:
-        all_simulation_paths_list = read_txt_file(phase1_files['paths'])
-    except FileNotFoundError:    
-        all_simulation_paths_list = []
+    simulation_paths_list = get_gathered_items("paths")
+    # handle if no ungathered directories
+    if len(ungathered_directories) == 0:
+        return simulation_paths_list
+
+    # start gathering directories
+    print(f"There are {len(directories)} total directories. {len(gathered_directories)} \
+        have already been gathered. Gathering paths for the remaining {len(ungathered_directories)}.")
 
     # if we're not using batches, run everything at once
     if batch_size is None:
-        sim_paths_list = get_paths_batch(parent_paths_gathered, parent_paths_len, fs, bucket)
-        append_txt_file(phase1_files['paths'], sim_paths_list)
-        return all_simulation_paths_list + sim_paths_list
+        new_sim_paths_list = get_paths_from_directories(ungathered_directories, fs)
+        append_txt_file(phase1_files['paths'], new_sim_paths_list)
+        return simulation_paths_list + new_sim_paths_list
 
     # collect runs in batches
-    parent_paths_left = parent_paths_len-parent_paths_gathered
-    num_batches = math.ceil(parent_paths_left/batch_size)
+    num_batches = math.ceil(len(ungathered_directories)/batch_size)
     for i in range(0, num_batches):
-        # define indices to get paths batch for
-        start_index = parent_paths_gathered + 1
-        end_index = start_index + batch_size
-
-        # start_index should be 0 if parent_paths_gathered is 0
-        if parent_paths_gathered == 0:
-            start_index = 0
-        # make sure to get all of the paths and no more on the final batch
+        # get end index for batch. Shouldn't change because 
+        end_index = batch_size
+        # if this is the last iteration, generate paths until the end of ungathered_directories
         if i == num_batches-1:
-            end_index = parent_paths_len
+            end_index = len(ungathered_directories)
 
         # get simulation paths for this batch
-        print(f"\nGetting batch for indices {start_index} up to {end_index}.", colored(f"Batch {i+1}/{num_batches}", "magenta"))
-        sim_paths_batch = get_paths_batch(start_index, end_index, fs, bucket)
-        all_simulation_paths_list += sim_paths_batch
-        
-        # update parent paths gathered
-        parent_paths_gathered += batch_size
-        update_parents_paths_gathered(parent_paths_gathered)
+        print(f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left.", colored(f"Batch {i+1}/{num_batches}", "magenta"))
+        sim_paths_batch = get_paths_from_directories(ungathered_directories[:end_index], fs)
+        # update all simulation paths and remove newly gathered directories from ungathered directories
+        simulation_paths_list += sim_paths_batch
+        ungathered_directories = ungathered_directories[end_index:]
 
         # append newly collected paths to the paths.txt file
         append_txt_file(phase1_files['paths'], sim_paths_batch)
-    return all_simulation_paths_list
+
+    return simulation_paths_list
+
 
 KEEP_ATTRIBUTES = [
     'canopy_moisture',
@@ -247,7 +259,7 @@ def get_df_from_paths(simulation_paths, batch_size=1000):
     
     # find out how many runs have been looked at already
     try:
-        runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
+        runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
         files_not_found = read_txt_file(phase1_files['files_not_found'])
         num_gathered_runs = len(runs_df) + len(files_not_found)
     except:
@@ -279,11 +291,11 @@ def get_df_from_paths(simulation_paths, batch_size=1000):
 
         # save the df to a file
         if len(partial_runs_df) > 0:
-            partial_runs_df.to_csv(phase1_files['temp'], mode='a')
+            partial_runs_df.to_csv(phase1_files['runs_df'], mode='a')
             print(partial_runs_df)
 
     # get the total runs df and return it
-    runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
+    runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
     return runs_df
 
 
@@ -346,11 +358,11 @@ def get_new_runs_df(df):
 ======================
 '''
 
-# authenticate and get file system and bucket
+# authenticate and get file system and bucket containing directories for paths
 fs, bucket = get_fs_and_bucket()
 
 # gather simulation paths to be read
-# simulation_paths_list = gather_all_paths(fs, bucket, batch_size=25)
+# simulation_paths_list = gather_all_paths(fs, bucket, batch_size=5)
 simulation_paths_list = read_txt_file(phase1_files['paths'])
 print("simulation paths length:", len(simulation_paths_list))
 
@@ -361,7 +373,7 @@ successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
 all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=50)
-# all_runs_df = pd.read_csv(phase1_files['temp'], index_col=0)
+# all_runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
 
 print("getting finalized dataframe")
 # only get the current runs that were successful
