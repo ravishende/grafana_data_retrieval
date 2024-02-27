@@ -65,6 +65,8 @@ def append_txt_file(txt_title, batch):
             file.write(entry + "\n")  # Write each entry on a new line
 
 
+# given the path to a .txt file, return a list where each line of the 
+# txt file is an element in the list
 def read_txt_file(txt_file):
     contents = []
     with open(txt_file,"r") as f:
@@ -162,6 +164,7 @@ def gather_all_paths(batch_size=None):
     return simulation_paths_list
 
 
+# returns a list of attributes of a run to keep
 def _get_keep_attributes():
     keep_attributes = [
         'canopy_moisture',
@@ -176,6 +179,7 @@ def _get_keep_attributes():
         'wind_speed'
     ]
     return keep_attributes
+
 
 # get the run_uuid (str) from a path (str)
 def run_id_from_path(path):
@@ -216,7 +220,9 @@ def drop_old_paths(paths, method="txt"):
     raise ValueError("method must be either 'txt' or 'training_data'")
 
 
-
+# given a start and stop index and a list of paths,
+# return a df of runs and a files_not_found list where each run is from a path 
+# in the section of paths[start:stop]
 def get_df_chunk(start, stop, paths):
     # initialize a list of paths that cause filenotfound errors
     bad_paths = []
