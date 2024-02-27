@@ -29,6 +29,10 @@ FINISH:
 save df to a file
 '''
 
+
+
+
+
 def get_fs_and_bucket():
     # get login details from .env file
     if not load_dotenv():
@@ -156,18 +160,20 @@ def gather_all_paths(fs, bucket, batch_size=None):
     return simulation_paths_list
 
 
-KEEP_ATTRIBUTES = [
-    'canopy_moisture',
-    'extent',
-    'run_end',
-    'run_max_mem_rss_bytes',
-    'run_start',
-    'sim_time',
-    'surface_moisture',
-    'threads',
-    'wind_direction',
-    'wind_speed'
-]
+def _get_keep_attributes():
+    keep_attributes = [
+        'canopy_moisture',
+        'extent',
+        'run_end',
+        'run_max_mem_rss_bytes',
+        'run_start',
+        'sim_time',
+        'surface_moisture',
+        'threads',
+        'wind_direction',
+        'wind_speed'
+    ]
+    return keep_attributes
 
 # get the run_uuid (str) from a path (str)
 def run_id_from_path(path):
@@ -210,7 +216,6 @@ def drop_old_paths(paths, method="txt"):
 
 
 def get_df_chunk(start, stop, paths):
-    global KEEP_ATTRIBUTES
     # initialize a list of paths that cause filenotfound errors
     bad_paths = []
 
@@ -239,8 +244,9 @@ def get_df_chunk(start, stop, paths):
         row = run_data
 
         # if an attribute is not in the row, add it as None
+        keep_attributes = _get_keep_attributes()
         complete_run = True
-        for attr in KEEP_ATTRIBUTES:
+        for attr in keep_attributes:
             if attr not in run_data:
                 row[attr] = None
                 complete_run = False
@@ -260,7 +266,7 @@ def get_df_chunk(start, stop, paths):
 
     # create the df from all of the rows
     df = pd.DataFrame(rows)
-    columns_to_keep = ['path'] + KEEP_ATTRIBUTES
+    columns_to_keep = ['path'] + keep_attributes
     df = df[columns_to_keep]
     df = add_run_uuid_col(df)
 
@@ -281,9 +287,6 @@ def get_df_chunk(start, stop, paths):
 # given the simulation paths, create a df containing runs
 # for all paths that have corresponding files
 def get_df_from_paths(simulation_paths, batch_size=1000):
-    # calculate how many batches to run
-    num_batches = len(simulation_paths) // batch_size
-    
     # find out how many runs have been looked at already
     try:
         runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
@@ -292,27 +295,19 @@ def get_df_from_paths(simulation_paths, batch_size=1000):
     except:
         num_gathered_runs = 0
 
+    # calculate how many batches to run
+    num_batches = (len(simulation_paths) - num_gathered_runs) // batch_size
+    
+    # loop over unexplored simulation paths, getting df chunks for each batch
+    current_batch = 0
+    for start_index in range(num_gathered_runs, len(simulation_paths), batch_size):
+        # print current batch
+        print(colored(f"batch {current_batch}/{num_batches}:", "green"))
+        current_batch += 1
 
-    # get df_chunk and append it to a csv file for each batch
-    for batch_i in range(1, num_batches+1):
-        print(colored(f"batch {batch_i}/{num_batches}:", "green"))
-
-        # get the index to start and stop at in get_df_chunk
-        stop_index = batch_i*batch_size
-        start_index = stop_index-batch_size
-
-        # if this is the last iteration, get the df for the rest of the paths
-        if batch_i == num_batches:
-            stop_index = len(simulation_paths)
+        # get the stop_index, making sure not to have it larger than len(simulation_paths)
+        stop_index = min(start_index + batch_size, len(simulation_paths))
         
-        # don't regather already collected runs
-        if stop_index <= num_gathered_runs:
-            print("\truns already gathered - skipping batch")
-            continue
-        # update start_index if it's less than what's been gathered
-        if start_index < num_gathered_runs:
-            start_index = num_gathered_runs
-
         # get the df from the runs
         partial_runs_df = get_df_chunk(start_index, stop_index, simulation_paths)
 
@@ -419,3 +414,5 @@ merged_df.to_csv(phase1_files['write'])
 
 # update old_paths txt to include newly found paths
 append_txt_file(new_paths)
+# clear files_not_found txt
+
