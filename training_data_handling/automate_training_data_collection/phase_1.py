@@ -32,8 +32,8 @@ save df to a file
 
 
 
-
-def get_fs_and_bucket():
+# authenticate and return the file system and bucket containing directories for paths
+def _get_fs_and_bucket():
     # get login details from .env file
     if not load_dotenv():
         raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY")
@@ -116,7 +116,9 @@ def get_paths_from_directories(directories, fs):
 
 
 # batch size is a number of paths per batch to get
-def gather_all_paths(fs, bucket, batch_size=None):
+def gather_all_paths(batch_size=None):
+    # authenticate and get file system and bucket containing directories for paths
+    fs, bucket = _get_fs_and_bucket()
     # way of keeping track of if all runs have been added yet
     directories = fs.ls(bucket)
     gathered_directories = get_gathered_items("path_directories")
@@ -384,12 +386,9 @@ def get_new_runs_df(df):
 ======================
 '''
 
-# authenticate and get file system and bucket containing directories for paths
-fs, bucket = get_fs_and_bucket()
-
-# gather simulation paths to be read
-# simulation_paths = gather_all_paths(fs, bucket, batch_size=5)
-simulation_paths = read_txt_file(phase1_files['paths'])
+# gather simulation paths to be read 
+# simulation_paths = gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
+simulation_paths = read_txt_file(phase1_files['paths'])  # for if simulation_paths are fully gathered
 new_paths = drop_old_paths(simulation_paths, method="txt")
 print("simulation paths length:", len(simulation_paths))
 print("New paths length:", len(new_paths))
