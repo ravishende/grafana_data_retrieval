@@ -218,13 +218,15 @@ def drop_old_paths(paths, method="txt"):
 def get_df_chunk(start, stop, paths):
     # initialize a list of paths that cause filenotfound errors
     bad_paths = []
-
     # variable to count the amount of runs missing data (columns)
     runs_missing_data = 0
-    
+
     # don't try to access out of bounds of path
     if stop > len(paths):
+        print(colored("stop index out of bounds - updating to be len(paths)", "yellow"))
         stop = len(paths)
+    if start >= len(paths):
+        raise ValueError("start cannot be greater than or equal to len(paths)")
 
     print(f"Reading from line {start} to {stop}")
     # get each path in the chunk and get the run from that path
