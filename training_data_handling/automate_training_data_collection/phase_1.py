@@ -174,12 +174,39 @@ def run_id_from_path(path):
     run_uuid = path.split('/')[-1]
     return run_uuid
 
+
 # given a df with a 'path' column, add a new column called 'run_uuid' 
 # which gets the run_uuid from the path. Return the new df.
 def add_run_uuid_col(df):
     path_col = df['path']
     df['run_uuid'] = df['path'].apply(run_id_from_path)
     return df
+
+
+# Given a paths list and a method of dropping old paths ("txt" or "training_data")
+# Return a new list of paths that only contains new paths (paths not in old paths)
+# Note: method="txt" should be used by default, unless there is no old_paths.txt file
+def drop_old_paths(paths, method="txt"):
+    # use old_paths.txt file to subtract all old paths from current paths file
+    if method == "txt":
+        # get a list of old paths
+        old_paths = read_txt_file(phase1_files['old_paths'])
+        # create a new list of paths that only contains paths not in old_paths
+        new_paths = [p for p in paths if p not in old_paths]
+        return new_paths
+
+    # get run_uuids from paths, then for each run_uuid in training_data, get rid of that path
+    if method == "training_data":
+        # get list of run_uuids from training_data
+        training_data = pd.read_csv(phase1_files['training_data'])
+        existing_uuids = training_data['run_uuid'].to_list()
+        # Use the run_id_from_path function to extract run_uuid from each path
+        new_paths = [p for p in paths if run_id_from_path(p) not in existing_uuids]
+        return new_paths
+    
+    # handle incorrect method user error
+    raise ValueError("method must be either 'txt' or 'training_data'")
+
 
 
 def get_df_chunk(start, stop, paths):
@@ -362,9 +389,11 @@ def get_new_runs_df(df):
 fs, bucket = get_fs_and_bucket()
 
 # gather simulation paths to be read
-# simulation_paths_list = gather_all_paths(fs, bucket, batch_size=5)
-simulation_paths_list = read_txt_file(phase1_files['paths'])
-print("simulation paths length:", len(simulation_paths_list))
+# simulation_paths = gather_all_paths(fs, bucket, batch_size=5)
+simulation_paths = read_txt_file(phase1_files['paths'])
+new_paths = drop_old_paths(simulation_paths, method="txt")
+print("simulation paths length:", len(simulation_paths))
+print("New paths length:", len(new_paths))
 
 # get a df that only contains the ids and status of successful runs
 runs_list_df = pd.read_csv(phase1_files['read'])
@@ -372,7 +401,7 @@ successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
-all_runs_df = get_df_from_paths(simulation_paths_list, batch_size=50)
+all_runs_df = get_df_from_paths(simulation_paths, batch_size=50)
 # all_runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
 
 print("getting finalized dataframe")
