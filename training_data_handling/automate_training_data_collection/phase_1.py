@@ -379,6 +379,8 @@ def get_new_runs_df(df):
 
     return new_runs_df
 
+
+
 '''
 ======================
     Main Program
@@ -415,3 +417,5 @@ merged_df = merged_df.reset_index(drop=True)
 print(merged_df)
 merged_df.to_csv(phase1_files['write'])
 
+# update old_paths txt to include newly found paths
+append_txt_file(new_paths)
