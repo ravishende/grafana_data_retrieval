@@ -352,6 +352,18 @@ def get_successful_runs(df, reset_index=True):
     return successful_runs
 
 
+# get a df of path, run_uuid, where we filter new_paths, only including the paths with run_uuids that were successful.
+def get_runs_to_gather_df(new_paths, successful_runs_list_df):
+    # Convert new_paths list to a DataFrame
+    new_paths_df = pd.DataFrame(new_paths, columns=['path'])
+    # Apply _run_id_from_path function to get run_uuid
+    new_paths_df['run_uuid'] = new_paths_df['path'].apply(_run_id_from_path)
+    # Merge with successful_runs_list_df to filter out unsuccessful runs
+    result_df = new_paths_df[new_paths_df['run_uuid'].isin(successful_runs_list_df['run_uuid'])]
+    return result_df
+
+
+
 # given a df that contains all successful runs and a df that 
 def merge_dfs(runs_data_df, runs_list_df):
     # Selecting the required columns from successful_runs_list_df
@@ -409,10 +421,13 @@ simulation_paths = read_txt_file(phase1_files['paths'])  # for if simulation_pat
 new_paths = read_txt_file(phase1_files['new_paths']). #for if new_paths are already generated
 print("simulation paths length:", len(simulation_paths))
 print("New paths length:", len(new_paths))
-'''
+
 # get a df that only contains the ids and status of successful runs
 runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
+
+# get a df of [path, run_uuid], where we filter new_paths, only including the paths with run_uuids that were successful.
+runs_to_gather_df = get_runs_to_gather_df(new_paths, successful_runs_list_df)
 
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
@@ -433,4 +448,3 @@ merged_df.to_csv(phase1_files['write'])
 # update old_paths txt to include newly found paths
 append_txt_file(new_paths)
 # clear files_not_found txt
-'''
