@@ -31,6 +31,79 @@ save df to a file
 
 
 
+# Given contents (a list to write to the file),
+# Writes contents to a file. Each element is written on a new line.
+# If txt_file does not exist, it is created.
+def write_txt_file(txt_file, contents):
+    with open(txt_file, "w") as file:  # Open the file in append mode ('a')
+        for entry in contents:
+            file.write(entry + "\n")  # Write each entry on a new line
+
+
+# Given paths_batch (a list of paths to append to the file),
+# appends a batch of entries to txt_file. Each entry is written on a new line.
+# If txt_file does not exist, it is created.
+def append_txt_file(txt_file, batch):
+    with open(txt_file, "a") as file:  # Open the file in append mode ('a')
+        for entry in batch:
+            file.write(entry + "\n")  # Write each entry on a new line
+
+
+# given the path to a .txt file, return a list where each line of the 
+# txt file is an element in the list
+def read_txt_file(txt_file):
+    contents = []
+    with open(txt_file,"r") as f:
+        contents = f.read().splitlines() 
+    return contents
+
+
+# given the fs and a subdirectory, return all of the run simulation paths
+def _get_sim_paths(fs, subdir):
+    sim_paths = []
+    paths = fs.ls(subdir)
+    for path in paths:
+        if "run_" in path:
+            sim_paths.append(path)
+    return sim_paths
+
+
+# given an item type ('paths' or 'path_directories')
+# return all of the previously gathered items of that type.
+# note: only works if workflow_files.phase1_files is set up so
+# that item_title and "old"+item_title are both keys of phase1_files
+def _get_gathered_items(item_title):
+    # make sure user input is valid
+    valid_item_titles = ['path_directories', 'paths']
+    if item_title not in valid_item_titles:
+        raise ValueError(f'item_title must be one of the following: {valid_item_titles}')
+    
+    # if no previously gathered items, get previously gathered items from past gatherings
+    gathered_items = read_txt_file(phase1_files[item_title])
+    if len(gathered_items) == 0:
+            # update gathered_items to contain the old gathered items
+            old_item_title = 'old_' + item_title
+            gathered_items = read_txt_file(phase1_files[old_item_title])
+            append_txt_file(phase1_files[item_title], gathered_items)
+    return gathered_items
+
+
+# returns a list of attributes of a run to keep
+def _get_keep_attributes():
+    keep_attributes = [
+        'canopy_moisture',
+        'extent',
+        'run_end',
+        'run_max_mem_rss_bytes',
+        'run_start',
+        'sim_time',
+        'surface_moisture',
+        'threads',
+        'wind_direction',
+        'wind_speed'
+    ]
+    return keep_attributes
+
 
 # authenticate and return the file system and bucket containing directories for paths
 def _get_fs_and_bucket():
@@ -56,62 +129,14 @@ def _get_fs_and_bucket():
     return fs, bucket
 
 
-# Given paths_batch (a list of paths to append to the file),
-# appends a batch of entries to txt_file. Each entry is written on a new line.
-# If txt_file does not exist, it is created.
-def append_txt_file(txt_title, batch):
-    with open(txt_title, "a") as file:  # Open the file in append mode ('a')
-        for entry in batch:
-            file.write(entry + "\n")  # Write each entry on a new line
-
-
-# given the path to a .txt file, return a list where each line of the 
-# txt file is an element in the list
-def read_txt_file(txt_file):
-    contents = []
-    with open(txt_file,"r") as f:
-        contents = f.read().splitlines() 
-    return contents
-
-
-# given the fs and a subdirectory, return all of the run simulation paths
-def get_sim_paths(fs, subdir):
-    sim_paths = []
-    paths = fs.ls(subdir)
-    for path in paths:
-        if "run_" in path:
-            sim_paths.append(path)
-    return sim_paths
-
-
-# given an item type ('paths' or 'path_directories')
-# return all of the previously gathered items of that type.
-# note: only works if workflow_files.phase1_files is set up so
-# that item_title and "old"+item_title are both keys of phase1_files
-def get_gathered_items(item_title):
-    # make sure user input is valid
-    valid_item_titles = ['path_directories', 'paths']
-    if item_title not in valid_item_titles:
-        raise ValueError(f'item_title must be one of the following: {valid_item_titles}')
-    
-    # if no previously gathered items, get previously gathered items from past gatherings
-    gathered_items = read_txt_file(phase1_files[item_title])
-    if len(gathered_items) == 0:
-            # update gathered_items to contain the old gathered items
-            old_item_title = 'old_' + item_title
-            gathered_items = read_txt_file(phase1_files[old_item_title])
-            append_txt_file(phase1_files[item_title], gathered_items)
-    return gathered_items
-
-
 # given a list of ungathered directories as well as the file system, 
 # return all the paths from those directories.
-def get_paths_from_directories(directories, fs):
+def _get_paths_from_directories(directories, fs):
     paths = []
     for directory in tqdm(directories):
         subdirectories = fs.ls(directory)
         for subdir in subdirectories:
-            paths += get_sim_paths(fs, subdir)
+            paths += _get_sim_paths(fs, subdir)
     # write newly gathered directories to a file so they don't ever have to be regenerated
     append_txt_file(phase1_files['path_directories'], directories)
     return paths
@@ -123,11 +148,11 @@ def gather_all_paths(batch_size=None):
     fs, bucket = _get_fs_and_bucket()
     # way of keeping track of if all runs have been added yet
     directories = fs.ls(bucket)
-    gathered_directories = get_gathered_items("path_directories")
+    gathered_directories = _get_gathered_items("path_directories")
     # get list of directories that have not been gathered
     ungathered_directories = [d for d in directories if d not in gathered_directories]
     # intialize a list to hold all simulation paths
-    simulation_paths_list = get_gathered_items("paths")
+    simulation_paths_list = _get_gathered_items("paths")
     # handle if no ungathered directories
     if len(ungathered_directories) == 0:
         return simulation_paths_list
@@ -138,7 +163,7 @@ def gather_all_paths(batch_size=None):
 
     # if we're not using batches, run everything at once
     if batch_size is None:
-        new_sim_paths_list = get_paths_from_directories(ungathered_directories, fs)
+        new_sim_paths_list = _get_paths_from_directories(ungathered_directories, fs)
         append_txt_file(phase1_files['paths'], new_sim_paths_list)
         return simulation_paths_list + new_sim_paths_list
 
@@ -153,7 +178,7 @@ def gather_all_paths(batch_size=None):
 
         # get simulation paths for this batch
         print(f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left.", colored(f"Batch {i+1}/{num_batches}", "magenta"))
-        sim_paths_batch = get_paths_from_directories(ungathered_directories[:end_index], fs)
+        sim_paths_batch = _get_paths_from_directories(ungathered_directories[:end_index], fs)
         # update all simulation paths and remove newly gathered directories from ungathered directories
         simulation_paths_list += sim_paths_batch
         ungathered_directories = ungathered_directories[end_index:]
@@ -163,26 +188,8 @@ def gather_all_paths(batch_size=None):
 
     return simulation_paths_list
 
-
-# returns a list of attributes of a run to keep
-def _get_keep_attributes():
-    keep_attributes = [
-        'canopy_moisture',
-        'extent',
-        'run_end',
-        'run_max_mem_rss_bytes',
-        'run_start',
-        'sim_time',
-        'surface_moisture',
-        'threads',
-        'wind_direction',
-        'wind_speed'
-    ]
-    return keep_attributes
-
-
 # get the run_uuid (str) from a path (str)
-def run_id_from_path(path):
+def _run_id_from_path(path):
     run_uuid = path.split('/')[-1]
     return run_uuid
 
@@ -191,20 +198,22 @@ def run_id_from_path(path):
 # which gets the run_uuid from the path. Return the new df.
 def add_run_uuid_col(df):
     path_col = df['path']
-    df['run_uuid'] = df['path'].apply(run_id_from_path)
+    df['run_uuid'] = df['path'].apply(_run_id_from_path)
     return df
 
 
 # Given a paths list and a method of dropping old paths ("txt" or "training_data")
 # Return a new list of paths that only contains new paths (paths not in old paths)
 # Note: method="txt" should be used by default, unless there is no old_paths.txt file
-def drop_old_paths(paths, method="txt"):
+def _drop_old_paths(paths, method="txt"):
     # use old_paths.txt file to subtract all old paths from current paths file
     if method == "txt":
         # get a list of old paths
         old_paths = read_txt_file(phase1_files['old_paths'])
         # create a new list of paths that only contains paths not in old_paths
         new_paths = [p for p in paths if p not in old_paths]
+        # save new paths to a file
+        write_txt_file(phase1_files['new_paths'], new_paths)
         return new_paths
 
     # get run_uuids from paths, then for each run_uuid in training_data, get rid of that path
@@ -212,8 +221,10 @@ def drop_old_paths(paths, method="txt"):
         # get list of run_uuids from training_data
         training_data = pd.read_csv(phase1_files['training_data'])
         existing_uuids = training_data['run_uuid'].to_list()
-        # Use the run_id_from_path function to extract run_uuid from each path
-        new_paths = [p for p in paths if run_id_from_path(p) not in existing_uuids]
+        # Use the _run_id_from_path function to extract run_uuid from each path
+        new_paths = [p for p in paths if _run_id_from_path(p) not in existing_uuids]
+        # save new paths to a file
+        write_txt_file(phase1_files['new_paths'], new_paths)
         return new_paths
     
     # handle incorrect method user error
@@ -221,8 +232,7 @@ def drop_old_paths(paths, method="txt"):
 
 
 # given a start and stop index and a list of paths,
-# return a df of runs and a files_not_found list where each run is from a path 
-# in the section of paths[start:stop]
+# return a df of runs in the section of paths[start:stop]
 def get_df_chunk(start, stop, paths):
     # initialize a list of paths that cause filenotfound errors
     bad_paths = []
@@ -395,10 +405,11 @@ def get_new_runs_df(df):
 # gather simulation paths to be read 
 # simulation_paths = gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
 simulation_paths = read_txt_file(phase1_files['paths'])  # for if simulation_paths are fully gathered
-new_paths = drop_old_paths(simulation_paths, method="txt")
+# new_paths = _drop_old_paths(simulation_paths, method="txt")  # for if new_paths are not yet generated
+new_paths = read_txt_file(phase1_files['new_paths']). #for if new_paths are already generated
 print("simulation paths length:", len(simulation_paths))
 print("New paths length:", len(new_paths))
-
+'''
 # get a df that only contains the ids and status of successful runs
 runs_list_df = pd.read_csv(phase1_files['read'])
 successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
@@ -422,4 +433,4 @@ merged_df.to_csv(phase1_files['write'])
 # update old_paths txt to include newly found paths
 append_txt_file(new_paths)
 # clear files_not_found txt
-
+'''
