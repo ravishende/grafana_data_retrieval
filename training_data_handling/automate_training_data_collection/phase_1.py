@@ -425,10 +425,10 @@ def get_new_runs_df(df):
 
 # gather simulation paths to be read 
 simulation_paths = gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
-'''
+
 # simulation_paths = read_txt_file(phase1_files['paths'])  # for if simulation_paths are fully gathered
 # new_paths = _drop_old_paths(simulation_paths, method="txt")  # for if new_paths are not yet generated
-new_paths = read_txt_file(phase1_files['new_paths']). #for if new_paths are already generated
+new_paths = read_txt_file(phase1_files['new_paths']) #for if new_paths are already generated
 print("simulation paths length:", len(simulation_paths))
 print("New paths length:", len(new_paths))
 
@@ -442,19 +442,21 @@ final_paths_list = runs_to_gather_df['path'].to_list()
 
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
-all_runs_df = get_df_from_paths(final_paths_list, batch_size=50)
-# all_runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
+runs_df = get_df_from_paths(final_paths_list, batch_size=50)
+# runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
 
 print("getting finalized dataframe")
 # remove rows with na values for run_start, run_end, renaming all others to  start or stop
-merged_df = remove_na_rows(merged_df)
-merged_df = merged_df.reset_index(drop=True)
+runs_df = remove_na_rows(runs_df)
+runs_df = runs_df.reset_index(drop=True)
 
 # save final_df
-print(merged_df)
-merged_df.to_csv(phase1_files['write'])
+print(runs_df)
+runs_df.to_csv(phase1_files['write'])
 
 # update old_paths txt to include newly found paths
-append_txt_file(new_paths)
+append_txt_file(phase1_files['new_paths'], new_paths)
+
 # clear files_not_found txt
-'''
+write_txt_file(phase1_files['files_not_found'], "")
+
