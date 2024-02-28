@@ -428,17 +428,16 @@ successful_runs_list_df = get_successful_runs(runs_list_df, reset_index=True)
 
 # get a df of [path, run_uuid], where we filter new_paths, only including the paths with run_uuids that were successful.
 runs_to_gather_df = get_runs_to_gather_df(new_paths, successful_runs_list_df)
+final_paths_list = runs_to_gather_df['path'].to_list()
 
 print("getting df from paths\n")
 # get the actual runs from the successful runs paths
-all_runs_df = get_df_from_paths(simulation_paths, batch_size=50)
+all_runs_df = get_df_from_paths(final_paths_list, batch_size=50)
 # all_runs_df = pd.read_csv(phase1_files['runs_df'], index_col=0)
 
 print("getting finalized dataframe")
-# only get the current runs that were successful
-merged_df = merge_dfs(all_runs_df, successful_runs_list_df)
+# remove rows with na values for run_start, run_end, renaming all others to  start or stop
 merged_df = remove_na_rows(merged_df)
-merged_df = get_new_runs_df(merged_df)
 merged_df = merged_df.reset_index(drop=True)
 
 # save final_df
