@@ -146,20 +146,29 @@ def _get_paths_from_directories(directories, fs):
 def gather_all_paths(batch_size=None):
     # authenticate and get file system and bucket containing directories for paths
     fs, bucket = _get_fs_and_bucket()
-    # way of keeping track of if all runs have been added yet
+    
+    # get all directories and previously gathered directories
     directories = fs.ls(bucket)
     gathered_directories = _get_gathered_items("path_directories")
+    
     # get list of directories that have not been gathered
     ungathered_directories = [d for d in directories if d not in gathered_directories]
+    # the last gathered directory may have new subdirectories. Add it into ungathered_directories to get new subdirs
+    ungathered_directories = [gathered_directories[-1]] + ungathered_directories
+    # get rid of duplicates in ungathered_directories (from adding in gathered_directories[-1])
+    ungathered_directories = list(set(ungathered_directories))
+    
     # intialize a list to hold all simulation paths
     simulation_paths_list = _get_gathered_items("paths")
-    # handle if no ungathered directories
-    if len(ungathered_directories) == 0:
+    # handle if no new directories
+    if ungathered_directories == [gathered_directories[-1]]:
         return simulation_paths_list
-
+    
     # start gathering directories
-    print(f"There are {len(directories)} total directories. {len(gathered_directories)} \
-        have already been gathered. Gathering paths for the remaining {len(ungathered_directories)}.")
+    print(f"{len(gathered_directories)} directories have already been gathered. \
+        Gathering paths for the remaining {len(ungathered_directories)}.") 
+        # note: if you were to calculate total based on these 2 values, you'd notice that len(directories) = total -1. This is because
+        # we added gathered_directories[-1] to ungathered_directories. We will also have to run .unique() on paths because of this
 
     # if we're not using batches, run everything at once
     if batch_size is None:
@@ -185,7 +194,7 @@ def gather_all_paths(batch_size=None):
 
         # append newly collected paths to the paths.txt file
         append_txt_file(phase1_files['paths'], sim_paths_batch)
-
+    
     return simulation_paths_list
 
 # get the run_uuid (str) from a path (str)
@@ -415,8 +424,9 @@ def get_new_runs_df(df):
 '''
 
 # gather simulation paths to be read 
-# simulation_paths = gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
-simulation_paths = read_txt_file(phase1_files['paths'])  # for if simulation_paths are fully gathered
+simulation_paths = gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
+'''
+# simulation_paths = read_txt_file(phase1_files['paths'])  # for if simulation_paths are fully gathered
 # new_paths = _drop_old_paths(simulation_paths, method="txt")  # for if new_paths are not yet generated
 new_paths = read_txt_file(phase1_files['new_paths']). #for if new_paths are already generated
 print("simulation paths length:", len(simulation_paths))
@@ -447,3 +457,4 @@ merged_df.to_csv(phase1_files['write'])
 # update old_paths txt to include newly found paths
 append_txt_file(new_paths)
 # clear files_not_found txt
+'''
