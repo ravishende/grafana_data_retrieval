@@ -17,13 +17,19 @@ PHASE_2_FILES = {
     # csv files
     "read": "csvs/phase_2_read.csv",
     "write": "csvs/phase_2_write.csv",
+    "temp": "csvs/query_progress.csv",
     # txt files
     "num_duration_cols": "txts/num_durations_cols.txt"
     }
-phase3_files = { 
+PHASE_3_FILES = { 
+    # csv files
     # "read": "csvs/phase_3_read.csv",
     "read": "csvs/phase_2_write.csv",
-    "write": "csvs/phase_3_write.csv"}
+    "write": "csvs/phase_3_write.csv",
+    # txt files
+    "num_duration_cols": "txts/num_durations_cols.txt"
+    }
 phase4_files = { 
     "read": "csvs/phase_4_read.csv",
-    "write": "csvs/phase_4_write.csv"}
+    "write": "csvs/phase_4_write.csv"
+    }
