@@ -105,7 +105,7 @@ class Phase_1():
         # return an updated dataframe with an added n duration columns of various insert methods
         def insert_n_duration_columns(self, df, n, single_method=-1):
             # initialize num_duration_cols to be n for later steps
-            with open("num_duration_cols.txt", "w") as f:
+            with open(self.files['num_duration_cols'], "w") as f:
                 f.write(str(self.num_duration_cols))
 
             num_insert_methods = 3
