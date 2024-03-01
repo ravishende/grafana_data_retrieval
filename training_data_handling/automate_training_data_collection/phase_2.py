@@ -3,17 +3,18 @@ import shutil
 import ast
 import random
 from datetime import datetime
-from workflow_files import PHASE_2_FILES
+from workflow_files import PHASE_2_FILES, NUM_DURATION_COLS_FILE
 
 # display settings
 pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-class Phase_1():
-    def __init__(self, files=PHASE_2_FILES):
+class Phase_2():
+    def __init__(self, files=PHASE_2_FILES, file_num_duration_cols=NUM_DURATION_COLS_FILE):
         self.files = files
         self.num_duration_cols = 3
+        self.file_num_duration_cols = file_num_duration_cols
         self.drop_cols = [
             "path",
             # "time_scraped", # if it's there
@@ -105,7 +106,7 @@ class Phase_1():
         # return an updated dataframe with an added n duration columns of various insert methods
         def insert_n_duration_columns(self, df, n, single_method=-1):
             # initialize num_duration_cols to be n for later steps
-            with open(self.files['num_duration_cols'], "w") as f:
+            with open(self.file_num_duration_cols, "w") as f:
                 f.write(str(self.num_duration_cols))
 
             num_insert_methods = 3

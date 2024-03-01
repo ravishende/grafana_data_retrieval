@@ -1,7 +1,7 @@
 import pandas as pd
 import shutil
-from itertools import chain
 from workflow_files import PHASE_3_FILES
+from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES
 import sys
 import os
 sys.path.append("../../grafana_data_retrieval")  # Adjust the path to go up two levels
@@ -15,63 +15,22 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-
-'''
-==========================
-    Helper functions
-==========================
-'''
-class Phase_1():
-    def __init__(self, files=PHASE_3_FILES):
+class Phase_3():
+    def __init__(self, files=PHASE_3_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES):
         self.files = files
         # metrics (to be queried)
-        self.all_metrics = [
-            "cpu_usage",
-            "mem_usage",
-            "cpu_request",
-            "mem_request",
-            "transmitted_packets",
-            "received_packets",
-            "transmitted_bandwidth",
-            "received_bandwidth"
-            ]
-        self.static_metrics = ["cpu_request", "mem_request"]
-        self.non_static_metrics = [metric for metric in self.all_metrics if metric not in self.static_metrics]
+        self.all_metrics = metrics["all"]
+        self.static_metrics = metrics["static"]
+        self.non_static_metrics = metrics["non_static"]
         # duration columns (for querying)
-            # Note: assumes duration columns are in the form "duration_t{N}" where {N} is 
-            # an int from 1 to num_duration_cols inclusive
-        self.num_duration_cols = self._init_num_duration_cols()
-        self.duration_col_names = ["duration_t" + str(num) for num in range(1, self.num_duration_cols+1)]
-        self.duration_col_total = "runtime"  # from phase_2
+        self.num_duration_cols = duration_cols["num_cols"]
+        self.duration_col_names = duration_cols["col_names"]
+        self.duration_col_total = duration_cols["total_col"]
         # column names (for queried results)
-        self.col_names_static = self.static_metrics
-        self.col_names_total = [name + "_total" for name in self.non_static_metrics]
-        self.col_names_by_time = self._init_col_names_by_time()
-        self.all_col_names = self.col_names_static + self.col_names_total + list(chain.from_iterable(self.col_names_by_time))
-
-    # read a txt file written by phase_2 that contains num_duration_cols
-    def _init_num_duration_cols(self):
-        # read the file to get num_duration_cols
-        try:
-            with open(self.files['num_duration_cols'],"r") as f:
-                num_duration_cols = int(f.read())
-        # handle errors for reading file
-        except FileNotFoundError:
-            print(f"Error: File {self.files['num_duration_cols']} not found.")
-        except ValueError:
-            print(f"Error: Content of {self.files['num_duration_cols']} is not an integer.")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-        # return if successful
-        return num_duration_cols
-
-    # initialize col_names_by_time based on self.num_duration_cols and self.non_static_metrics
-    def _init_col_names_by_time(self):
-        col_names_by_time = []
-        for i in range(1, self.num_duration_cols):
-            col_names_t_i = [name + "_t" + str(i) for name in self.non_static_metrics]
-            col_names_by_time.append(col_names_t_i)
-        return col_names_by_time
+        self.col_names_static = col_names["static"]
+        self.col_names_total = col_names["total"]
+        self.col_names_by_time = col_names["by_time"]
+        self.all_col_names = col_names["all"]
 
     # given: 
         # df - a dataframe 
@@ -103,12 +62,11 @@ class Phase_1():
         Main Program
     ======================
     '''
-    def run(self):
+    def run(self, rows_batch_size=20):
         # get preprocessed_df
         preprocessed_df = pd.read_csv(phase3_files['read'], nrows=3)
 
         # 7. query resource metrics (metrics total, t1, t2)
-        rows_batch_size = 20
         queried_df = self.query_metrics(preprocessed_df, rows_batch_size, temporary_save_file)
 
         # save df to a csv file
