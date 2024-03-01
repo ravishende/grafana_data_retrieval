@@ -279,7 +279,6 @@ class Phase_1():
             # add a path column to the row, then append it to rows
             row['path'] = path
             rows.append(row)
-        
 
         # if there are no successful rows, return an empty dataframe
         if len(rows) == 0:
@@ -304,7 +303,6 @@ class Phase_1():
 
         # return df
         return df
-
 
     # given the simulation paths, create a df containing runs
     # for all paths that have corresponding files
@@ -342,7 +340,6 @@ class Phase_1():
         runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
         return runs_df
 
-
     # given a dataframe of runs with ens_status and run_status columns,
     # return a new dataframe with only the successful runs 
     def get_successful_runs(self, df, reset_index=True):
@@ -352,7 +349,6 @@ class Phase_1():
         if reset_index:
             successful_runs = successful_runs.reset_index(drop=True)
         return successful_runs
-
 
     # get a df of path, run_uuid, where we filter new_paths, only including the paths with run_uuids that were successful.
     def get_runs_to_gather_df(self, new_paths, successful_runs_list_df):
@@ -364,15 +360,13 @@ class Phase_1():
         result_df = new_paths_df[new_paths_df['run_uuid'].isin(successful_runs_list_df['run_uuid'])]
         return result_df
 
-
-
     # given a df that contains all successful runs and a df that 
-    def merge_dfs(self, runs_data_df, runs_list_df):
+    def merge_dfs(self, runs_data_df, successful_runs_list_df):
         # Selecting the required columns from successful_runs_list_df
         successful_runs_cols = successful_runs_list_df[['ensemble_uuid', 'run_uuid']]
         
         # Merging the dataframes on 'run_uuid' with an inner join
-        merged_df = pd.merge(successful_runs_cols, all_runs_df, on='run_uuid', how='inner')
+        merged_df = pd.merge(successful_runs_cols, runs_data_df, on='run_uuid', how='inner')
         
         return merged_df
 
@@ -400,18 +394,6 @@ class Phase_1():
             df = df.reset_index(drop=True)
 
         return df
-
-
-    # given a df of runs, keep only the runs that aren't already in training_data
-    # these runs are checked by the "run_uuid" column in the df and training_data
-    def get_new_runs_df(self, df):
-        training_data = pd.read_csv(self.files['training_data'], index_col=0)
-
-        # find runs in df that are not already in training_data by "run_uuid"
-        new_runs_mask = ~df['run_uuid'].isin(training_data['run_uuid'])
-        new_runs_df = df[new_runs_mask]
-
-        return new_runs_df
 
     '''
     ======================
