@@ -1,5 +1,5 @@
 # file settings
-phase1_files = { 
+PHASE_1_FILES = { 
     # csv files
     "read": "csvs/phase_1_read.csv",
     "write": "csvs/phase_1_write.csv",
@@ -13,9 +13,13 @@ phase1_files = {
     "path_directories": "txts/path_directories.txt",
     "old_path_directories": "txts/old_path_directories.txt",
     }
-phase2_files = { 
+PHASE_2_FILES = { 
+    # csv files
     "read": "csvs/phase_2_read.csv",
-    "write": "csvs/phase_2_write.csv"}
+    "write": "csvs/phase_2_write.csv",
+    # txt files
+    "num_duration_cols": "txts/num_durations_cols.txt"
+    }
 phase3_files = { 
     # "read": "csvs/phase_3_read.csv",
     "read": "csvs/phase_2_write.csv",
