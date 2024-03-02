@@ -4,6 +4,7 @@ from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES, ID_COLS
 class Phase_4():
     def __init__(self, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS):
         self.files = files
+        self.drop_cols = ["start","stop", "ensemble_uuid"]
         # metrics (to be queried)
         self.all_metrics = metrics["all"]
         self.static_metrics = metrics["static"]
@@ -57,12 +58,6 @@ class Phase_4():
             df = df.reset_index(drop=True)
         return df
 
-'''
--------
-step 11 - add ratio cols for duration_t_i columns and drop numerator columns
--------
-'''
-
     # given an i (1 through num_duration_cols inclusive), 
     # return 
         # insert_ratio_cols - a list of ratio column names at i to be inserted
@@ -113,20 +108,20 @@ step 11 - add ratio cols for duration_t_i columns and drop numerator columns
     ====================================
     '''
     def run(self):
-        # 8. sum over json to get floats for resource metrics
+        # sum over json to get floats for resource metrics
         summed_df = self.update_queried_cols(queried_df)
 
-        # 9. add in percent columns
+        # add in percent columns
         percents_included_df = self.add_percent_columns(summed_df)
 
-        # 10. drop rows with zeros in cpu & mem total
+        # drop rows with zeros in cpu & mem total
         nonzero_df = self.drop_zero_cpu_mem(percents_included_df, reset_index=True)
 
-        # 11. add ratio cols for duration_t_i columns and drop numerator columns of ratio cols
+        # add ratio cols for duration_t_i columns and drop numerator columns of ratio cols
         ratios_added_df = self.insert_ratio_columns(nonzero_df, drop_numerators=True, reset_index=True)
 
-        # 12. drop_cols_2
-        final_df = self.drop_columns(ratios_added_df, drop_cols_2, reset_index=True)
+        # drop newly unnecessary columns
+        final_df = self.drop_columns(ratios_added_df, self.drop_cols, reset_index=True)
 
         # save df to a csv file
         final_df.to_csv(phase4files['write'])
