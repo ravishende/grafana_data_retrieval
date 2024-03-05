@@ -1,18 +1,15 @@
 import shutil
 import pandas as pd
-from work_flow_functions import *
-from workflow_files import phase1_files, phase2_files, phase3_files, phase4files
+from workflow_files import MAIN_FILES
+from phase_1 import Phase_1
+from phase_2 import Phase_2
+from phase_3 import Phase_3
+from phase_4 import Phase_4
 
 # display settings
 pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
-
-
-# global progress variables - DO NOT EDIT
-PHASE_1_COMPLETE = False
-PHASE_2_COMPLETE = False
-PHASE_3_COMPLETE = False
 
 
 '''
@@ -22,12 +19,8 @@ Work Flow
 Phase 1:  Collecting Runs
 =========================
 1. get successful bp3d runs from bp3d-runs
-    - run_selection.py
-2. collect runs from successful bp3d runs  # needs new phase?
-    - gather.ipynb in collect_runs/
+2. collect runs from successful bp3d runs and paths
 3. add in ensemble uuid
-    - add_id_cols.py 
-
 
 ======================
 Phase 2: Preprocessing
@@ -88,86 +81,97 @@ drop_cols_2 = [
         Main Program
 ============================
 '''
+# given a phase number (1 through 4): return True or False depending on whether the stater has been finished or not
+def is_phase_finished(phase):
+    # check input is a valid phase
+    if phase not in [1,2,3,4]:
+        raise ValueError("phase must be set to either: 1, 2, 3, or 4.")
+     # read file, then check the line's progress
+    try:
+        # Read the file's current contents
+        with open(MAIN_FILES['phases_progress'], 'r') as file:
+            lines = file.readlines()
+            line_content = lines[phase-1].strip()  # Remove leading/trailing whitespace and newline
+            return line_content == 'T'
 
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+# given a phase number (1 through 4): set the phase's 'finished' progress to be True
+def set_phase_finished(phase):
+    # check input is a valid phase
+    if phase not in [1,2,3,4]:
+        raise ValueError("phase must be set to either: 1, 2, 3, or 4.")
+    # read file, then update the phase line to be True
+    try:
+        # Read the file's current contents
+        with open(MAIN_FILES['phases_progress'], 'r') as file:
+            lines = file.readlines()
+            lines[phase - 1] = 'T\n'
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+# given a phase number (1 through 4): set the phase's 'finished' progress to be False
+def set_phase_unfinished(phase):
+    # check input is a valid phase
+    if phase not in [1,2,3,4]:
+        raise ValueError("phase must be set to either: 1, 2, 3, or 4.")
+    # read file, then update the phase line to be False
+    try:
+        # Read the file's current contents
+        with open(MAIN_FILES['phases_progress'], 'r') as file:
+            lines = file.readlines()
+            lines[phase - 1] = 'F\n'
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+# set the progress of all phases to False
+def reset_phase_progess():
+    set_phase_unfinished(1)
+    set_phase_unfinished(2)
+    set_phase_unfinished(3)
+    set_phase_unfinished(4)
+    
 
 '''
 ========================
-Phase 1: Collecting Runs
+    Main Program
 ========================
 '''
 
-# 1. get successful bp3d runs from bp3d-runs
-runs_df = pd.read_csv(phase1_files['read'], index_col=0)
-successful_runs_df = get_successful_runs(runs_df, reset_index=True)
+# reset progress if this is the first time running it with new data
+# reset_progess()
 
-# 2. collect runs from successful bp3d runs
-    # - gather.ipynb in collect_runs/
-collected_runs_df = collect_runs(successful_runs_df)  # write collect_runs() function logic
+# get instances of classes
+p_1 = Phase_1()
+p_2 = Phase_2()
+p_3 = Phase_3()
+p_4 = Phase_4()
 
-# 3. add in ensemble uuid
-ids_included_df = add_id_cols(successful_runs_df, collected_runs_df)
+# run each phase if it is not finished
+# Phase 1: Collecting Runs
+if not is_phase_finished(1):
+    print("Beginning Phase 1...")
+    p_1.run()
+    set_phase_finished(1)
 
-ids_included_df.to_csv()
+# Phase 2: PreProcessing
+if not is_phase_finished(2):
+    print("Beginning Phase 2...")
+    p_2.run()
+    set_phase_finished(2)
 
-'''
-======================
-Phase 2: PreProcessing
-======================
-'''
+# Phase 3: Querying
+if not is_phase_finished(3):
+    print("Beginning Phase 3...")
+    p_3.run()
+    set_phase_finished(3)
 
-# 4. calculate area and runtime
-calculated_df = add_area_and_runtime(ids_included_df)
-
-# 5. drop drop_cols_1
-filtered_df = drop_columns(calculated_df, drop_cols_1)
-
-# 6. add duration_t1, duration_t2 columns
-num_duration_cols = 2  # number of duration columns to insert and query for (doesn't include "runtime")
-preprocessed_df = insert_n_duration_columns(filtered_df, num_duration_cols, single_method=False)
-
-# save preprocessed_df to file
-preprocessed_df.to_csv(phase2_files['write'])
-PHASE_1_COMPLETE = True
-
-
-'''
-=================
-Phase 3: Querying
-=================
-'''
-
-# 7. query resource metrics (metrics total, t1, t2)
-temporary_save_file = "csv_files/query_progress.csv"
-rows_batch_size = 20
-queried_df = query_metrics(preprocessed_df, rows_batch_size, temporary_save_file)
-
-# save df to a csv file
-queried_df.to_csv(phase3_files['write'])
-PHASE_2_COMPLETE = True
-
-
-'''
-====================================
-Phase 3: Sum and Ready Training Data
-====================================
-'''
-
-# 8. sum over json to get floats for resource metrics
-summed_df = update_queried_cols(queried_df)
-
-# 9. add in percent columns
-percents_included_df = add_percent_columns(summed_df)
-
-# 10. drop rows with zeros in cpu & mem total
-nonzero_df = drop_zero_cpu_mem(percents_included_df, reset_index=True)
-
-# 11. add ratio cols for duration_t_i columns and drop numerator columns of ratio cols
-ratios_added_df = insert_ratio_columns(nonzero_df, drop_numerators=True, reset_index=True)
-
-# 12. drop_cols_2
-final_df = drop_columns(ratios_added_df, drop_cols_2)
-
-# save df to a csv file
-queried_df.to_csv(phase4files['write'])
-PHASE_3_COMPLETE = True
-
+# Phase 4: Sum and Ready Training Data
+if not is_phase_finished(4):
+    print("Beginning Phase 4...")
+    p_4.run()
+    set_phase_finished(4)
