@@ -1,6 +1,6 @@
 import shutil
 import pandas as pd
-from workflow_files import MAIN_FILES
+from work_flow_functions import is_phase_finished, set_phase_finished, reset_phases_progress
 from phase_1 import Phase_1
 from phase_2 import Phase_2
 from phase_3 import Phase_3
@@ -53,88 +53,6 @@ Phase 4: Sum and Ready Training Data
     - finalize_training_data.py
 '''
 
-drop_cols_1 = [
-    "path",
-    # "time_scraped", # if it's there
-    "extent_fmt",
-    "dz",
-    "fire_grid",
-    "output",
-    "resolution",
-    "resolution_units",
-    "run_binary",
-    "seed",
-    "timestep",
-    "topo"
-]
-
-drop_cols_2 = [
-    "start",
-    "stop", 
-    "ensemble_uuid", 
-    # "run_uuid"
-]
-
-
-'''
-============================
-        Main Program
-============================
-'''
-# given a phase number (1 through 4): return True or False depending on whether the stater has been finished or not
-def is_phase_finished(phase):
-    # check input is a valid phase
-    if phase not in [1,2,3,4]:
-        raise ValueError("phase must be set to either: 1, 2, 3, or 4.")
-     # read file, then check the line's progress
-    try:
-        # Read the file's current contents
-        with open(MAIN_FILES['phases_progress'], 'r') as file:
-            lines = file.readlines()
-            line_content = lines[phase-1].strip()  # Remove leading/trailing whitespace and newline
-            return line_content == 'T'
-
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
-
-# given a phase number (1 through 4): set the phase's 'finished' progress to be True
-def set_phase_finished(phase):
-    # check input is a valid phase
-    if phase not in [1,2,3,4]:
-        raise ValueError("phase must be set to either: 1, 2, 3, or 4.")
-    # read file, then update the phase line to be True
-    try:
-        # Read the file's current contents
-        with open(MAIN_FILES['phases_progress'], 'r') as file:
-            lines = file.readlines()
-            lines[phase - 1] = 'T\n'
-
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
-# given a phase number (1 through 4): set the phase's 'finished' progress to be False
-def set_phase_unfinished(phase):
-    # check input is a valid phase
-    if phase not in [1,2,3,4]:
-        raise ValueError("phase must be set to either: 1, 2, 3, or 4.")
-    # read file, then update the phase line to be False
-    try:
-        # Read the file's current contents
-        with open(MAIN_FILES['phases_progress'], 'r') as file:
-            lines = file.readlines()
-            lines[phase - 1] = 'F\n'
-
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
-# set the progress of all phases to False
-def reset_phase_progess():
-    set_phase_unfinished(1)
-    set_phase_unfinished(2)
-    set_phase_unfinished(3)
-    set_phase_unfinished(4)
-    
 
 '''
 ========================
@@ -143,35 +61,22 @@ def reset_phase_progess():
 '''
 
 # reset progress if this is the first time running it with new data
-# reset_progess()
+reset_phases_progress()
 
 # get instances of classes
 p_1 = Phase_1()
 p_2 = Phase_2()
 p_3 = Phase_3()
 p_4 = Phase_4()
+phases = [p_1, p_2, p_3, p_4]
 
-# run each phase if it is not finished
-# Phase 1: Collecting Runs
-if not is_phase_finished(1):
-    print("Beginning Phase 1...")
-    p_1.run()
-    set_phase_finished(1)
 
-# Phase 2: PreProcessing
-if not is_phase_finished(2):
-    print("Beginning Phase 2...")
-    p_2.run()
-    set_phase_finished(2)
-
-# Phase 3: Querying
-if not is_phase_finished(3):
-    print("Beginning Phase 3...")
-    p_3.run()
-    set_phase_finished(3)
-
-# Phase 4: Sum and Ready Training Data
-if not is_phase_finished(4):
-    print("Beginning Phase 4...")
-    p_4.run()
-    set_phase_finished(4)
+# run phases that have not yet been run
+for i, phase in enumerate(phases):
+    # get phase number - start at 1, not 0
+    phase_number = i+1
+    # for each unfinished phase, run the phase, then set phase_finished of that stage to True
+    if not is_phase_finished(phase_number):
+        print(f"Beginning Phase {phase_number}...")
+        phase.run()
+        set_phase_finished(phase_number)

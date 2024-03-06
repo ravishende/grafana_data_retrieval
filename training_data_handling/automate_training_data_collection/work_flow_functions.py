@@ -1,14 +1,104 @@
-import pandas as pd
-import warnings
-import ast
-import sys
-import os
-sys.path.append("../grafana_data_retrieval")
-current = os.path.dirname(os.path.realpath("work_flow_functions.py"))
-parent = os.path.dirname(current)
-sys.path.append(parent)
-from query_resources import query_and_insert_columns
-from resource_json_summation import update_columns
+from workflow_files import MAIN_FILES
+# import pandas as pd
+# import sys
+# import os
+# sys.path.append("../grafana_data_retrieval")
+# current = os.path.dirname(os.path.realpath("work_flow_functions.py"))
+# parent = os.path.dirname(current)
+# sys.path.append(parent)
+# from query_resources import query_and_insert_columns
+# from resource_json_summation import update_columns
+
+# constants - DO NOT EDIT
+NUM_PHASES = 4
+
+
+
+# given a filename of a txt file, line number, and message, update the line at line_number to be "message", ending in a new line
+def _update_txt_line(file_name, line_number, message):
+     # read file, then update the phase line to be message with a \n
+    try:
+        # Read the file's current contents
+        with open(file_name, 'r') as file:
+            lines = file.readlines()
+            lines[line_number] = f"{message}\n"
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+# given a file_name and line_number, return the contents of the line (without any trailing whitespace or \n at the end of the line)
+def _read_txt_line(file_name, line_number):
+     # read file, then check the line's progress
+    try:
+        # Read the file's current contents
+        with open(file_name, 'r') as file:
+            lines = file.readlines()
+            line_content = lines[line_number].strip()  # Remove leading/trailing whitespace and newline
+            return line_content
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    
+
+# check that the input phase_number is a valid phase
+def _check_phase_number(phase_number):
+    # check input is a valid phase
+    if phase_number not in range(1, NUM_PHASES+1):
+        raise ValueError(f"phase_number must be an integer between 1 and {NUM_PHASES} inclusive")
+
+
+# given a phase number (1 through 4): return True or False depending on whether the stater has been finished or not
+def is_phase_finished(phase_number):
+    # check that input is valid
+    _check_phase_number(phase_number)
+    # get the status of the requested phase
+    line_number = phase_number-1
+    phase_status = _read_txt_line(MAIN_FILES["phases_progress"], line_number)
+    # return True if phase_status is 'T', or False otherwise
+    return phase_status == 'T'
+
+
+# given a phase number (1 through 4): set the phase's 'finished' progress to be True
+def set_phase_finished(phase_number):
+    # check input is a valid phase
+    _check_phase_number(phase_number)
+    
+    # make sure phases aren't being set incorrecly out of order
+    if phase_number > 1:
+        if not is_phase_finished(phase_number-1):
+            raise ValueError(f"Phase {phase_number} cannot be set as finished because phase {phase_number-1} is still unfinished. Phases must be done sequentially.")
+
+    # write the line number to be "T" (True) at the line corresponding to the phase_number in the phases_progress txt file
+    line_num = phase_number-1
+    _update_txt_line(file_name=MAIN_FILES['phases_progress'], line_number=line_num, message="T")
+
+
+# given a phase number (1 through 4): set the phase's 'finished' progress to be False
+def set_phase_unfinished(phase_number):
+    # check input is a valid phase
+    _check_phase_number(phase_number)
+    # make sure phases aren't being set incorrecly out of order
+    if phase_number < 4:
+        if not is_phase_finished(phase_number-1):
+            raise ValueError(f"Phase {phase_number} cannot be set as finished because phase {phase_number-1} is still unfinished. Phases must be done sequentially.")
+    
+    # write the line number to be "F" (False) at the line corresponding to the phase_number in the phases_progress txt file
+    line_num = phase_number-1
+    _update_txt_line(file_name=MAIN_FILES['phases_progress'], line_number=line_num, message="F")
+
+
+# given the total number of phases, set the progress of all phases to False
+def reset_phases_progress():
+    for phase_number in range(1, NUM_PHASES+1):
+        set_phase_unfinished(phase_number)
+    
+
+
+
+
+
+"""
 
 '''
 ========================
@@ -116,8 +206,10 @@ step 5 - drop unnecessary columns
 ------
 '''
 
-def drop_columns(df, columns_to_drop):
+def drop_columns(df, columns_to_drop, reset_index=True):
     df = df.drop(columns=columns_to_drop)
+    if reset_index:
+        df = df.reset_index(drop=True)
     return df
 
 
@@ -213,10 +305,11 @@ def _get_metric_column_names():
     # get column names
     col_names_static = static_metrics
     col_names_total = [name + "_total" for name in non_static_metrics]
+    num_duration_cols = _get_num_duration_cols()
 
     # get col_names_t1, col_names_t2, etc. in a list called col_names_by_time
     col_names_by_time = []
-    for i in range(1, len(duration_col_namesn)+1):
+    for i in range(1, num_duration_cols):
         col_names_t_i = [name + "_t" + i for name in non_static_metrics]
         col_names_by_time.append(col_names_t_i)
 
@@ -382,3 +475,4 @@ def insert_ratio_columns(df, drop_numerators=True, reset_index=True):
     return df
 
 
+"""
