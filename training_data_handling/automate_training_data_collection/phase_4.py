@@ -1,5 +1,13 @@
+import pandas as pd
 from workflow_files import PHASE_4_FILES
 from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES, ID_COLS
+import sys
+import os
+sys.path.append("../../grafana_data_retrieval")  # Adjust the path to go up two levels
+parent = os.path.dirname(os.path.realpath(__file__))
+grandparent = os.path.dirname(parent)
+sys.path.append(grandparent)
+from resource_json_summation import update_columns
 
 class Phase_4():
     def __init__(self, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS):
@@ -14,18 +22,19 @@ class Phase_4():
         self.duration_col_names = duration_cols["col_names"]
         self.duration_col_total = duration_cols["total_col"]
         # column names (for queried results)
-        self.col_names_static = col_names["static"]
-        self.col_names_total = col_names["total"]
-        self.col_names_by_time = col_names["by_time"]
-        self.all_col_names = col_names["all"]
+        self.col_names_static = col_names["static_cols"]
+        self.col_names_total = col_names["total_cols"]
+        self.col_names_by_time = col_names["by_time_cols"]
+        self.all_col_names = col_names["all_names"]
         # id columns (for updating queried cols)
         self.ensemble_col = id_cols["ensemble"]
 
-    # given a df with a column titled "ensemble_uuid" and queried columns with json-like data
+    # given a df with a column titled "ensemble_uuid" and queried4 columns with json-like data
     # return a df with all queried columns updated to be a single float value
     def update_queried_cols(self, df):
+        non_static_col_names = self.col_names_total + self.col_names_by_time
         # update columns - sum non_static columns, get values for static columns
-        df = update_columns(df, self.non_static_metrics, self.ensemble_col, static=False)
+        df = update_columns(df, non_static_col_names, self.ensemble_col, static=False)
         df = update_columns(df, self.static_metrics, self.ensemble_col, static=True)
         return df
 
@@ -45,8 +54,8 @@ class Phase_4():
     # given a dataframe with the columns "cpu_usage_total" and "mem_usage_total", drop all rows where those columns are 0
     # return the updated dataframe
     def drop_zero_cpu_mem(self, df, reset_index=True):
-        zero_mask = (summed['cpu_usage_total'] == 0) | (summed['mem_usage_total'] == 0)
-        non_zeros = summed[~zero_mask]
+        zero_mask = (df['cpu_usage_total'] == 0) | (df['mem_usage_total'] == 0)
+        non_zeros = df[~zero_mask]
         if reset_index:
             non_zeros = non_zeros.reset_index(drop=True)
 
@@ -65,13 +74,10 @@ class Phase_4():
         # duration_col - a column name of the duration column at i
     def _get_ratio_components(self, i):
         if i < 1 or i > self.num_duration_cols:
-            raise ValueError("i should only be 1 through num_duration_cols inclusive.")
-
-        # get non static metrics which will be used to find numerator columns
-        _, non_static_metrics = _get_metrics()
+            raise ValueError("i should be an int between 1 and num_duration_cols inclusive.")
 
         # get numerator column names, new insert column names, and duration column name
-        numerator_cols = [f"{metric}_t{i}" for metric in non_static_metrics]
+        numerator_cols = [f"{metric}_t{i}" for metric in self.non_static_metrics]
         insert_ratio_cols = [f"{name}_ratio" for name in numerator_cols]
         duration_col = f"duration_t{i}"
 
@@ -108,6 +114,7 @@ class Phase_4():
     ====================================
     '''
     def run(self):
+        queried_df = pd.read_csv(self.files['read'], index_col=0)
         # sum over json to get floats for resource metrics
         summed_df = self.update_queried_cols(queried_df)
 
@@ -124,5 +131,5 @@ class Phase_4():
         final_df = self.drop_columns(ratios_added_df, self.drop_cols, reset_index=True)
 
         # save df to a csv file
-        final_df.to_csv(phase4files['write'])
+        final_df.to_csv(self.files['write'])
 

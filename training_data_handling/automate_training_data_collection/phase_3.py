@@ -27,10 +27,10 @@ class Phase_3():
         self.duration_col_names = duration_cols["col_names"]
         self.duration_col_total = duration_cols["total_col"]
         # column names (for queried results)
-        self.col_names_static = col_names["static"]
-        self.col_names_total = col_names["total"]
-        self.col_names_by_time = col_names["by_time"]
-        self.all_col_names = col_names["all"]
+        self.col_names_static = col_names["static_cols"]
+        self.col_names_total = col_names["total_cols"]
+        self.col_names_by_time = col_names["by_time_cols"]
+        self.all_col_names = col_names["all_names"]
 
     # given: 
         # df - a dataframe 
@@ -47,13 +47,13 @@ class Phase_3():
         while df[self.col_names_total[0]].iloc[len(df)-1] is None:
             # query and insert static and total columns
             df = query_and_insert_columns(df, self.static_metrics, self.col_names_static, self.duration_col_total, batch_size)
-            df.to_csv(self.files['temp'])
+            df.to_csv(self.files['query_progress'])
             df = query_and_insert_columns(df, self.non_static_metrics, self.col_names_total, self.duration_col_total, batch_size)
-            df.to_csv(self.files['temp'])
+            df.to_csv(self.files['query_progress'])
             # query and insert duration_t_i columns
             for i, col_names_t_i in enumerate(self.col_names_by_time):
                 df = query_and_insert_columns(df, self.non_static_metrics, col_names_t_i, self.duration_col_names[i], batch_size)
-                df.to_csv(self.files['temp'])
+                df.to_csv(self.files['query_progress'])
 
         return df
 
@@ -64,11 +64,11 @@ class Phase_3():
     '''
     def run(self, rows_batch_size=20):
         # get preprocessed_df
-        preprocessed_df = pd.read_csv(phase3_files['read'], nrows=3)
+        preprocessed_df = pd.read_csv(self.files['read'], nrows=3)
 
         # 7. query resource metrics (metrics total, t1, t2)
-        queried_df = self.query_metrics(preprocessed_df, rows_batch_size, temporary_save_file)
+        queried_df = self.query_metrics(preprocessed_df, rows_batch_size)
 
         # save df to a csv file
-        queried_df.to_csv(phase3_files['write'])
+        queried_df.to_csv(self.files['write'])
         print(queried_df)

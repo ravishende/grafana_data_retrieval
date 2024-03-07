@@ -1,9 +1,7 @@
 import os
 import s3fs
-import zarr
 import json
 import math
-import pickle
 import pandas as pd
 from tqdm import tqdm
 from pprint import pprint
@@ -119,7 +117,7 @@ class Phase_1():
         )
         bucket = 'burnpro3d/d'
 
-        print(colored("\n\nsuccessfully authenticated", "green"))
+        print(colored("successfully authenticated", "green"))
         return fs, bucket
 
 
@@ -436,4 +434,3 @@ class Phase_1():
 
         # clear files_not_found txt
         self._write_txt_file(self.files['files_not_found'], [])
-

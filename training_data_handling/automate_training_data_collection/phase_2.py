@@ -1,4 +1,5 @@
 import pandas as pd
+import warnings
 import shutil
 import ast
 import random
@@ -17,17 +18,7 @@ class Phase_2():
         self.file_num_duration_cols = file_num_duration_cols
         self.drop_cols = [
             "path",
-            # "time_scraped", # if it's there
-            "extent_fmt",
-            "dz",
-            "fire_grid",
-            "output",
-            "resolution",
-            "resolution_units",
-            "run_binary",
-            "seed",
-            "timestep",
-            "topo"
+            "extent"
         ]
 
     '''
@@ -72,85 +63,84 @@ class Phase_2():
         return runtime_delta.total_seconds()
 
 
-        # given a dataframe with 'extent', 'start', and 'stop' columns, 
-        # return a df with added 'area' and 'runtime' columns
-        def add_area_and_runtime(self, df):
-            df['area'] = df['extent'].apply(_calculate_area)
-            df['runtime'] = df.apply(lambda row: _calculate_runtime(row['start'], row['stop']), axis=1)
-            return df
+    # given a dataframe with 'extent', 'start', and 'stop' columns, 
+    # return a df with added 'area' and 'runtime' columns
+    def add_area_and_runtime(self, df):
+        df['area'] = df['extent'].apply(self._calculate_area)
+        df['runtime'] = df.apply(lambda row: self._calculate_runtime(row['start'], row['stop']), axis=1)
+        return df
 
 
-        def drop_columns(self, df, columns_to_drop, reset_index=True):
-            df = df.drop(columns=columns_to_drop)
-            if reset_index:
-                df = df.reset_index(drop=True)
-            return df
+    def drop_columns(self, df, columns_to_drop, reset_index=True):
+        df = df.drop(columns=columns_to_drop)
+        if reset_index:
+            df = df.reset_index(drop=True)
+        return df
 
-        # generate random values between run_start and some end time, put into duration1
-        def _insert_rand_refresh_col(self, df, refresh_title, method=0):
-            duration_seconds = df['runtime']
-            if method == 0:
-                # generate random values between 45sec and 5min
-                df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, 300) if time >= 300 else time)
-            elif method == 1:
-                # generate random values between 45sec and half of the duration
-                df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time // 2) if time // 2 >= 45 else time)
-            elif method == 2:
-                # generate random values between 45sec and the full duration
-                df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time) if time > 45 else time)
+    # generate random values between run_start and some end time, put into duration1
+    def _insert_rand_refresh_col(self, df, refresh_title, method=0):
+        duration_seconds = df['runtime']
+        if method == 0:
+            # generate random values between 45sec and 5min
+            df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, 300) if time >= 300 else time)
+        elif method == 1:
+            # generate random values between 45sec and half of the duration
+            df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time // 2) if time // 2 >= 45 else time)
+        elif method == 2:
+            # generate random values between 45sec and the full duration
+            df[refresh_title] = duration_seconds.apply(lambda time: random.randint(45, time) if time > 45 else time)
+        else:
+            raise ValueError("method must be: 0, 1, or 2")
+        return df
+
+    # given a dataframe and number of duration columns to insert, (also single_method, which is either -1 (not a single method) or some int between 0 and 2)
+    # return an updated dataframe with an added n duration columns of various insert methods
+    def insert_n_duration_columns(self, df, n, single_method=-1):
+        # initialize num_duration_cols to be n for later steps
+        with open(self.file_num_duration_cols, "w") as f:
+            f.write(str(self.num_duration_cols))
+
+        num_insert_methods = 3
+        # warn the user if they are expecting more insert methods than are available in _insert_rand_refresh_col
+        if n > num_insert_methods and not single_method:
+            warnings.warn("There are more columns requested than insert methods defined.self,  Repeating the last method after other methods are used.")
+        for i in range(0, n):
+            # get the insert method
+            if single_method != -1:
+                insert_method = single_method
             else:
-                raise ValueError("method must be: 0, 1, or 2")
-            return df
+                insert_method = i
+                if insert_method >= num_insert_methods:
+                    insert_method = num_insert_methods - 1
+            # assemble the duration_title
+            duration_title = "duration_t" + str(insert_method + 1)
+            # insert the duration column into the df
+            df = self._insert_rand_refresh_col(df, duration_title, method=insert_method)
+        return df
 
-        # given a dataframe and number of duration columns to insert, (also single_method, which is either -1 (not a single method) or some int between 0 and 2)
-        # return an updated dataframe with an added n duration columns of various insert methods
-        def insert_n_duration_columns(self, df, n, single_method=-1):
-            # initialize num_duration_cols to be n for later steps
-            with open(self.file_num_duration_cols, "w") as f:
-                f.write(str(self.num_duration_cols))
+    '''
+    ======================
+        Main Program
+    ======================
+    '''
+    def run(self, num_duration_cols=None):
+        if num_duration_cols is not None:
+            self.num_duration_cols = num_duration_cols
 
-            num_insert_methods = 3
-            # warn the user if they are expecting more insert methods than are available in _insert_rand_refresh_col
-            if n > num_insert_methods and not single_method:
-                warnings.warn("There are more columns requested than insert methods defined.self,  Repeating the last method after other methods are used.")
-            for i in range(0, n):
-                # get the insert method
-                if single_method != -1:
-                    insert_method = single_method
-                else:
-                    insert_method = i
-                    if insert_method >= num_insert_methods:
-                        insert_method = num_insert_methods - 1
-                # assemble the duration_title
-                duration_title = "duration_t" + str(insert_method + 1)
-                # insert the duration column into the df
-                df = _insert_rand_refresh_col(df, duration_title, method=insert_method)
+        # get df from csv file
+        ids_included_df = pd.read_csv(self.files['read'], index_col=0)
 
-            return df
+        # 4. calculate area and runtime
+        calculated_df = self.add_area_and_runtime(ids_included_df)
 
-        '''
-        ======================
-            Main Program
-        ======================
-        '''
-        def run(self, num_duration_cols=None):
-            if num_duration_cols is not None:
-                self.num_duration_cols = num_duration_cols
+        # 5. drop self.drop_cols
+        filtered_df = self.drop_columns(calculated_df, self.drop_cols, reset_index=True)
 
-            # get df from csv file
-            ids_included_df = pd.read_csv(phase2_files['read'], index_col=0)
+        # 6. add duration_t1, duration_t2, etc. columns
+        # self.num_duration_cols is the number of duration columns to insert and query for (doesn't include "runtime")
+        preprocessed_df = self.insert_n_duration_columns(filtered_df, self.num_duration_cols)
 
-            # 4. calculate area and runtime
-            calculated_df = add_area_and_runtime(ids_included_df)
-
-            # 5. drop self.drop_cols
-            filtered_df = drop_columns(calculated_df, self.drop_cols, reset_index=True)
-
-            # 6. add duration_t1, duration_t2 columns
-            # num_duration_cols is the number of duration columns to insert and query for (doesn't include "runtime")
-            preprocessed_df = insert_n_duration_columns(filtered_df, self.num_duration_cols, single_method=False)
-
-            # save preprocessed_df to file
-            preprocessed_df.to_csv(phase2_files['write'])
-            print(preprocessed_df)
+        # save preprocessed_df to file
+        preprocessed_df.to_csv(self.files['write'])
+        print(preprocessed_df)
 

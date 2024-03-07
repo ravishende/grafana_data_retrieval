@@ -234,8 +234,9 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
     # Query metric and insert column into dataframe
     print_title(f"Inserting {insert_col}")
     df[insert_col] = df.apply(
-        lambda row: query_resource(metric, row['start'], row[duration_col], row.name, n_rows) \
-        if start_row <= row.name <= end_row else row[insert_col], axis=1)  
+        lambda row: query_resource(
+            metric, row['start'], row[duration_col], row.name, n_rows) \
+            if start_row <= row.name <= end_row else row[insert_col], axis=1)  
         # Note: row.name is just the index of the row.
     
     return df
