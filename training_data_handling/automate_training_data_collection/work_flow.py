@@ -1,10 +1,11 @@
 import shutil
 import pandas as pd
-from work_flow_functions import is_phase_finished, set_phase_finished, reset_phases_progress
+from termcolor import colored
 from phase_1 import Phase_1
 from phase_2 import Phase_2
 from phase_3 import Phase_3
 from phase_4 import Phase_4
+from work_flow_functions import is_phase_finished, set_phase_finished, initialize_files, reset_phases_progress, set_phase_unfinished
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -60,8 +61,14 @@ Phase 4: Sum and Ready Training Data
 ========================
 '''
 
-# reset progress if this is the first time running it with new data
-reset_phases_progress()
+# if this is the first time running it with new data, set new_run to True. Otherwise, if you are partway through running it, set new_run to False.
+new_run = False
+if new_run:
+    print(colored("ATTENTION: new_run is set to True. This means that all phases progress will be reset, and any runs gathered in phase_1 will be set to old, and will not be regathered next time. Are you sure you want to continue?", "red"))
+    response = input("type 'y' to continue, resetting the progress. Any other response will continue as if new_run were set to False.")
+    if response == "y":
+        initialize_files()
+        reset_phases_progress()
 
 # get instances of classes
 p_1 = Phase_1()
@@ -76,7 +83,10 @@ for i, phase in enumerate(phases):
     # get phase number - start at 1, not 0
     phase_number = i+1
     # for each unfinished phase, run the phase, then set phase_finished of that stage to True
-    if not is_phase_finished(phase_number):
-        print(f"Beginning Phase {phase_number}...")
+    if is_phase_finished(phase_number):
+        print(colored(f"\n\nPhase {phase_number} has already been completed. Moving on.", "green"))
+    else:
+        print(colored(f"\n\nBeginning Phase {phase_number}...", "magenta"))
         phase.run()
         set_phase_finished(phase_number)
+        print(colored(f"\n\nPhase {phase_number} complete!", "green"))

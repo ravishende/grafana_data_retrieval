@@ -15,21 +15,23 @@ PHASE_1_FILES = {
     }
 PHASE_2_FILES = { 
     # csv files
-    "read": "csvs/phase_2_read.csv",
+    "read": PHASE_1_FILES["write"],
     "write": "csvs/phase_2_write.csv",
-    "temp": "csvs/query_progress.csv",
-    # txt files
-    "num_duration_cols": "txts/num_durations_cols.txt"
     }
 PHASE_3_FILES = { 
     # csv files
-    # "read": "csvs/phase_3_read.csv",
-    "read": "csvs/phase_2_write.csv",
+    "read": PHASE_2_FILES["write"],
     "write": "csvs/phase_3_write.csv",
-    # txt files
-    "num_duration_cols": "txts/num_durations_cols.txt"
+    "query_progress": "csvs/query_progress.csv"
     }
-phase4_files = { 
-    "read": "csvs/phase_4_read.csv",
+PHASE_4_FILES = { 
+    "read": PHASE_3_FILES["write"],
     "write": "csvs/phase_4_write.csv"
     }
+
+NUM_DURATION_COLS_FILE = "txts/num_duration_cols.txt"
+
+# for work_flow.py
+MAIN_FILES = {
+    "phases_progress": "txts/phases_progress.txt"
+}
