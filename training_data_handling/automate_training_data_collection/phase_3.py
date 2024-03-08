@@ -62,6 +62,7 @@ class Phase_3():
         Main Program
     ======================
     '''
+    # runs the whole phase. Returns True if successful, False otherwise
     def run(self, rows_batch_size=20):
         success = False
 

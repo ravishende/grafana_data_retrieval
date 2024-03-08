@@ -73,7 +73,7 @@ if new_run:
         initialize_files()
         reset_phases_progress()
 
-# get instances of classes
+# get instances of Phase classes. Each one has a run() method to run its phase
 p_1 = Phase_1()
 p_2 = Phase_2()
 p_3 = Phase_3()
@@ -85,14 +85,17 @@ phases = [p_1, p_2, p_3, p_4]
 for i, phase in enumerate(phases):
     # get phase number - start at 1, not 0
     phase_number = i+1
-    # for each unfinished phase, run the phase, then set phase_finished of that stage to True
+    # if phase has previously been finished, move on to next stage
     if is_phase_finished(phase_number):
         print(colored(f"\n\nPhase {phase_number} has already been completed. Moving on.", "green"))
+    # for each unfinished phase, run the phase, then set phase_finished of that stage to True
     else:
         print(colored(f"\n\nBeginning Phase {phase_number}...", "magenta"))
         success = phase.run()
+        # if phase not successful, break
         if not success:
             print(colored(f"\nProgram stop caused by phase {phase_number}\n", "magenta"))
             break
+        # otherwise, set phase as finished, move on
         set_phase_finished(phase_number)
         print(colored(f"\n\nPhase {phase_number} complete!", "green"))

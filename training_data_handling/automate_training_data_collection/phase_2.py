@@ -123,6 +123,7 @@ class Phase_2():
         Main Program
     ======================
     '''
+    # runs the whole phase. Returns True if successful, False otherwise
     def run(self, num_duration_cols=None):
         success = False
 

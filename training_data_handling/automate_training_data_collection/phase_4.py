@@ -108,6 +108,7 @@ class Phase_4():
             Main Program
     ====================================
     '''
+    # runs the whole phase. Returns True if successful, False otherwise
     def run(self):
         success = False
 

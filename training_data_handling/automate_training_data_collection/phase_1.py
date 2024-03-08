@@ -408,6 +408,7 @@ class Phase_1():
         Main Program
     ======================
     '''
+    # runs the whole phase. Returns True if successful, False otherwise
     def run(self):
         success=False
         # gather simulation paths to be read 
