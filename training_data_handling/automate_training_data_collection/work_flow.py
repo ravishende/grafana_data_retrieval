@@ -68,7 +68,7 @@ if new_run:
         "\nATTENTION: new_run is set to True. This means that all phases progress will be reset. \
         \nAny runs gathered in phase_1 will be set to old and will not be regathered next time. \
         \nAre you sure you want to continue?", "red"))
-    response = input("type 'y' to continue, resetting the progress. Any other response will continue as if new_run were set to False.\n")
+    response = input("type 'y' to continue resetting the progress. Any other response will continue as if new_run were set to False.\n")
     if response == "y":
         initialize_files()
         reset_phases_progress()

@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from multiprocessing.sharedctypes import Value
 from workflow_files import MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES, NUM_DURATION_COLS_FILE
 
@@ -39,6 +40,20 @@ def initialize_files():
     # initialize all files
     for file_path in all_file_paths:
         _initialize_file(file_path)
+    
+    # clear csv files that need to be cleared
+    csv_files_to_reset = [
+        PHASE_1_FILES['read'],
+        PHASE_1_FILES['write'],
+        PHASE_1_FILES['runs_df'],
+        PHASE_2_FILES['write'],
+        PHASE_3_FILES['write'],
+        PHASE_3_FILES['query_progress'],
+        PHASE_4_FILES['write']
+        ]
+    empty_df = pd.DataFrame()
+    for file in csv_files_to_reset:
+        empty_df.to_csv(file)
 
 # given a filename of a txt file, line number, and message, update the line at line_number to be "message", ending in a new line
 def _update_txt_line(file_name, line_number, message):

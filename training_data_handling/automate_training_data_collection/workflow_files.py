@@ -3,7 +3,7 @@ PHASE_1_FILES = {
     # csv files
     "read": "csvs/phase_1_read.csv",
     "write": "csvs/phase_1_write.csv",
-    "runs_df": "csvs/phase_1_runs_df.csv",
+    "runs_df": "csvs/runs_df.csv",
     "training_data": "csvs/training_data.csv",
     # txt files
     "files_not_found": "txts/files_not_found.txt",
@@ -29,6 +29,7 @@ PHASE_4_FILES = {
     "write": "csvs/phase_4_write.csv"
     }
 
+# for metrics_and_columns_setup.py
 NUM_DURATION_COLS_FILE = "txts/num_duration_cols.txt"
 
 # for work_flow.py
