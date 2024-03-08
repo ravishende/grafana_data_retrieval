@@ -90,6 +90,9 @@ for i, phase in enumerate(phases):
         print(colored(f"\n\nPhase {phase_number} has already been completed. Moving on.", "green"))
     else:
         print(colored(f"\n\nBeginning Phase {phase_number}...", "magenta"))
-        phase.run()
+        success = phase.run()
+        if not success:
+            print(colored(f"\nProgram stop caused by phase {phase_number}\n", "magenta"))
+            break
         set_phase_finished(phase_number)
         print(colored(f"\n\nPhase {phase_number} complete!", "green"))

@@ -109,6 +109,8 @@ class Phase_4():
     ====================================
     '''
     def run(self):
+        success = False
+
         queried_df = pd.read_csv(self.files['read'], index_col=0)
         # sum over json to get floats for resource metrics
         summed_df = self.update_queried_cols(queried_df)
@@ -127,4 +129,7 @@ class Phase_4():
 
         # save df to a csv file
         final_df.to_csv(self.files['write'])
+
+        success = True
+        return success
 

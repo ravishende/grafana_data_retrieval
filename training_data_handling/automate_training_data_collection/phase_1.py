@@ -1,4 +1,5 @@
 import os
+from unittest import result
 import s3fs
 import json
 import math
@@ -117,7 +118,7 @@ class Phase_1():
         )
         bucket = 'burnpro3d/d'
 
-        print(colored("successfully authenticated", "green"))
+        print("successfully authenticated")
         return fs, bucket
 
 
@@ -348,14 +349,23 @@ class Phase_1():
             successful_runs = successful_runs.reset_index(drop=True)
         return successful_runs
 
-    # get a df of path, run_uuid, where we filter new_paths, only including the paths with run_uuids that were successful.
+    # # get a df of path, run_uuid, where we filter new_paths, only including the paths with run_uuids that were successful.
+    # def get_runs_to_gather_df(self, new_paths, successful_runs_list_df):
+    #     # Convert new_paths list to a DataFrame
+    #     new_paths_df = pd.DataFrame(new_paths, columns=['path'])
+    #     # Apply _run_id_from_path function to get run_uuid
+    #     new_paths_df['run_uuid'] = new_paths_df['path'].apply(self._run_id_from_path)
+    #     # Merge with successful_runs_list_df to filter out unsuccessful runs
+    #     result_df = new_paths_df[new_paths_df['run_uuid'].isin(successful_runs_list_df['run_uuid'])]
+    #     return result_df
+
     def get_runs_to_gather_df(self, new_paths, successful_runs_list_df):
         # Convert new_paths list to a DataFrame
         new_paths_df = pd.DataFrame(new_paths, columns=['path'])
         # Apply _run_id_from_path function to get run_uuid
         new_paths_df['run_uuid'] = new_paths_df['path'].apply(self._run_id_from_path)
-        # Merge with successful_runs_list_df to filter out unsuccessful runs
-        result_df = new_paths_df[new_paths_df['run_uuid'].isin(successful_runs_list_df['run_uuid'])]
+        # Merge with successful_runs_list_df on 'run_uuid' to include 'ensemble_uuid' and filter out unsuccessful runs
+        result_df = pd.merge(new_paths_df, successful_runs_list_df[['run_uuid', 'ensemble_uuid']], on='run_uuid', how='inner')
         return result_df
 
     # given a df that contains all successful runs and a df that 
@@ -399,6 +409,7 @@ class Phase_1():
     ======================
     '''
     def run(self):
+        success=False
         # gather simulation paths to be read 
         simulation_paths = self.gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
 
@@ -407,6 +418,11 @@ class Phase_1():
         new_paths = self.read_txt_file(self.files['new_paths']) #for if new_paths are already generated
         print("simulation paths length:", len(simulation_paths))
         print("New paths length:", len(new_paths))
+
+        if len(new_paths) == 0:
+            print(colored("\nNo new runs since last collection! Nothing left to do.", "green"))
+            success = False
+            return success
 
         # get a df that only contains the ids and status of successful runs
         runs_list_df = pd.read_csv(self.files['read'])  # note: doesn't have an index column, so don't set index_col=0
@@ -423,7 +439,8 @@ class Phase_1():
 
         print("getting finalized dataframe")
         # remove rows with na values for run_start, run_end, renaming those columns to start and stop
-        runs_df = self.remove_na_rows(runs_df, reset_index=True)
+        result_df = self.merge_dfs(runs_to_gather_df, runs_df)
+        result_df = self.remove_na_rows(result_df, reset_index=True)
 
         # save final_df
         print(runs_df)
@@ -434,3 +451,6 @@ class Phase_1():
 
         # clear files_not_found txt
         self._write_txt_file(self.files['files_not_found'], [])
+        
+        success = True
+        return success

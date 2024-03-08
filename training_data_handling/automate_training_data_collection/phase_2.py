@@ -124,6 +124,8 @@ class Phase_2():
     ======================
     '''
     def run(self, num_duration_cols=None):
+        success = False
+
         if num_duration_cols is not None:
             self.num_duration_cols = num_duration_cols
 
@@ -144,3 +146,5 @@ class Phase_2():
         preprocessed_df.to_csv(self.files['write'])
         print(preprocessed_df)
 
+        success = True
+        return success

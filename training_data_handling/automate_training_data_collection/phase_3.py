@@ -63,6 +63,8 @@ class Phase_3():
     ======================
     '''
     def run(self, rows_batch_size=20):
+        success = False
+
         # get preprocessed_df
         preprocessed_df = pd.read_csv(self.files['read'], nrows=3)
 
@@ -72,3 +74,6 @@ class Phase_3():
         # save df to a csv file
         queried_df.to_csv(self.files['write'])
         print(queried_df)
+
+        success = True
+        return success
