@@ -50,8 +50,8 @@ def get_columns_from_metrics(metric_list, num_inserted_duration_cols=3):
     # df: a dataframe with columns that have a _total, _t1, and _t2 appended for each metric in the following metric lists
     # percent_metrics: a list of names of metrics that will become the percent columns after appending _total, _t1, and _t2 to it
     # numerator_metrics: a list of metrics that are are the base (will add the _total, _t1, _t2), for the columns that will be used as the numerator for the percent operation
-    # denominator_metrics: a list of static metrics that the columns that will be used as the numerator for the percent operation
-        # NOTE: percent_metrics, numerator_metrics, denominator_metrics must all be the same length, with each index corresponding to each other
+    # denominator_metrics: a list of no_sum metrics that the columns that will be used as the numerator for the percent operation
+        # Note: percent_metrics, numerator_metrics, denominator_metrics must all be the same length, with each index corresponding to each other
 # returns:
     # an updated df with inserted percent columns
         # percent columns are formed by: 
@@ -89,7 +89,7 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
         # or -1 if no pods match ensemble_id
     # result_list (if there is no ensemble id provided)
     # None (if there are no bp3d-workers to sum over in result_list)
-def sum_pods_for_ensemble(result_list, ensemble, static=False):
+def sum_pods_for_ensemble(result_list, ensemble, sum=True):
     # handle if there is no ensemble id
     if not ensemble:
         return result_list
@@ -111,7 +111,7 @@ def sum_pods_for_ensemble(result_list, ensemble, static=False):
             value = item["value"][1]
             total += float(value)
             worker_found = True
-            if static:
+            if not sum:
                 return total
 
         # if there are no worker pods that match the ensemble id, return -1
@@ -121,19 +121,19 @@ def sum_pods_for_ensemble(result_list, ensemble, static=False):
     return total
 
 
-def fill_in_static_na(df, static_metrics):
+def fill_in_no_sum_na(df, no_sum_metrics):
     # Group df by 'ensemble_uuid'
     ensemble_groups = df.groupby('ensemble_uuid')
 
-    # Create a subset of df with rows where any static metric is NA
-    na_static_df = df[df[static_metrics].isna().any(axis=1)]
+    # Create a subset of df with rows where any no-sum metric is NA
+    na_no_sum_df = df[df[no_sum_metrics].isna().any(axis=1)]
 
     # Iterate over the rows in the subset
-    for i, row in na_static_df.iterrows():
+    for i, row in na_no_sum_df.iterrows():
         ensemble_uuid = row['ensemble_uuid']
 
-        # For each static metric, try to find a non-NA value from the same ensemble
-        for metric in static_metrics:
+        # For each no-sum metric, try to find a non-NA value from the same ensemble
+        for metric in no_sum_metrics:
             # if the row's metric is not na, move on
             if not pd.isna(row[metric]):
                 continue
@@ -147,10 +147,10 @@ def fill_in_static_na(df, static_metrics):
             if not valid_rows.empty:
                 # get the metric's value for the valid row
                 valid_value = valid_rows[metric]
-                na_static_df.at[i, metric] = valid_value
+                na_no_sum_df.at[i, metric] = valid_value
 
     # Update the original df with filled values
-    df.update(na_static_df)
+    df.update(na_no_sum_df)
 
     return df
 
@@ -159,7 +159,7 @@ def fill_in_static_na(df, static_metrics):
 # return a new dataframe with the edited column being float values instead of json data
 # in every row where there was an ensemble id in the ensemble column, or None if there are
 # no bp3d-worker-pods
-def update_col(df, update_col_title, ensemble_col_title, static=False):
+def update_col(df, update_col_title, ensemble_col_title, sum=True):
     # drop na values of column
     df = df.dropna(subset=update_col_title)
 
@@ -168,18 +168,24 @@ def update_col(df, update_col_title, ensemble_col_title, static=False):
 
     # calculate totals summed over the ensemble for given column
     df[update_col_title] = df.apply(
-        lambda row: sum_pods_for_ensemble(row[update_col_title], row[ensemble_col_title], static=False) \
+        lambda row: sum_pods_for_ensemble(row[update_col_title], row[ensemble_col_title], sum=sum) \
         if row[ensemble_col_title] else row[update_col_title],axis=1)
 
     return df
 
 # given a dataframe, list of column names to update, and title of the ensemble_id column,
 # return a new dataframe with the edited columns being float values of the summed over json data
-def update_columns(df, update_col_names, ensemble_col_title, static=False):
+def update_columns(df, update_col_names, ensemble_col_title, no_sum_metrics):
     num_update_cols = len(update_col_names)
     for i, col_name in enumerate(update_col_names):
         print(f"\n\nUpdating {col_name}", colored(f"({i+1}/{num_update_cols})", "green"))
-        df = update_col(df, col_name, ensemble_col_title, static=static)
+        # set sum to False if it is a no_sum column, otherwise, set sum to True
+        if col_name in no_sum_metrics:
+            sum = False
+        else:
+            sum = True
+        # update the column (summing or not depending on sum)
+        df = update_col(df, col_name, ensemble_col_title, sum=sum)
     return df
 
 
@@ -204,18 +210,22 @@ if __name__ == "__main__":
         "received_bandwidth"
     ]
 
-    static_metrics = [
+    no_sum_metrics = [
         "cpu_request",
         "mem_request",
     ]
 
+    static_metrics = [  # just for insert_percent_cols
+        "mem_request"
+    ]
 
 
-    # get a list of metrics that need to be summed (all metrics - static metrics)
-    metrics_to_sum = [metric for metric in all_metrics if metric not in static_metrics]
+
+    # get a list of metrics that need to be summed (all metrics - no_sum metrics)
+    metrics_to_sum = [metric for metric in all_metrics if metric not in no_sum_metrics]
     # get names of all columns to sum
     columns_to_sum = get_columns_from_metrics(metrics_to_sum)
-
+    all_metric_cols = no_sum_metrics + columns_to_sum
 
     # get the csv file as a pandas dataframe
     summed_runs = pd.read_csv(read_file, index_col=0)
@@ -224,12 +234,10 @@ if __name__ == "__main__":
 
     # update columns to get float values from json
     print_heading("Summing Up Columns")
-    summed_runs = update_columns(summed_runs, columns_to_sum, ensemble_col, static=False)
-    print_heading("Getting Values for Static Columns")
-    summed_runs = update_columns(summed_runs, static_metrics, ensemble_col, static=True)
+    summed_runs = update_columns(summed_runs, all_metric_cols, ensemble_col, no_sum_metrics=no_sum_metrics)
 
-    # try to fill in any na values in static columns by looking at other runs with same ensemble
-    summed_runs = fill_in_static_na(summed_runs, static_metrics)
+    # try to fill in any na values in no_sum columns by looking at other runs with same ensemble
+    summed_runs = fill_in_no_sum_na(summed_runs, no_sum_metrics)
 
     # insert percent columns into the dataframe
     percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
@@ -249,8 +257,8 @@ if __name__ == "__main__":
 # na_worker_runs = summed_runs[na_mask]
 # valid_worker_runs = summed_runs[~na_mask]
 
-# summed_runs = update_col(summed_runs, "cpu_request_total", ensemble_col, static=True)
-# summed_runs = update_col(summed_runs, "mem_request_total", ensemble_col, static=True)
+# summed_runs = update_col(summed_runs, "cpu_request_total", ensemble_col, sum=False)
+# summed_runs = update_col(summed_runs, "mem_request_total", ensemble_col, sum=False)
 # save dataframes to new files and print summed_runs
 
 # valid_worker_runs.to_csv(success_write_file)

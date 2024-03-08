@@ -47,7 +47,8 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 
 # Internal Global Variables. Do not edit.
 CURRENT_ROW = 1  # for printing
-STATIC_METRICS = ["cpu_request", "mem_request"]
+STATIC_METRICS = ["mem_request"]
+REQUEST_METRICS = ["cpu_request", "mem_request"]
 
 
 
@@ -85,7 +86,7 @@ STATIC_METRICS = ["cpu_request", "mem_request"]
 # receive/transmit bandwidth
 
 
-def get_static_query_suffix(metric, start, duration_seconds, requery=False):
+def get_request_query_suffix(metric, start, duration_seconds, requery=False):
     # static metrics only need to be requested for one datapoint
     if requery:
         # query at the beginning of the run (10 seconds in)
@@ -109,7 +110,7 @@ def get_static_query_suffix(metric, start, duration_seconds, requery=False):
 
 # given a metric (one of the keys in query_bodies), start (datetime), and duration (float)
 # return a query for the metric over the given duration of the run
-def get_resource_query(metric, start, duration_seconds, is_static, requery=False):
+def get_resource_query(metric, start, duration_seconds, is_request_metric, requery=False):
     # all resources and the heart of their queries
     query_bodies = {
         "cpu_usage":"increase(container_cpu_usage_seconds_total",  # increase metric
@@ -128,8 +129,8 @@ def get_resource_query(metric, start, duration_seconds, is_static, requery=False
     if metric not in metrics:
         raise ValueError(f'query metric "{metric}" must be within one of the following metrics:\n{metric}')
     # can only requery static metrics
-    if requery and not is_static:
-        raise ValueError("Can only requery static metrics - requery can only be True if is_static is True")
+    if requery and not is_request_metric:
+        raise ValueError("Can only requery request metrics - requery can only be True if is_request_metric is True")
 
     # get all the pieces necessary to assemble the query
     offset = calculate_offset(start, duration_seconds)    
@@ -138,9 +139,9 @@ def get_resource_query(metric, start, duration_seconds, is_static, requery=False
     prefix = 'sum by (node, pod) ('
 
     # static metrics have a different suffix. Update suffix if metric is a static metric
-    if is_static:
+    if is_request_metric:
         # if requery is set to True, we get a slightly different query that hopefully does have data.
-        suffix = get_static_query_suffix(metric, start, duration_seconds, requery=requery)
+        suffix = get_request_query_suffix(metric, start, duration_seconds, requery=requery)
 
     # assemble the final query
     query = prefix + query_bodies[metric] + suffix
@@ -152,11 +153,11 @@ def get_resource_query(metric, start, duration_seconds, is_static, requery=False
 # return the queried data of that metric over the duration of the run
 def query_resource(metric, start, duration_seconds, row_index, n_rows):
     # determine if the metric is static or not
-    is_static = (metric in STATIC_METRICS)
+    is_request_metric = (metric in REQUEST_METRICS)
 
     # query for data
     start = datetime_ify(start)
-    query = get_resource_query(metric, start, duration_seconds, is_static)
+    query = get_resource_query(metric, start, duration_seconds, is_request_metric)
     resource_data = query_data(query)
 
     # print row information
@@ -167,8 +168,8 @@ def query_resource(metric, start, duration_seconds, row_index, n_rows):
     CURRENT_ROW += 1
 
     # if it is a static metric and resource data is empty, requery it
-    if is_static and (resource_data == []):
-        query = get_resource_query(metric, start, duration_seconds, is_static, requery=True)
+    if is_request_metric and (resource_data == []):
+        query = get_resource_query(metric, start, duration_seconds, is_request_metric, requery=True)
         resource_data = query_data(query)
 
     # return queried data
@@ -287,8 +288,8 @@ if __name__ == "__main__":
         "received_bandwidth"
         ]
 
-    # get all non static metrics to then get _total, _t1, and _t2 columns
     non_static_metrics = [metric for metric in all_metrics if metric not in STATIC_METRICS]
+    # get _total, _t1, and _t2 columns
     # names of columns to pass into query_and_insert_columns()
     col_names_static = STATIC_METRICS
     col_names_total = [name + "_total" for name in non_static_metrics]
@@ -313,12 +314,16 @@ if __name__ == "__main__":
             training_data[col_name] = None
 
     # query everything and insert the new columns into the dataframe, saving after each insertion
+    # insert columns for static metrics (duration=runtime - just for calculating offset)
     training_data = query_and_insert_columns(training_data, STATIC_METRICS, col_names_static, duration_col_total, NUM_ROWS)
     training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+    # insert columns for totals metrics (duration=runtime)
     training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_total, duration_col_total, NUM_ROWS)
     training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+    # inserting columns for _t1 metrics (duration=duration_t1)
     training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_t1, duration_col_t1, NUM_ROWS)
     training_data.to_csv(write_file)  # in case program gets stopped before finishing, save partial progress
+    # inserting columns for _t2 metrics (duration=duration_t1)
     training_data = query_and_insert_columns(training_data, non_static_metrics, col_names_t2, duration_col_t2, NUM_ROWS)
 
     # print and write the updated dataframe to a csv file
