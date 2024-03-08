@@ -409,14 +409,18 @@ class Phase_1():
     ======================
     '''
     # runs the whole phase. Returns True if successful, False otherwise
-    def run(self):
+    def run(self, paths_gathered=False):
         success=False
-        # gather simulation paths to be read 
-        simulation_paths = self.gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
 
-        # simulation_paths = read_txt_file(self.files['paths'])  # for if simulation_paths are fully gathered
-        # new_paths = _drop_old_paths(simulation_paths, method="txt")  # for if new_paths are not yet generated
-        new_paths = self.read_txt_file(self.files['new_paths']) #for if new_paths are already generated
+        # for if simulation_paths are fully gathered and we're just getting df from runs
+        if paths_gathered:
+            simulation_paths = self.read_txt_file(self.files['paths'])  #
+            new_paths = self.read_txt_file(self.files['new_paths']) 
+        # gather simulation paths to be read 
+        else:
+            simulation_paths = self.gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
+            new_paths = self._drop_old_paths(simulation_paths, method="txt")  # for if new_paths are not yet generated
+        
         print("simulation paths length:", len(simulation_paths))
         print("New paths length:", len(new_paths))
 
@@ -453,5 +457,6 @@ class Phase_1():
         # clear files_not_found txt
         self._write_txt_file(self.files['files_not_found'], [])
         
+        # return phase_1 was successful
         success = True
         return success
