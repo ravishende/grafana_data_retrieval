@@ -62,10 +62,13 @@ Phase 4: Sum and Ready Training Data
 '''
 
 # if this is the first time running it with new data, set new_run to True. Otherwise, if you are partway through running it, set new_run to False.
-new_run = False
+new_run = True
 if new_run:
-    print(colored("ATTENTION: new_run is set to True. This means that all phases progress will be reset, and any runs gathered in phase_1 will be set to old, and will not be regathered next time. Are you sure you want to continue?", "red"))
-    response = input("type 'y' to continue, resetting the progress. Any other response will continue as if new_run were set to False.")
+    print(colored(
+        "\nATTENTION: new_run is set to True. This means that all phases progress will be reset. \
+        \nAny runs gathered in phase_1 will be set to old and will not be regathered next time. \
+        \nAre you sure you want to continue?", "red"))
+    response = input("type 'y' to continue, resetting the progress. Any other response will continue as if new_run were set to False.\n")
     if response == "y":
         initialize_files()
         reset_phases_progress()

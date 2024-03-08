@@ -51,7 +51,10 @@ _all_metrics = [
     "transmitted_bandwidth",
     "received_bandwidth"
     ]
-_static_metrics = ["cpu_request", "mem_request"]
+_request_metrics = ["cpu_request", "mem_request"]
+_no_sum_metrics = _request_metrics
+_sum_metrics = [metric for metric in _all_metrics if metric not in _no_sum_metrics]
+_static_metrics = ["mem_request"]
 _non_static_metrics = [metric for metric in _all_metrics if metric not in _static_metrics]
 
 # duration columns
@@ -62,10 +65,10 @@ _duration_col_names = ["duration_t" + str(num) for num in range(1,(_num_duration
 _duration_col_total = "runtime"  # from phase_2
 
 # column names
-_col_names_static = _static_metrics
-_col_names_total = [name + "_total" for name in _non_static_metrics]
+_static_col_names = _static_metrics
+_totals_col_names = [name + "_total" for name in _non_static_metrics]
 _col_names_by_time = _init_col_names_by_time(_num_duration_cols, _non_static_metrics)
-_all_col_names = _col_names_static + _col_names_total + list(chain.from_iterable(_col_names_by_time))
+_all_col_names = _static_col_names + _totals_col_names + list(chain.from_iterable(_col_names_by_time))
 
 
 '''
@@ -76,6 +79,8 @@ _all_col_names = _col_names_static + _col_names_total + list(chain.from_iterable
 
 METRICS = {
     "all":_all_metrics,
+    "sum": _sum_metrics,
+    "no_sum": _no_sum_metrics,
     "static":_static_metrics,
     "non_static": _non_static_metrics
     }
@@ -87,10 +92,10 @@ DURATION_COLS = {
     }
 
 COL_NAMES = {
-    "static_cols":_col_names_static,
-    "total_cols":_col_names_total,
-    "by_time_cols":_col_names_by_time,
-    "all_names":_all_col_names
+    "static":_static_col_names,
+    "totals":_totals_col_names,
+    "by_time":_col_names_by_time,
+    "all":_all_col_names
     }
 
 ID_COLS = {

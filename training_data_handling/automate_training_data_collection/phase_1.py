@@ -409,7 +409,7 @@ class Phase_1():
         print("New paths length:", len(new_paths))
 
         # get a df that only contains the ids and status of successful runs
-        runs_list_df = pd.read_csv(self.files['read'])
+        runs_list_df = pd.read_csv(self.files['read'])  # note: doesn't have an index column, so don't set index_col=0
         successful_runs_list_df = self.get_successful_runs(runs_list_df, reset_index=True)
 
         # get a df of [path, run_uuid], where we filter new_paths, only including the paths with run_uuids that were successful.

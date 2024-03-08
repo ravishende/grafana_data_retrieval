@@ -7,42 +7,37 @@ sys.path.append("../../grafana_data_retrieval")  # Adjust the path to go up two 
 parent = os.path.dirname(os.path.realpath(__file__))
 grandparent = os.path.dirname(parent)
 sys.path.append(grandparent)
-from resource_json_summation import update_columns
+from resource_json_summation import update_columns, insert_percent_cols
 
 class Phase_4():
     def __init__(self, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS):
         self.files = files
         self.drop_cols = ["start","stop", "ensemble_uuid"]
-        # metrics (to be queried)
-        self.all_metrics = metrics["all"]
+        # metrics
+        self.no_sum_metrics = metrics["no_sum"]
         self.static_metrics = metrics["static"]
-        self.non_static_metrics = metrics["non_static"]
-        # duration columns (for querying)
+        # duration columns
         self.num_duration_cols = duration_cols["num_cols"]
         self.duration_col_names = duration_cols["col_names"]
         self.duration_col_total = duration_cols["total_col"]
-        # column names (for queried results)
-        self.col_names_static = col_names["static_cols"]
-        self.col_names_total = col_names["total_cols"]
-        self.col_names_by_time = col_names["by_time_cols"]
-        self.all_col_names = col_names["all_names"]
+        # column names
+        self.col_names_by_time = col_names["by_time"]
+        self.all_col_names = col_names["all"]
         # id columns (for updating queried cols)
         self.ensemble_col = id_cols["ensemble"]
 
     # given a df with a column titled "ensemble_uuid" and queried4 columns with json-like data
     # return a df with all queried columns updated to be a single float value
     def update_queried_cols(self, df):
-        non_static_col_names = self.col_names_total + self.col_names_by_time
         # update columns - sum non_static columns, get values for static columns
-        df = update_columns(df, non_static_col_names, self.ensemble_col, static=False)
-        df = update_columns(df, self.static_metrics, self.ensemble_col, static=True)
+        df = update_columns(df, self.all_col_names, self.ensemble_col, no_sum_metrics=self.no_sum_metrics)
         return df
 
     def add_percent_columns(self, df):
         # metrics lists that will be used to get/calculate percentages
         percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
         numerator_metrics = ["cpu_usage", "mem_usage"]
-        denominator_metrics = self.static_metrics
+        denominator_metrics = self.no_sum_metrics  # cpu_request and mem_request
 
         # insert percentage columns as df[percent_metric_col] = 100 * df[numerator_metric_col] / df[denominator_metric_col]
         df = insert_percent_cols(
@@ -77,7 +72,7 @@ class Phase_4():
             raise ValueError("i should be an int between 1 and num_duration_cols inclusive.")
 
         # get numerator column names, new insert column names, and duration column name
-        numerator_cols = [f"{metric}_t{i}" for metric in self.non_static_metrics]
+        numerator_cols = [name for name in self.col_names_by_time if name[-1] == str(i)]
         insert_ratio_cols = [f"{name}_ratio" for name in numerator_cols]
         duration_col = f"duration_t{i}"
 

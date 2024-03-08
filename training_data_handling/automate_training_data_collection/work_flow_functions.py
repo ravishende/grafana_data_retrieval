@@ -1,17 +1,6 @@
-from multiprocessing.sharedctypes import Value
 import os
-from termcolor import colored
-from itertools import chain
+from multiprocessing.sharedctypes import Value
 from workflow_files import MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES, NUM_DURATION_COLS_FILE
-# import pandas as pd
-# import sys
-# import os
-# sys.path.append("../grafana_data_retrieval")
-# current = os.path.dirname(os.path.realpath("work_flow_functions.py"))
-# parent = os.path.dirname(current)
-# sys.path.append(parent)
-# from query_resources import query_and_insert_columns
-# from resource_json_summation import update_columns
 
 # constants - DO NOT EDIT
 NUM_PHASES = 4
@@ -42,8 +31,12 @@ def _initialize_file(file_path):
 
 # make sure all necessary files exist
 def initialize_files():
-    all_files_dicts = [MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES, NUM_DURATION_COLS_FILE]
-    all_file_paths = list(chain.from_iterable(d.values() for d in all_files_dicts))
+    all_files_dicts = [MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES]
+    # get paths to all files so that they can be initialized
+    all_file_paths = [NUM_DURATION_COLS_FILE]
+    for file_dict in all_files_dicts:
+        all_file_paths += file_dict.values()
+    # initialize all files
     for file_path in all_file_paths:
         _initialize_file(file_path)
 
@@ -138,7 +131,23 @@ def reset_phases_progress():
         set_phase_unfinished(phase_number)
     
 
+
+
+
+
+
+# Old functions that have now been moved into individual Phase clases in phase_1.py, phase_2.py, phase_3.py and phase_4.py
 """
+import pandas as pd
+import sys
+import os
+sys.path.append("../grafana_data_retrieval")
+current = os.path.dirname(os.path.realpath("work_flow_functions.py"))
+parent = os.path.dirname(current)
+sys.path.append(parent)
+from query_resources import query_and_insert_columns
+from resource_json_summation import update_columns
+
 
 '''
 ========================
