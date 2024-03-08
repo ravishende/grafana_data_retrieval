@@ -5,7 +5,7 @@ from phase_1 import Phase_1
 from phase_2 import Phase_2
 from phase_3 import Phase_3
 from phase_4 import Phase_4
-from work_flow_functions import is_phase_finished, set_phase_finished, initialize_files, reset_phases_progress, set_phase_unfinished
+from work_flow_functions import is_phase_finished, set_phase_finished, initialize_files, reset_phases_progress
 
 # display settings
 pd.set_option("display.max_columns", None)
