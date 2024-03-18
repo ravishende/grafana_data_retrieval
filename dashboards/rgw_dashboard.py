@@ -8,10 +8,14 @@ from graphs import Graphs
 from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict
 
-# define inputs
+# settings - change these to change display
+get_graphs_as_single_df=False
+visualize_graphs=False
+
+
+# define inputs for querying
 duration = '1h'
 cluster = "rook"
-
 new_queries = {
     'Queue length':'sum by(instance) (ceph_rgw_qlen{namespace="' + cluster + '"})',
     'RGW Cache Hit':'sum by(instance) (irate(ceph_rgw_cache_hit{namespace="' + cluster + '"}[' + duration + ']))',
@@ -23,14 +27,17 @@ new_queries = {
 
 # get graphs class
 graphs_class = Graphs()
-
-# get the graphs dict and print it
+# get dict containing all queried graphs
 graphs_dict = graphs_class.get_graphs_from_queries(new_queries, sum_by="instance")
-print_dataframe_dict(graphs_dict)
 
-# uncomment the following lines if you prefer to have the graphs as one df
-# graphs_df = get_graphs_as_one_df(graphs_dict)
-# print(graphs_df)
+if not get_graphs_as_single_df:
+    # print multiple graphs
+    print_dataframe_dict(graphs_dict)
+else:
+    # print graphs as single dataframe
+    graphs_df = graphs_class.get_graphs_as_one_df(graphs_dict)
+    print(graphs_df)
 
-# uncomment the following line if you want the graphs visualized
-# display_graphs(graphs_dict, sum_by="instance")
+if visualize_graphs:
+    # display graphs in another window 
+    display_graphs(graphs_dict, sum_by="instance")
