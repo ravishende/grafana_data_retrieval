@@ -234,19 +234,32 @@ class Graphs():
 
     # combines all graph dataframes into one large dataframe. Each graph is represented as a column
     # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
-    def get_graphs_as_one_df(self, graphs_dict=None, only_include_worker_pods=False, display_time_as_datetime=True, show_runtimes=False):
+    def get_graphs_as_one_df(self, graphs_dict=None, sum_by=['node', 'pod']):
         total_df = pd.DataFrame(data={})
+
+        # Handle invalid input
+        if graphs_dict is None and sum_by != ['node', 'pod']:
+            raise ValueError("Must pass in graphs_dict if sum_by is not default value.")
 
         # Generate graphs if none given
         if graphs_dict is None:
-            graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
+            graphs_dict = self._generate_graphs()
 
-        # Fill in node and pod columns with the first non-empty graph
+        # Fill in Time and sum_by (default: node, pod) columns with the first non-empty graph
         for graph_df in graphs_dict.values():
             if graph_df is not None:
+                # Insert Time column
                 total_df['Time'] = graph_df['Time']
-                total_df['node'] = graph_df['node']
-                total_df['pod'] = graph_df['pod']
+                # Insert sum_by columns
+                if sum_by is not None:
+                    # Handle if sum_by is single string
+                    if isinstance(sum_by, str):
+                        sum_by = [sum_by]
+                    # Add in sum_by columns to total_df
+                    for metric in sum_by:
+                        metric_col = metric.title()
+                        total_df[metric_col] = graph_df[metric_col]
+                # once columns are inserted, break - start filling in df with graphs
                 break
 
         # Fill in graphs columns
@@ -274,14 +287,14 @@ class Graphs():
             return
         graphs_dict = {}
         for col_title in graphs_df.columns:
-            if col_title == 'node' or col_title == 'pod' or col_title == 'Time':
+            if col_title == 'Node' or col_title == 'Pod' or col_title == 'Time':
                 pass
 
             # assemble new df
             graph_data = {
                 'Time': graphs_df['Time'],
-                'node': graphs_df['node'],
-                'pod': graphs_df['pod'],
+                'Node': graphs_df['Node'],
+                'Pod': graphs_df['Pod'],
                 col_title: graphs_df[col_title]
             }
             graph_df = pd.DataFrame(data=graph_data)

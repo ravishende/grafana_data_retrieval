@@ -37,7 +37,7 @@ if not get_graphs_as_single_df:
     print_dataframe_dict(graphs_dict)
 else:
     # print graphs as single dataframe
-    graphs_df = graphs_class.get_graphs_as_one_df(graphs_dict)
+    graphs_df = graphs_class.get_graphs_as_one_df(graphs_dict, sum_by="instance")
     print(graphs_df)
 
 if visualize_graphs:
