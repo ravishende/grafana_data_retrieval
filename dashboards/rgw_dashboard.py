@@ -8,7 +8,7 @@ from graphs import Graphs
 from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict
 
-# settings - change these to change display
+# display settings
 get_graphs_as_single_df=False
 visualize_graphs=False
 
@@ -30,6 +30,8 @@ graphs_class = Graphs()
 # get dict containing all queried graphs
 graphs_dict = graphs_class.get_graphs_from_queries(queries, sum_by="instance")
 
+
+# logic for displaying graphs
 if not get_graphs_as_single_df:
     # print multiple graphs
     print_dataframe_dict(graphs_dict)
