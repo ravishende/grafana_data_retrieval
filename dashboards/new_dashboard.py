@@ -1,3 +1,9 @@
+import sys
+import os
+sys.path.append("../grafana_data_retrieval")  # Adjust the path to go up one level
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent)
 from graphs import Graphs
 from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict
@@ -12,7 +18,7 @@ new_queries = {
     'RGW Cache Miss':'sum by(instance) (irate(ceph_rgw_cache_miss{namespace="' + cluster + '"}[' + duration + ']))',
     'RGW gets':'sum by(instance) (irate(ceph_rgw_get{namespace="' + cluster + '"}[' + duration + ']))',
     'RGW puts':'sum by(instance) (irate(ceph_rgw_put{namespace="' + cluster + '"}[' + duration + ']))',
-    'RGW Failed Req':'sum by(instance) (irate(ceph_rgw_failed_req{namespace="' + cluster + '"}[' + duration + ']))',
+    'RGW Failed Req':'sum by(instance) (irate(ceph_rgw_failed_req{namespace="' + cluster + '"}[' + duration + ']))'
 }
 
 # get graphs class
