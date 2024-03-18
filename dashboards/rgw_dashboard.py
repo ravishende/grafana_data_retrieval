@@ -16,7 +16,7 @@ visualize_graphs=False
 # define inputs for querying
 duration = '1h'
 cluster = "rook"
-new_queries = {
+queries = {
     'Queue length':'sum by(instance) (ceph_rgw_qlen{namespace="' + cluster + '"})',
     'RGW Cache Hit':'sum by(instance) (irate(ceph_rgw_cache_hit{namespace="' + cluster + '"}[' + duration + ']))',
     'RGW Cache Miss':'sum by(instance) (irate(ceph_rgw_cache_miss{namespace="' + cluster + '"}[' + duration + ']))',
@@ -28,7 +28,7 @@ new_queries = {
 # get graphs class
 graphs_class = Graphs()
 # get dict containing all queried graphs
-graphs_dict = graphs_class.get_graphs_from_queries(new_queries, sum_by="instance")
+graphs_dict = graphs_class.get_graphs_from_queries(queries, sum_by="instance")
 
 if not get_graphs_as_single_df:
     # print multiple graphs
