@@ -71,11 +71,11 @@ class Graphs():
 
         return time_filter
 
-    # returns a dataframe containing Time, Node, Pod, and value (value is titled something different for each graph)
+    # returns a dataframe containing Time, node, pod, and value (value is titled something different for each graph)
     # returns none if there is no data
-    # note: sum_by is a string that makes it get rid of Node and Pod, and instead of the sum_by column
+    # note: sum_by is a string or list of strings that must have the same items that queries start with in their "sum by(___, ___) (...)"
             # this is only used by get_graphs_from_queries
-    def _generate_graph_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=None, show_runtimes=False):
+    def _generate_graph_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=["node", "pod"], show_runtimes=False):
         # create time filter to then generate list of all datapoints for the graph
         time_filter = self._assemble_time_filter(start=start, end=end, time_step=time_step)
 
@@ -94,12 +94,11 @@ class Graphs():
         # prepare columns for graph. columns will be appended to one pod at a time
         times_column = []
         values_column = []
-        if sum_by is None:
-            pods_column = []
-            nodes_column = []
-        else:
-            sum_by_column = []
-
+        
+        # initialize sum_by columns to eventually be put into the graph
+        if sum_by is not None: # if sum_by is None, don't add a sum_by column
+            sum_by_columns = {metric:[] for metric in sum_by}
+        
         # loop through the data for each pod. The data has: node, pod, values, timestamps
         for datapoint in result_list:
             # prepare data to be extracted
@@ -110,35 +109,26 @@ class Graphs():
             for time_value_pair in datapoint['values']:
                 times_list.append(time_value_pair[0])
                 values_list.append(float(time_value_pair[1]))
-
-
-            # There is only one node and pod per pod, so these columns will be constant for each pod.
-            if sum_by is None:
-                node_list = [datapoint['metric']['node']]*len(times_list)
-                pod_list = [datapoint['metric']['pod']]*len(times_list)
-                # add pod's lists to the graph's columns
-                nodes_column.extend(node_list)
-                pods_column.extend(pod_list)
-            else:
-                sum_by_list = [datapoint['metric'][sum_by]]*len(times_list)
-                # add list to graph's columns
-                sum_by_column.extend(sum_by_list)
-
+            
             # add pod's lists to the graph's columns
             times_column.extend(times_list)
             values_column.extend(values_list)
-           
 
+            if sum_by is not None:
+                for item in sum_by:
+                    item_list = [datapoint['metric'][item]]*len(times_list)
+                    sum_by_columns[item].extend(item_list)
+           
         # create and populate graph dataframe
         graph_df = pd.DataFrame()
         graph_df['Time'] = times_column
+        # add in sum_by columns
+        if sum_by is not None:  # if sum_by is None, don't add a sum_by column
+            for item in sum_by:
+                # make sure item cols in graph are title case (Capitalized First Letters Of Words)
+                graph_df[item.title()] = sum_by_columns[item]
+        # add in values column
         graph_df[query_title] = values_column
-
-        if sum_by is None:
-            graph_df['Node'] = nodes_column
-            graph_df['Pod'] = pods_column
-        else:
-            graph_df[sum_by] = sum_by_column
 
         return graph_df
 
@@ -196,10 +186,28 @@ class Graphs():
     #       to be what the query has in "sum by(_____)""
     #       This function does not work if queries do not start with "sum by("
     # Return a dictionary of graphs of the same names as the queries
-    def get_graphs_from_queries(self, queries_dict, sum_by=None):
+    def get_graphs_from_queries(self, queries_dict, sum_by=["node", "pod"], display_time_as_datetime=False):
+        # handle if sum_by is a single input (put into list format)
+        if isinstance(sum_by, str):
+            sum_by = [sum_by]
+        # make sure sum_by metrics are all lower case
+        for i in range(len(sum_by)):
+            sum_by[i] = sum_by[i].lower()
+        
+        # generate graphs
         graphs_dict={}
         for title, query in tqdm(queries_dict.items()):
             graphs_dict[title] = self._generate_graph_df(title, query, sum_by=sum_by)
+
+        # update times to be datetimes if requested
+        if display_time_as_datetime:
+            for graph_title, graph in graphs_dict.items():
+                if graph is None:
+                    continue
+                # update graphs with correct time columns
+                graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
+                graphs_dict[graph_title] = graph
+
         return graphs_dict
 
 
@@ -233,12 +241,12 @@ class Graphs():
         if graphs_dict is None:
             graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
 
-        # Fill in Node and Pod columns with the first non-empty graph
+        # Fill in node and pod columns with the first non-empty graph
         for graph_df in graphs_dict.values():
             if graph_df is not None:
                 total_df['Time'] = graph_df['Time']
-                total_df['Node'] = graph_df['Node']
-                total_df['Pod'] = graph_df['Pod']
+                total_df['node'] = graph_df['node']
+                total_df['pod'] = graph_df['pod']
                 break
 
         # Fill in graphs columns
@@ -266,14 +274,14 @@ class Graphs():
             return
         graphs_dict = {}
         for col_title in graphs_df.columns:
-            if col_title == 'Node' or col_title == 'Pod' or col_title == 'Time':
+            if col_title == 'node' or col_title == 'pod' or col_title == 'Time':
                 pass
 
             # assemble new df
             graph_data = {
                 'Time': graphs_df['Time'],
-                'Node': graphs_df['Node'],
-                'Pod': graphs_df['Pod'],
+                'node': graphs_df['node'],
+                'pod': graphs_df['pod'],
                 col_title: graphs_df[col_title]
             }
             graph_df = pd.DataFrame(data=graph_data)
