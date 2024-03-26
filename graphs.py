@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+from unittest import result
 import pandas as pd
 from helpers.querying import query_data_for_graph
 from helpers.printing import print_sub_title
@@ -182,17 +183,18 @@ class Graphs():
     '''
 
     # Given a dictionary of queries, generate graphs based on those queries
-    # Note: if the queries do not start with "sum by(Node, pod)", then you must set sum_by
+    # Note: if the queries do not start with "sum by(node, pod)", then you must set sum_by
     #       to be what the query has in "sum by(_____)""
-    #       This function does not work if queries do not start with "sum by("
+    #       If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of graphs of the same names as the queries
     def get_graphs_from_queries(self, queries_dict, sum_by=["node", "pod"], display_time_as_datetime=False):
         # handle if sum_by is a single input (put into list format)
         if isinstance(sum_by, str):
             sum_by = [sum_by]
         # make sure sum_by metrics are all lower case
-        for i in range(len(sum_by)):
-            sum_by[i] = sum_by[i].lower()
+        if sum_by is not None:
+            for i in range(len(sum_by)):
+                sum_by[i] = sum_by[i].lower()
         
         # generate graphs
         graphs_dict={}

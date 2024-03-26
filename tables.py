@@ -88,6 +88,51 @@ class Tables():
                 for column in new_df.columns:
                     table_df[column] = new_df[column]
         return table_df
+    
+
+    def _generate_table_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=["node", "pod"], show_runtimes=False):
+        # query for data
+        result_list = query_data(query)
+        if len(result_list) == 0:
+            return None
+
+        # prepare columns for table. columns will be appended to one pod at a time
+        values_column = []
+        
+        # initialize sum_by columns to eventually be put into the table
+        if sum_by is not None: # if sum_by is None, don't add a sum_by column
+            sum_by_columns = {metric:[] for metric in sum_by}
+        
+        # loop through the data for each pod. The data has: node, pod, values, timestamps
+        for datapoint in result_list:
+            # prepare data to be extracted
+            values_list = []
+
+            # fill in lists
+            for time_value_pair in datapoint['values']:
+                values_list.append(float(time_value_pair[1]))
+            
+            # add pod's lists to the table's columns
+            values_column.extend(values_list)
+            # add sum_by column (e.g. pod name)
+            if sum_by is not None:
+                for item in sum_by:
+                    item_list = [datapoint['metric'][item]]*len(values_list)
+                    sum_by_columns[item].extend(item_list)
+           
+        # create and populate table dataframe
+        table_df = pd.DataFrame()
+        # add in sum_by columns
+        if sum_by is not None:  # if sum_by is None, don't add a sum_by column
+            for item in sum_by:
+                # make sure item cols in table are title case (Capitalized First Letters Of Words)
+                table_df[item.title()] = sum_by_columns[item]
+        # add in values column
+        table_df[query_title] = values_column
+
+        return table_df
+
+
 
     def _calc_percent(self, numerator_col, divisor_col):
         # divide the two columns, then multiply by 100 to get the percentage
@@ -153,6 +198,35 @@ class Tables():
         self.storage_io['Throughput(Read + Write)'] = \
             self.storage_io['Throughput(Read)'].astype(float) + self.storage_io['Throughput(Write)'].astype(float)
         return self.storage_io
+
+
+    # Given a dictionary of queries, generate a table based on those queries
+    # Note: if the queries do not start with "sum by(node, pod)", then you must set sum_by
+    #        to be what the query has in "sum by(_____)""
+    #        If queries do not have "sum by(...)", then set sum_by to None
+    # Return a dictionary of a table_name: table_df if table_name is specified, otherwise returns
+    # a dataframe that is the table
+    def get_table_from_queries(self, queries_dict, sum_by=["node", "pod"], table_name=None):
+        # handle if sum_by is a single input (put into list format)
+        if isinstance(sum_by, str):
+            sum_by = [sum_by]
+        # make sure sum_by metrics are all lower case
+        if sum_by is not None:
+            for i in range(len(sum_by)):
+                sum_by[i] = sum_by[i].lower()
+        
+        # generate tables
+        table_df = pd.DataFrame()
+        for title, query in tqdm(queries_dict.items()):
+            single_query_table = self._generate_table_df(title, query, sum_by=sum_by)
+            table_df[title] = single_query_table
+
+        # if table_name is specified, return the table_df in a dict of table_name:table_df
+        if table_name is not None:
+            return {table_name:table_df}
+        # otherwise, return the table_df
+        return table_df
+
 
     # get a dictionary of all the tables
     def get_tables_dict(self, only_include_worker_pods=False, queries=None, partial_queries=None):
