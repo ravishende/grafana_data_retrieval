@@ -13,8 +13,9 @@ def display_graphs(graphs_dict=None, sum_by=["node", "pod"]):
     if isinstance(sum_by, str):
         sum_by = [sum_by]
     # make sure sum_by metrics are all lower case
-    for i in range(len(sum_by)):
-        sum_by[i] = sum_by[i].lower()
+    if sum_by is not None:
+        for i in range(len(sum_by)):
+            sum_by[i] = sum_by[i].lower()
     # generate graphs if there is no graphs_dict
     if graphs_dict is None:
         graphs_class = Graphs()
