@@ -90,7 +90,7 @@ class Tables():
         return table_df
     
 
-    def _generate_table_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=["node", "pod"], show_runtimes=False):
+    def _generate_table_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=["node", "pod"]):
         # query for data
         result_list = query_data(query)
         if len(result_list) == 0:
@@ -109,8 +109,8 @@ class Tables():
             values_list = []
 
             # fill in lists
-            for time_value_pair in datapoint['values']:
-                values_list.append(float(time_value_pair[1]))
+            time_value_pair = datapoint['value']
+            values_list.append(float(time_value_pair[1]))
             
             # add pod's lists to the table's columns
             values_column.extend(values_list)
@@ -210,17 +210,25 @@ class Tables():
         # handle if sum_by is a single input (put into list format)
         if isinstance(sum_by, str):
             sum_by = [sum_by]
-        # make sure sum_by metrics are all lower case
+        # get rid of title case for sum_by metrics
         if sum_by is not None:
             for i in range(len(sum_by)):
-                sum_by[i] = sum_by[i].lower()
+                sum_by[i] = sum_by[i][0].lower() + sum_by[i][1:]
         
         # generate tables
         table_df = pd.DataFrame()
         for title, query in tqdm(queries_dict.items()):
             single_query_table = self._generate_table_df(title, query, sum_by=sum_by)
-            table_df[title] = single_query_table
-
+            # add column to table
+            if single_query_table is not None:
+                # initialize table if it isn't already
+                if len(table_df) == 0:
+                    table_df = single_query_table
+                else: 
+                    table_df[title] = single_query_table[title]
+            else:
+                table_df[title] = None
+        
         # if table_name is specified, return the table_df in a dict of table_name:table_df
         if table_name is not None:
             return {table_name:table_df}
