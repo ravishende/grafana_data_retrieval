@@ -20,11 +20,12 @@ pd.set_option("display.max_rows", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-# define inputs
-namespace = "bvl"
+# inputs and settings
+namespace = "ndp-test"
+# namespace = "bvl"  # namespace that often has data - for testing
 # for graphs:
-time_range = "15m"  # the amount of time that the graph will have data for
-timestep = "15s"  # how often datapoints are queried
+time_range = "1h"  # the amount of time that the graph will have data for
+timestep = "1m"  # how often datapoints are queried for
 # display settings
 get_graphs_as_single_df = False
 visualize_graphs = False
@@ -84,6 +85,7 @@ if data_gpu_usage is not None:
     print(data_gpu_usage)
 else:
     print(colored("No Data", "red"))
+print("\n"*2)
 
 # logic for displaying graphs
 if not get_graphs_as_single_df:
