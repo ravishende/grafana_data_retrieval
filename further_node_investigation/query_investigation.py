@@ -7,7 +7,7 @@ import os
 # get set up to be able to import files from parent directory (grafana_data_retrieval)
 # utils.py and inputs.py not in this current directory and instead in the parent
 sys.path.append("../grafana_data_retrieval")
-current = os.path.dirname(os.path.realpath("query_investigation.py"))
+current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from inputs import NAMESPACE

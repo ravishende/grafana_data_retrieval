@@ -5,7 +5,7 @@ from termcolor import colored
 import sys
 import os
 sys.path.append("../grafana_data_retrieval")
-current = os.path.dirname(os.path.realpath("investigate_zero_usage.py"))
+current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.printing import print_title

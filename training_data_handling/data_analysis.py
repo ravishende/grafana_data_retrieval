@@ -6,7 +6,7 @@ import sys
 import os
 # get set up to be able to import helper files from parent directory (grafana_data_retrieval)
 sys.path.append("../grafana_data_retrieval")
-current = os.path.dirname(os.path.realpath("data_analysis.py"))
+current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.time_functions import datetime_ify
