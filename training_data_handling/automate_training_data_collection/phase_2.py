@@ -133,10 +133,10 @@ class Phase_2():
         # get df from csv file
         ids_included_df = pd.read_csv(self.files['read'], index_col=0)
 
-        # 4. calculate area and runtime
+        # 4. calculate area and runtime and add those columns to dataframe
         calculated_df = self.add_area_and_runtime(ids_included_df)
 
-        # 5. drop self.drop_cols
+        # 5. drop self.drop_cols (columns that were used to calculate area)
         filtered_df = self.drop_columns(calculated_df, self.drop_cols, reset_index=True)
 
         # 6. add duration_t1, duration_t2, etc. columns

@@ -45,9 +45,10 @@ class Phase_3():
 
         # while there are still unqueried rows, keep querying batch_size rows at a time
         while df[self.col_names_total[0]].iloc[len(df)-1] is None:
-            # # query and insert static and total columns
+            # query and insert static columns
             df = query_and_insert_columns(df, self.static_metrics, self.col_names_static, self.duration_col_total, batch_size)
             # df.to_csv(self.files['query_progress'])
+            # query and insert total columns
             df = query_and_insert_columns(df, self.non_static_metrics, self.col_names_total, self.duration_col_total, batch_size)
             df.to_csv(self.files['query_progress'])
             # query and insert duration_t_i columns
