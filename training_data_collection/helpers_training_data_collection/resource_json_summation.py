@@ -1,3 +1,4 @@
+from multiprocessing.sharedctypes import Value
 import pandas as pd 
 import json
 from ast import literal_eval
@@ -29,20 +30,17 @@ terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
 
-read_file = "csv_files/queried.csv" 
-write_file = "csv_files/partial_summed_all_metrics.csv"
-
-
 # given a list of metrics, return a new list that has _total, _t1, and _t2 appended to each metric
 # to create a new list that is 3 times the size of metrics_list
-def get_columns_from_metrics(metric_list, num_inserted_duration_cols=3):
+def get_columns_from_metrics(metric_list, num_inserted_duration_cols=3, include_total=True):
     summary_columns = []
     for name in metric_list:
         # get total duration column names
-        summary_columns.append(name + "_total")
+        if include_total:
+            summary_columns.append(name + "_total")
         # get duration_t_i column names - append num_inserted_duraion_cols added to the name
-        for i in range(1, len(num_inserted_duration_cols)+1):
-            summary_columns.append(name + "_t" + i)
+        for i in range(1, num_inserted_duration_cols+1):
+            summary_columns.append(name + "_t" + str(i))
     return summary_columns
 
 
@@ -62,24 +60,37 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
     # make sure that all metrics lists are the same size
     if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
         raise ValueError("percent_metrics, numerator_metrics, denominator_metrics must all be the same length")
-
-    # get columns lists by adding _total, _t1, and _t2 to each metric in each metric_list in percent_metrics_format
-    percent_cols = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols)
-    numerator_cols = get_columns_from_metrics(numerator_metrics, num_inserted_duration_cols)
+    try:
+        final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
+        int(final_duration_col)
+    except Exception as e:
+        raise ValueError("In insert_percent_cols(): num_inserted_duration_cols is either out of bounds or inserted duration columns are not set up correctly They should be in the form 'duration_t1'. \nHere is the error: {e}")
+        
+    # get columns lists by adding _t1, _t2, etc. to each metric in each metric_list in percent_metrics_format
+    percent_cols = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols, include_total=False)
+    numerator_cols = get_columns_from_metrics(numerator_metrics, num_inserted_duration_cols, include_total=False)
     
     denominator_cols = []
-    # check if any denominator metrics are static metrics. 
+    # handle if any denominator metrics are static metrics. 
     for metric in denominator_metrics:
         if metric in static_metrics:
             # If they are, don't add _t_i to the end of them and just repeat them num_inserted_duration_cols times
             denominator_cols += [metric]*num_inserted_duration_cols
         else:
             # get column names for the one metric
-            denominator_cols += get_columns_from_metrics([metric])
+            denominator_cols += get_columns_from_metrics([metric], num_inserted_duration_cols, include_total=False)
 
     # calculate percentage columns
     for i in range(len(percent_cols)):
-        df[percent_cols[i]] = 100 * df[numerator_cols[i]] / df[denominator_cols[i]]
+        # get numerator and denominator for calculation
+        numerator = df[numerator_cols[i]]
+        denominator = df[denominator_cols[i]]
+        # handle if denominator column is cpu_request (multiply it by duration_t{i} to get into cpu_seconds)
+        if denominator_cols[i] == "cpu_request":
+            duration_t_i = df[f"duration_t{i}"]
+            denominator = denominator * int(duration_t_i)
+        # calculate and insert percent column
+        df[percent_cols[i]] = 100 * numerator / denominator
 
     return df
 
@@ -122,19 +133,19 @@ def sum_pods_for_ensemble(result_list, ensemble, sum=True):
     return total
 
 
-def fill_in_no_sum_na(df, no_sum_metrics):
+def fill_in_static_na(df, static_metrics):
     # Group df by 'ensemble_uuid'
     ensemble_groups = df.groupby('ensemble_uuid')
 
     # Create a subset of df with rows where any no-sum metric is NA
-    na_no_sum_df = df[df[no_sum_metrics].isna().any(axis=1)]
+    na_no_sum_df = df[df[static_metrics].isna().any(axis=1)]
 
     # Iterate over the rows in the subset
     for i, row in na_no_sum_df.iterrows():
         ensemble_uuid = row['ensemble_uuid']
 
         # For each no-sum metric, try to find a non-NA value from the same ensemble
-        for metric in no_sum_metrics:
+        for metric in static_metrics:
             # if the row's metric is not na, move on
             if not pd.isna(row[metric]):
                 continue
@@ -170,7 +181,7 @@ def update_col(df, update_col_title, ensemble_col_title, sum=True):
     # calculate totals summed over the ensemble for given column
     df[update_col_title] = df.apply(
         lambda row: sum_pods_for_ensemble(row[update_col_title], row[ensemble_col_title], sum=sum) \
-        if row[ensemble_col_title] else row[update_col_title],axis=1)
+        if row[ensemble_col_title] else row[update_col_title], axis=1)
 
     return df
 
@@ -198,6 +209,8 @@ def update_columns(df, update_col_names, ensemble_col_title, no_sum_metrics):
 '''
 
 if __name__ == "__main__":
+    read_file = "old/csv_files/queried.csv" 
+    write_file = "old/csv_files/partial_summed_all_metrics.csv"
 
     # all queried metrics
     all_metrics = [
@@ -211,22 +224,16 @@ if __name__ == "__main__":
         "received_bandwidth"
     ]
 
-    no_sum_metrics = [
-        "cpu_request",
-        "mem_request",
-    ]
-
-    static_metrics = [  # just for insert_percent_cols
+    static_metrics = [
         "mem_request"
+        "cpu_request"
     ]
-
-
 
     # get a list of metrics that need to be summed (all metrics - no_sum metrics)
-    metrics_to_sum = [metric for metric in all_metrics if metric not in no_sum_metrics]
+    non_static_metrics = [metric for metric in all_metrics if metric not in static_metrics]
     # get names of all columns to sum
-    columns_to_sum = get_columns_from_metrics(metrics_to_sum)
-    all_metric_cols = no_sum_metrics + columns_to_sum
+    columns_to_sum = get_columns_from_metrics(non_static_metrics)
+    all_metric_cols = static_metrics + columns_to_sum
 
     # get the csv file as a pandas dataframe
     summed_runs = pd.read_csv(read_file, index_col=0)
@@ -235,15 +242,15 @@ if __name__ == "__main__":
 
     # update columns to get float values from json
     print_heading("Summing Up Columns")
-    summed_runs = update_columns(summed_runs, all_metric_cols, ensemble_col, no_sum_metrics=no_sum_metrics)
+    summed_runs = update_columns(summed_runs, all_metric_cols, ensemble_col, no_sum_metrics=static_metrics)
 
-    # try to fill in any na values in no_sum columns by looking at other runs with same ensemble
-    summed_runs = fill_in_no_sum_na(summed_runs, no_sum_metrics)
+    # try to fill in any na values in static columns by looking at other runs with same ensemble
+    summed_runs = fill_in_static_na(summed_runs, static_metrics)
 
     # insert percent columns into the dataframe
     percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
     numerator_metrics = ["cpu_usage", "mem_usage"]
-    denominator_metrics = ["cpu_request", "mem_request"]
+    denominator_metrics = static_metrics
     summed_runs = insert_percent_cols(summed_runs, percent_metrics, numerator_metrics, denominator_metrics, static_metrics)
 
     # save the dataframe to a file and print it
