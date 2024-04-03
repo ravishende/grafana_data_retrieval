@@ -9,6 +9,7 @@ training_data_handling/.DS_Store
 training_data_handling/find_ensembles.py
 training_data_handling/add_ids_col.py
 training_data_handling/investigate.py
+training_data_handling/fix_cpu_request.py
 training_data_handling/collect_runs/.ipynb_checkpoints/
 training_data_handling/csv_files/queried_w_ids.csv
 training_data_handling/csv_files/queried.csv
@@ -21,3 +22,6 @@ training_data_handling/csv_files/nonzero_queried_all_metrics.csv
 training_data_handling/csv_files/queried_all_metrics.csv
 training_data_handling/csv_files/summed_all_metrics.csv
 training_data_handling/csv_files/partial_summed_all_metrics.csv
+training_data_handling/automate_training_data_collection/txts/
+training_data_handling/automate_training_data_collection/csvs/
+
