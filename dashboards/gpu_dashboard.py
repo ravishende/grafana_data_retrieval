@@ -32,6 +32,8 @@ timestep = "1m"  # how often datapoints are queried for
 get_graphs_as_single_df = False
 visualize_graphs = False
 
+# This is the dashboard for the following Grafana page: https://grafana.nrp-nautilus.io/d/dRG9q0Ymz/k8s-compute-resources-namespace-gpus?orgId=1&refresh=30s&var-namespace=ndp-test
+
 def combine_dataframes_on_pod(df1, df2):
     # concatenate the dataframes along the columns axis
     combined_df = pd.concat([df1, df2], axis=1)
@@ -60,7 +62,7 @@ graph_queries_by_pod = {
 table_queries_by_pod = {
     'GPU Utilization':'sum(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod) / count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod)'
 }
-graph_queries_by_pod_model = {
+table_queries_by_pod_model = {
     'GPUs Requested':'count(DCGM_FI_DEV_GPU_TEMP{namespace=~"' + namespace + '"}) by (pod, modelName)'
 }
 
@@ -72,7 +74,7 @@ tables_class = Tables()
 # table_cell_dict = tables_class.get_table_from_queries(table_queries_no_sum, sum_by=None, table_name="Current GPU Usage")``
 data_gpu_usage = get_datapoint(current_gpu_usage_query)
 table_1 = tables_class.get_table_from_queries(table_queries_by_pod, sum_by='pod')
-table_2 = tables_class.get_table_from_queries(graph_queries_by_pod_model, sum_by=['pod', 'modelName'])
+table_2 = tables_class.get_table_from_queries(table_queries_by_pod_model, sum_by=['pod', 'modelName'])
 graphs_dict_no_sum = graphs_class.get_graphs_from_queries(graph_queries_no_sum, sum_by=None)
 graphs_dict_by_pod = graphs_class.get_graphs_from_queries(graph_queries_by_pod, sum_by='pod')
 
