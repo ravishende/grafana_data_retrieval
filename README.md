@@ -5,7 +5,7 @@ This code base uses Python and PromQL querying to collect data from PromQL datab
 It collects all of the information that can be found on the [Grafana](https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=default&var-cluster=&var-namespace=wifire-quicfire&from=1690454188000&to=1690472188000) website and displays each statistic by Node and Pod, rather than a sum of all pods like Grafana does.
 
 
-Running main.py will collect and print all current information for the header, tables, and graphs.
+Running `main.py` will collect and print all current information for the header, tables, and graphs.`
 
 
 Other Features:
@@ -52,7 +52,7 @@ There are 3 main types of data collected:
 ___
 
 ## Inputs
-There are 4 main inputs (defined in inputs.py) that specify what information will be returned:
+There are 4 main inputs (defined in `inputs.py`) that specify what information will be returned:
 1. `DEFAULT_DURATION`
 2. `DEFAULT_GRAPH_STEP`
 3. `DEFAULT_GRAPH_TIME_OFFSET`
