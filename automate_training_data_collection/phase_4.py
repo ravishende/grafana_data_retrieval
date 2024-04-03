@@ -1,13 +1,7 @@
 import pandas as pd
 from workflow_files import PHASE_4_FILES
 from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES, ID_COLS
-import sys
-import os
-sys.path.append("../../grafana_data_retrieval")  # Adjust the path to go up two levels
-parent = os.path.dirname(os.path.realpath(__file__))
-grandparent = os.path.dirname(parent)
-sys.path.append(grandparent)
-from resource_json_summation import update_columns, insert_percent_cols
+from helpers_training_data_collection.resource_json_summation import update_columns, insert_percent_cols
 
 class Phase_4():
     def __init__(self, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS):

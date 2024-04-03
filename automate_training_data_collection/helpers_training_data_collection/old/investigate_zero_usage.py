@@ -4,10 +4,11 @@ from termcolor import colored
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
-sys.path.append("../grafana_data_retrieval")
+sys.path.append("../../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
-sys.path.append(parent)
+grandparent = os.path.dirname(parent)
+sys.path.append(grandparent)
 from helpers.printing import print_title
 
 '''

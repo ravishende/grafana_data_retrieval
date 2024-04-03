@@ -2,13 +2,7 @@ import pandas as pd
 import shutil
 from workflow_files import PHASE_3_FILES
 from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES
-import sys
-import os
-sys.path.append("../../grafana_data_retrieval")  # Adjust the path to go up two levels
-parent = os.path.dirname(os.path.realpath(__file__))
-grandparent = os.path.dirname(parent)
-sys.path.append(grandparent)
-from query_resources import query_and_insert_columns
+from helpers_training_data_collection.query_resources import query_and_insert_columns
 
 # display settings
 pd.set_option("display.max_columns", None)

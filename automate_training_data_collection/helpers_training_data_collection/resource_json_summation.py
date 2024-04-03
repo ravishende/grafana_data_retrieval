@@ -7,10 +7,11 @@ import shutil
 import sys
 import os
 # get set up to be able to import helper files from parent directory (grafana_data_retrieval)
-sys.path.append("../grafana_data_retrieval")
+sys.path.append("../../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
-sys.path.append(parent)
+grandparent = os.path.dirname(parent)
+sys.path.append(grandparent)
 from helpers.filtering import get_worker_id
 from helpers.printing import print_heading
 
