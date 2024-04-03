@@ -11,15 +11,15 @@ Running main.py will collect and print all current information for the header, t
 Other Features:
 1. Collect training data for bp3d (Burn Pro 3D) runs over a time period
     
-    &nbsp; &nbsp; training_data_collection/  (specifically workflow.py)
+    &nbsp; &nbsp; `training_data_collection/`  (specifically workflow.py)
 
 2. Collect all data from tables.py for a BP3D run
     
-    &nbsp; &nbsp; table_for_run.py
+    &nbsp; &nbsp; `table_for_run.py`
 
 3. Get analytics from other Grafana Dashboards 
 
-    &nbsp; &nbsp; dashboards/
+    &nbsp; &nbsp; `dashboards/`
 
 ___
 
