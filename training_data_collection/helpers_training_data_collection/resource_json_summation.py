@@ -1,6 +1,5 @@
 from multiprocessing.sharedctypes import Value
-import pandas as pd 
-import json
+import pandas as pd
 from ast import literal_eval
 from termcolor import colored
 from uuid import UUID

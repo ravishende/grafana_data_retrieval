@@ -27,7 +27,7 @@ def _initialize_file(file_path):
     # Check if the file exists
     if not os.path.exists(file_path):
         # If the file does not exist, create it
-        with open(file_path, 'w') as file:
+        with open(file_path, 'w'):
             return # we only want to create the file, not write to it.
 
 # make sure all necessary files exist

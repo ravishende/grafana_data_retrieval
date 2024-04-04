@@ -1,13 +1,10 @@
 import os
-from unittest import result
 import s3fs
 import json
 import math
 import pandas as pd
 from tqdm import tqdm
-from pprint import pprint
 from termcolor import colored
-from datetime import datetime
 from dotenv import load_dotenv
 from workflow_files import PHASE_1_FILES
 
@@ -43,7 +40,34 @@ class Phase_1():
         'wind_direction',
         'wind_speed'
         ]
+        # fs and bucket for collecting paths and runs_df
+        self.fs = None
+        self.bucket = ""
+        self.init_fs_and_bucket()
         
+    # initalize self.fs and self.bucket
+    def init_fs_and_bucket(self):
+        # get login details from .env file
+        if not load_dotenv():
+            raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY for the s3 file system")
+        endpoint = 'https://wifire-data.sdsc.edu:9000'
+        access_key = os.getenv("ACCESS_KEY")
+        secret_key = os.getenv("SECRET_KEY")
+
+        # login and get fs (file system) and bucket
+        fs = s3fs.S3FileSystem(key=access_key,
+            secret=secret_key,
+            client_kwargs={
+                'endpoint_url': endpoint,
+                'verify': False
+            },
+            skip_instance_cache=False
+        )
+        bucket = 'burnpro3d/d'
+
+        # initialize fs and bucket
+        self.fs = fs
+        self.bucket = bucket
 
     # Given contents (a list to write to the file),
     # Writes contents to a file. Each element is written on a new line.
@@ -69,10 +93,10 @@ class Phase_1():
             contents = f.read().splitlines() 
         return contents
 
-    # given the fs and a subdirectory, return all of the run simulation paths
-    def _get_sim_paths(self, fs, subdir):
+    # given a subdirectory, return all of the run simulation paths
+    def _get_sim_paths(self, subdir):
         sim_paths = []
-        paths = fs.ls(subdir)
+        paths = self.fs.ls(subdir)
         for path in paths:
             if "run_" in path:
                 sim_paths.append(path)
@@ -97,64 +121,38 @@ class Phase_1():
                 self._append_txt_file(self.files[item_title], gathered_items)
         return gathered_items
 
-
-    # authenticate and return the file system and bucket containing directories for paths
-    def _get_fs_and_bucket(self):
-        # get login details from .env file
-        if not load_dotenv():
-            raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY")
-        endpoint = 'https://wifire-data.sdsc.edu:9000'
-        access_key = os.getenv("ACCESS_KEY")
-        secret_key = os.getenv("SECRET_KEY")
-
-        # login and get fs (file system) and bucket
-        fs = s3fs.S3FileSystem(key=access_key,
-            secret=secret_key,
-            client_kwargs={
-                'endpoint_url': endpoint,
-                'verify': False
-            },
-            skip_instance_cache=False
-        )
-        bucket = 'burnpro3d/d'
-
-        print("successfully authenticated")
-        return fs, bucket
-
-
-    # given a list of ungathered directories as well as the file system, 
-    # return all the paths from those directories.
-    def _get_paths_from_directories(self, directories, fs):
+    # given a list of ungathered directories, return all the paths from those directories.
+    def _get_paths_from_directories(self, directories):
         paths = []
         for directory in tqdm(directories):
-            subdirectories = fs.ls(directory)
+            subdirectories = self.fs.ls(directory)
             for subdir in subdirectories:
-                paths += self._get_sim_paths(fs, subdir)
+                paths += self._get_sim_paths(subdir)
         # write newly gathered directories to a file so they don't ever have to be regenerated
         self._append_txt_file(self.files['path_directories'], directories)
         return paths
 
 
+    # gather all paths in batches if requested.
     # batch size is a number of paths per batch to get
     def gather_all_paths(self, batch_size=None):
-        # authenticate and get file system and bucket containing directories for paths
-        fs, bucket = self._get_fs_and_bucket()
         
         # get all directories and previously gathered directories
-        directories = fs.ls(bucket)
+        directories = self.fs.ls(self.bucket)
         gathered_directories = self._get_gathered_items("path_directories")
         
         # get list of directories that have not been gathered
         ungathered_directories = [d for d in directories if d not in gathered_directories]
         # the last gathered directory may have new subdirectories. Add it into ungathered_directories to get new subdirs
-        ungathered_directories = [gathered_directories[-1]] + ungathered_directories
+        if len(gathered_directories) > 0:
+            ungathered_directories = [gathered_directories[-1]] + ungathered_directories
         # get rid of duplicates in ungathered_directories (from adding in gathered_directories[-1])
         ungathered_directories = list(set(ungathered_directories))
         
         # intialize a list to hold all simulation paths
         simulation_paths_list = self._get_gathered_items("paths")
         # handle if no new directories
-        if ungathered_directories == [gathered_directories[-1]]:
+        if len(gathered_directories) > 0 and ungathered_directories == [gathered_directories[-1]]:
             return simulation_paths_list
         
         # start gathering directories
@@ -165,7 +163,7 @@ class Phase_1():
 
         # if we're not using batches, run everything at once
         if batch_size is None:
-            new_sim_paths_list = self._get_paths_from_directories(ungathered_directories, fs)
+            new_sim_paths_list = self._get_paths_from_directories(ungathered_directories, self.fs)
             self._append_txt_file(self.files['paths'], new_sim_paths_list)
             return simulation_paths_list + new_sim_paths_list
 
@@ -180,7 +178,7 @@ class Phase_1():
 
             # get simulation paths for this batch
             print(f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left.", colored(f"Batch {i+1}/{num_batches}", "magenta"))
-            sim_paths_batch = self._get_paths_from_directories(ungathered_directories[:end_index], fs)
+            sim_paths_batch = self._get_paths_from_directories(ungathered_directories[:end_index], self.fs)
             # update all simulation paths and remove newly gathered directories from ungathered directories
             simulation_paths_list += sim_paths_batch
             ungathered_directories = ungathered_directories[end_index:]
@@ -192,7 +190,8 @@ class Phase_1():
 
     # get the run_uuid (str) from a path (str)
     def _run_id_from_path(self, path):
-        run_uuid = path.split('/')[-1]
+        run_uuid_w_prefix = path.split('/')[-1]
+        run_uuid = run_uuid_w_prefix.split('_')[-1]
         return run_uuid
 
 
@@ -255,7 +254,7 @@ class Phase_1():
             # try to get the file from the path
             try:
                 name = 'quicfire.zarr'
-                with fs.open(path + '/' + name + '/.zattrs') as file:
+                with self.fs.open(path + '/' + name + '/.zattrs') as file:
                     run_data=json.load(file)
             # if the file isn't there, append path to bad_paths
             except:
@@ -288,14 +287,14 @@ class Phase_1():
         df = pd.DataFrame(rows)
         columns_to_keep = ['path'] + self.keep_attributes
         df = df[columns_to_keep]
-        df = self.add_run_uuid_col(df)
+        df = self._add_run_uuid_col(df)
 
         # print file not found files
         if len(bad_paths) > 0:
             print("FileNotFound Error on the following Files:")
             for file_path in bad_paths:
                 print("\t" + file_path)
-        print(colored(f"\nRead from {start} to {stop}\n", "green"))
+        print(colored(f"\nRead from {start} to {stop-1}\n", "green"))
 
         # append bad paths to files not found
         self._append_txt_file(self.files['files_not_found'], bad_paths)
@@ -311,14 +310,16 @@ class Phase_1():
             runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
             files_not_found = self.read_txt_file(self.files['files_not_found'])
             num_gathered_runs = len(runs_df) + len(files_not_found)
+            runs_df_exists = True
         except:
             num_gathered_runs = 0
+            runs_df_exists = False
 
         # calculate how many batches to run
-        num_batches = (len(simulation_paths) - num_gathered_runs) // batch_size
+        num_batches = math.ceil((len(simulation_paths) - num_gathered_runs) / batch_size)
         
         # loop over unexplored simulation paths, getting df chunks for each batch
-        current_batch = 0
+        current_batch = 1
         for start_index in range(num_gathered_runs, len(simulation_paths), batch_size):
             # print current batch
             print(colored(f"batch {current_batch}/{num_batches}:", "green"))
@@ -332,7 +333,12 @@ class Phase_1():
 
             # save the df to a file
             if len(partial_runs_df) > 0:
-                partial_runs_df.to_csv(self.files['runs_df'], mode='a')
+                if runs_df_exists:
+                    # append to df and don't rewrite the header if the df already exists
+                    partial_runs_df.to_csv(self.files['runs_df'], mode='a', header=False)
+                    runs_df_exists = True
+                else:
+                    partial_runs_df.to_csv(self.files['runs_df'], mode='w', header=True)
                 print(partial_runs_df)
 
         # get the total runs df and return it
@@ -370,10 +376,13 @@ class Phase_1():
 
     # given a df that contains all successful runs and a df that 
     def merge_dfs(self, runs_data_df, successful_runs_list_df):
-        # Selecting the required columns from successful_runs_list_df
+        # select the required columns from successful_runs_list_df
+        if len(runs_data_df) == 0 or len(successful_runs_list_df) == 0:
+            raise ValueError("\n\nEither runs_data_df or successful_runs_list_df are empty, so they cannot be merged.\n\n")
+
         successful_runs_cols = successful_runs_list_df[['ensemble_uuid', 'run_uuid']]
         
-        # Merging the dataframes on 'run_uuid' with an inner join
+        # merge the dataframes on 'run_uuid' with an inner join
         merged_df = pd.merge(successful_runs_cols, runs_data_df, on='run_uuid', how='inner')
         
         return merged_df
@@ -411,10 +420,9 @@ class Phase_1():
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self, paths_gathered=False):
         success=False
-
         # for if simulation_paths are fully gathered and we're just getting df from runs
         if paths_gathered:
-            simulation_paths = self.read_txt_file(self.files['paths'])  #
+            simulation_paths = self.read_txt_file(self.files['paths'])
             new_paths = self.read_txt_file(self.files['new_paths']) 
         # gather simulation paths to be read 
         else:
@@ -439,12 +447,15 @@ class Phase_1():
 
         print("getting df from paths\n")
         # get the actual runs from the successful runs paths
-        runs_df = self.get_df_from_paths(final_paths_list, batch_size=50)
+        runs_df = self.get_df_from_paths(final_paths_list, batch_size=500)
         # runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
 
         print("getting finalized dataframe")
         # remove rows with na values for run_start, run_end, renaming those columns to start and stop
-        result_df = self.merge_dfs(runs_to_gather_df, runs_df)
+        print(colored(f"runs_to_gather_df: \n{runs_to_gather_df}", "yellow"))
+        print(colored(f"runs_df: \n{runs_df}", "green"))
+
+        result_df = self.merge_dfs(runs_data_df=runs_df, successful_runs_list_df=runs_to_gather_df)
         result_df = self.remove_na_rows(result_df, reset_index=True)
 
         # save final_df

@@ -12,46 +12,12 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-
 '''
-Work Flow
-
-=========================
-Phase 1:  Collecting Runs
-=========================
-1. get successful bp3d runs from bp3d-runs
-2. collect runs from successful bp3d runs and paths
-3. add in ensemble uuid
-
-======================
-Phase 2: Preprocessing
-======================
-4. calculate area and runtime
-    - filter_training_data.py 
-5. drop drop_cols_1
-    - filter_training_data.py
-6. add duration_t1, duration_t2 columns
-    - query_resources.py
-
-=================
-Phase 3: Querying
-=================
-7. query resource metrics (metrics total, t1, t2)
-    - query_resources.py
-
-====================================
-Phase 4: Sum and Ready Training Data
-====================================
-8. sum over json to get floats for resource metrics
-    - resource_json_summation.py
-9. add in percent columns
-    - resource_json_summation.py
-10. drop rows with zeros in cpu & mem total
-    - investigate_zero_usage.py
-11. add ratio cols for t1 & t2
-    - add_ratio_cols.py
-12. drop drop_cols_2
-    - finalize_training_data.py
+NOTE: If this is the first time ever running this file:
+all txt and csv files with their paths will be setup for you EXCEPT:
+you will need to put in the PHASE_1_FILES['read'] file with the appropiate name into csvs/
+Be sure to check workflow_files.py for the proper name of this file, but it is most likely
+'phase_1_read.csv'. Make sure it is in the csvs/ directory.
 '''
 
 
@@ -99,3 +65,49 @@ for i, phase in enumerate(phases):
         # otherwise, set phase as finished, move on
         set_phase_finished(phase_number)
         print(colored(f"\n\nPhase {phase_number} complete!", "green"))
+
+
+
+
+
+
+'''
+Work Flow
+
+=========================
+Phase 1:  Collecting Runs
+=========================
+1. get successful bp3d runs from bp3d-runs
+2. collect runs from successful bp3d runs and paths
+3. add in ensemble uuid
+
+======================
+Phase 2: Preprocessing
+======================
+4. calculate area and runtime
+    - filter_training_data.py 
+5. drop drop_cols_1
+    - filter_training_data.py
+6. add duration_t1, duration_t2 columns
+    - query_resources.py
+
+=================
+Phase 3: Querying
+=================
+7. query resource metrics (metrics total, t1, t2)
+    - query_resources.py
+
+====================================
+Phase 4: Sum and Ready Training Data
+====================================
+8. sum over json to get floats for resource metrics
+    - resource_json_summation.py
+9. add in percent columns
+    - resource_json_summation.py
+10. drop rows with zeros in cpu & mem total
+    - investigate_zero_usage.py
+11. add ratio cols for t1 & t2
+    - add_ratio_cols.py
+12. drop drop_cols_2
+    - finalize_training_data.py
+'''
