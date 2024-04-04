@@ -51,10 +51,7 @@ _all_metrics = [
     "transmitted_bandwidth",
     "received_bandwidth"
     ]
-_request_metrics = ["cpu_request", "mem_request"]
-_no_sum_metrics = _request_metrics
-_sum_metrics = [metric for metric in _all_metrics if metric not in _no_sum_metrics]
-_static_metrics = ["mem_request"]
+_static_metrics = ["cpu_request", "mem_request"]
 _non_static_metrics = [metric for metric in _all_metrics if metric not in _static_metrics]
 
 # duration columns
@@ -79,8 +76,6 @@ _all_col_names = _static_col_names + _totals_col_names + list(chain.from_iterabl
 
 METRICS = {
     "all":_all_metrics,
-    "sum": _sum_metrics,
-    "no_sum": _no_sum_metrics,
     "static":_static_metrics,
     "non_static": _non_static_metrics
     }

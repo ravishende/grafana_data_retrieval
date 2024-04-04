@@ -8,7 +8,6 @@ class Phase_4():
         self.files = files
         self.drop_cols = ["start","stop", "ensemble_uuid"]
         # metrics
-        self.no_sum_metrics = metrics["no_sum"]
         self.static_metrics = metrics["static"]
         # duration columns
         self.num_duration_cols = duration_cols["num_cols"]
@@ -24,19 +23,20 @@ class Phase_4():
     # return a df with all queried columns updated to be a single float value
     def update_queried_cols(self, df):
         # update columns - sum non_static columns, get values for static columns
-        df = update_columns(df, self.all_col_names, self.ensemble_col, no_sum_metrics=self.no_sum_metrics)
+        df = update_columns(df, self.all_col_names, self.ensemble_col, no_sum_metrics=self.static_metrics)
         return df
 
+    # given a df, insert percent columns for every duration column
     def add_percent_columns(self, df):
         # metrics lists that will be used to get/calculate percentages
         percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
         numerator_metrics = ["cpu_usage", "mem_usage"]
-        denominator_metrics = self.no_sum_metrics  # cpu_request and mem_request
+        denominator_metrics = ["cpu_request", "mem_request"]  # cpu_request and mem_request
 
         # insert percentage columns as df[percent_metric_col] = 100 * df[numerator_metric_col] / df[denominator_metric_col]
         df = insert_percent_cols(
-            df, percent_metrics, numerator_metrics, denominator_metrics, 
-            self.num_duration_cols, self.static_metrics)
+            df, percent_metrics, numerator_metrics, denominator_metrics,
+            self.static_metrics, self.num_duration_cols)
 
         return df
 

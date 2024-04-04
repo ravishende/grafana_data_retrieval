@@ -18,8 +18,6 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
 # Note: read file and write file should be the same once the write file has some data.
-read_file = 'csv_files/test_w_ids.csv'
-write_file = 'csv_files/queried.csv'
 NUM_ROWS = 10
 NAMESPACE = 'wifire-quicfire'
 
@@ -47,8 +45,8 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 
 # Internal Global Variables. Do not edit.
 CURRENT_ROW = 1  # for printing
-STATIC_METRICS = ["mem_request"]
-REQUEST_METRICS = ["cpu_request", "mem_request"]
+STATIC_METRICS = ["cpu_request", "mem_request"]
+# REQUEST_METRICS = ["cpu_request", "mem_request"]
 
 
 
@@ -86,19 +84,19 @@ REQUEST_METRICS = ["cpu_request", "mem_request"]
 # receive/transmit bandwidth
 
 
-def get_request_query_suffix(metric, start, duration_seconds, requery=False):
+def get_static_query_suffix(metric, start, duration_seconds, requery=False):
     # static metrics only need to be requested for one datapoint
     if requery:
         # query at the beginning of the run (10 seconds in)
-        offset = calculate_offset(start, 10)
+        offset = calculate_offset(start, duration_seconds//2)
     else:
         # query at halfway through the run
-        offset = calculate_offset(start, duration_seconds//2)
+        offset = calculate_offset(start, 10)
 
     suffixes = {
         # set resource to cpu and multiply by duration seconds to get metric from measuring cpu cores to cpu seconds
         # ex: cpu_usage is measured in cpu seconds, so to make the cpu requests % (cpu_usage/cpu_requests) accurate, they both have to be in the same units.
-        'cpu':'{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ') * ' + str(duration_seconds),
+        'cpu':'{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')',
         # set resource to memory. It is already in the preferred unit of bytes
         'mem':'{resource="memory", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')'
     }
@@ -110,7 +108,7 @@ def get_request_query_suffix(metric, start, duration_seconds, requery=False):
 
 # given a metric (one of the keys in query_bodies), start (datetime), and duration (float)
 # return a query for the metric over the given duration of the run
-def get_resource_query(metric, start, duration_seconds, is_request_metric, requery=False):
+def get_resource_query(metric, start, duration_seconds, is_static_metric, requery=False):
     # all resources and the heart of their queries
     query_bodies = {
         "cpu_usage":"increase(container_cpu_usage_seconds_total",  # increase metric
@@ -129,8 +127,8 @@ def get_resource_query(metric, start, duration_seconds, is_request_metric, reque
     if metric not in metrics:
         raise ValueError(f'query metric "{metric}" must be within one of the following metrics:\n{metric}')
     # can only requery static metrics
-    if requery and not is_request_metric:
-        raise ValueError("Can only requery request metrics - requery can only be True if is_request_metric is True")
+    if requery and not is_static_metric:
+        raise ValueError("Can only requery static metrics - requery can only be True if is_static_metric is True")
 
     # get all the pieces necessary to assemble the query
     offset = calculate_offset(start, duration_seconds)    
@@ -139,9 +137,9 @@ def get_resource_query(metric, start, duration_seconds, is_request_metric, reque
     prefix = 'sum by (node, pod) ('
 
     # static metrics have a different suffix. Update suffix if metric is a static metric
-    if is_request_metric:
+    if is_static_metric:
         # if requery is set to True, we get a slightly different query that hopefully does have data.
-        suffix = get_request_query_suffix(metric, start, duration_seconds, requery=requery)
+        suffix = get_static_query_suffix(metric, start, duration_seconds, requery=requery)
 
     # assemble the final query
     query = prefix + query_bodies[metric] + suffix
@@ -153,11 +151,11 @@ def get_resource_query(metric, start, duration_seconds, is_request_metric, reque
 # return the queried data of that metric over the duration of the run
 def query_resource(metric, start, duration_seconds, row_index, n_rows):
     # determine if the metric is static or not
-    is_request_metric = (metric in REQUEST_METRICS)
+    is_static_metric = (metric in STATIC_METRICS)
 
     # query for data
     start = datetime_ify(start)
-    query = get_resource_query(metric, start, duration_seconds, is_request_metric)
+    query = get_resource_query(metric, start, duration_seconds, is_static_metric)
     resource_data = query_data(query)
 
     # print row information
@@ -168,8 +166,8 @@ def query_resource(metric, start, duration_seconds, row_index, n_rows):
     CURRENT_ROW += 1
 
     # if it is a static metric and resource data is empty, requery it
-    if is_request_metric and (resource_data == []):
-        query = get_resource_query(metric, start, duration_seconds, is_request_metric, requery=True)
+    if is_static_metric and (resource_data == []):
+        query = get_resource_query(metric, start, duration_seconds, is_static_metric, requery=True)
         resource_data = query_data(query)
 
     # return queried data
@@ -271,6 +269,9 @@ def query_and_insert_columns(df, query_metrics_list, col_names_list, duration_co
 ---------------------------------------
 '''
 if __name__ == "__main__":
+    read_file = 'csv_files/test_w_ids.csv'
+    write_file = 'csv_files/queried.csv'
+    
     # get the csv file as a pandas dataframe
     training_data = pd.read_csv(read_file, index_col=0)
     training_data = training_data.reset_index(drop=True)
