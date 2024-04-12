@@ -247,7 +247,7 @@ class Phase_1():
         if start >= len(paths):
             raise ValueError("start cannot be greater than or equal to len(paths)")
 
-        print(f"Reading from line {start} to {stop}")
+        print(f"Reading from line {start} to {stop-1}")
         # get each path in the chunk and get the run from that path
         rows = [] # list that will collect row dictionaries to be put into the df
         for path in tqdm(paths[start:stop]):
@@ -310,7 +310,10 @@ class Phase_1():
             runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
             files_not_found = self.read_txt_file(self.files['files_not_found'])
             num_gathered_runs = len(runs_df) + len(files_not_found)
-            runs_df_exists = True
+            if len(runs_df_exists) > 0:
+                runs_df_exists = True
+            else:
+                runs_df_exists = False
         except:
             num_gathered_runs = 0
             runs_df_exists = False
@@ -335,19 +338,22 @@ class Phase_1():
             if len(partial_runs_df) > 0:
                 if runs_df_exists:
                     # append to df and don't rewrite the header if the df already exists
-                    partial_runs_df.to_csv(self.files['runs_df'], mode='a', header=False)
+                    partial_runs_df.to_csv(self.files['runs_df'], mode='a', header=False, index=False)
                     runs_df_exists = True
                 else:
-                    partial_runs_df.to_csv(self.files['runs_df'], mode='w', header=True)
-                print(partial_runs_df)
+                    partial_runs_df.to_csv(self.files['runs_df'], mode='w', header=True, index=False)
 
         # get the total runs df and return it
-        runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
+        runs_df = pd.read_csv(self.files['runs_df'])
+        # runs_df = runs_df.reset_index(drop=True)
         return runs_df
 
     # given a dataframe of runs with ens_status and run_status columns,
     # return a new dataframe with only the successful runs 
     def get_successful_runs(self, df, reset_index=True):
+        # handle if df is empty
+        if len(df) == 0:
+            raise ValueError("The read file df is empty; cannot get successful runs from it. Please provide a proper dataframe that contains the columns 'run_uuid', 'ensemble_uuid', 'ens_status', and 'runs_status'.")
         # get a df with only the successful runs
         successful_runs = df[(df["ens_status"]=="Done") & (df["run_status"]=="Done")]
         # if requested, reset the indices to 0 through end of new df after selection
@@ -452,18 +458,15 @@ class Phase_1():
 
         print("getting finalized dataframe")
         # remove rows with na values for run_start, run_end, renaming those columns to start and stop
-        print(colored(f"runs_to_gather_df: \n{runs_to_gather_df}", "yellow"))
-        print(colored(f"runs_df: \n{runs_df}", "green"))
-
         result_df = self.merge_dfs(runs_data_df=runs_df, successful_runs_list_df=runs_to_gather_df)
         result_df = self.remove_na_rows(result_df, reset_index=True)
 
         # save final_df
-        print(runs_df)
-        runs_df.to_csv(self.files['write'])
+        print(result_df)
+        result_df.to_csv(self.files['write'])
 
         # update old_paths txt to include newly found paths
-        self._append_txt_file(self.files['new_paths'], new_paths)
+        # self._append_txt_file(self.files['old_paths'], new_paths)
 
         # clear files_not_found txt
         self._write_txt_file(self.files['files_not_found'], [])
