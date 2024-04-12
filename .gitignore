@@ -8,3 +8,5 @@ training_data_collection/txts/
 training_data_collection/csvs/
 automate_training_data_collection/
 training_data_collection/helpers_training_data_collection/old/csv_files/
+training_data_collection/old_csvs/
+training_data_collection/old_txts/
