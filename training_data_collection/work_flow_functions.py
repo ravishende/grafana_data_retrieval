@@ -31,7 +31,7 @@ def _initialize_file(file_path):
             return # we only want to create the file, not write to it.
 
 # make sure all necessary files exist
-def initialize_files(wipe_paths_gathered=False):
+def initialize_files():
     all_files_dicts = [MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES]
     
     # get paths to all files so that they can be initialized
@@ -42,16 +42,6 @@ def initialize_files(wipe_paths_gathered=False):
     # initialize all files
     for file_path in all_file_paths:
         _initialize_file(file_path)
-    
-    # wipe phase 1 according to wipe_paths_gathered
-    if wipe_paths_gathered:
-        _wipe_phase_files(1, wipe_paths_gathered=True)
-    else:
-        _wipe_phase_files(1)
-    
-    # wipe phases 2 through 4
-    for phase_number in range(2, NUM_PHASES+1):
-        _wipe_phase_files(phase_number)
 
     
 # given a filename of a txt file, line number, and message, update the line at line_number to be "message", ending in a new line
@@ -176,7 +166,8 @@ def set_phase_unfinished(phase_number, wipe_files=False):
 
 
 # given the total number of phases, set the progress of all phases to False
-def reset_phases_progress(wipe_files=False):
+# also wipe progress & write files if requested, and wipe paths_gathered file if requested (not recommended)
+def reset_phases_progress(wipe_files=False, wipe_paths_gathered=False):
     # if file does not have the proper number of phases represented, 
     if len(MAIN_FILES['phases_progress']) != NUM_PHASES+1:
         # rewrite file, setting all phases to incomplete
@@ -187,3 +178,20 @@ def reset_phases_progress(wipe_files=False):
     # otherwise, set all phases to False
     for phase_number in range(1, NUM_PHASES+1):
         set_phase_unfinished(phase_number, wipe_files=wipe_files)
+
+    # handle invalid user input
+    if wipe_paths_gathered and not wipe_files:
+        raise ValueError(
+            "wipe_paths_gathered can only be True if wipe_files is also True.\
+            Paths gathered files can only be wiped if progress and write files are also wiped.")
+    # wipe files if requested
+    if wipe_files:
+        # wipe phase 1 according to wipe_paths_gathered
+        if wipe_paths_gathered:
+            _wipe_phase_files(1, wipe_paths_gathered=True)
+        else:
+            _wipe_phase_files(1)
+        
+        # wipe phases 2 through 4
+        for phase_number in range(2, NUM_PHASES+1):
+            _wipe_phase_files(phase_number)
