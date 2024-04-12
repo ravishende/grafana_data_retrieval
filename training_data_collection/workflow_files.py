@@ -1,7 +1,7 @@
 # file settings
 PHASE_1_FILES = { 
     # csv files
-    "read": "csvs/phase_1_read.csv",  # only necessary user input file - contains the following columns: run_uuid, ensemble_uuid, run_status, ens_status
+    "read": "csvs/phase_1_read.csv",  # only required user input file - contains the following columns: run_uuid, ensemble_uuid, run_status, ens_status
     "write": "csvs/phase_1_write.csv",
     "runs_df": "csvs/runs_df.csv",
     "training_data": "csvs/training_data.csv",
