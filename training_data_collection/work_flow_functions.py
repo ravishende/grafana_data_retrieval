@@ -31,30 +31,29 @@ def _initialize_file(file_path):
             return # we only want to create the file, not write to it.
 
 # make sure all necessary files exist
-def initialize_files():
+def initialize_files(wipe_paths_gathered=False):
     all_files_dicts = [MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES]
+    
     # get paths to all files so that they can be initialized
     all_file_paths = [NUM_DURATION_COLS_FILE]
     for file_dict in all_files_dicts:
         all_file_paths += file_dict.values()
+    
     # initialize all files
     for file_path in all_file_paths:
         _initialize_file(file_path)
     
-    # clear csv files that need to be cleared
-    csv_files_to_reset = [
-        PHASE_1_FILES['read'],
-        PHASE_1_FILES['write'],
-        PHASE_1_FILES['runs_df'],
-        PHASE_2_FILES['write'],
-        PHASE_3_FILES['write'],
-        PHASE_3_FILES['query_progress'],
-        PHASE_4_FILES['write']
-        ]
-    empty_df = pd.DataFrame()
-    for file in csv_files_to_reset:
-        empty_df.to_csv(file)
+    # wipe phase 1 according to wipe_paths_gathered
+    if wipe_paths_gathered:
+        _wipe_phase_files(1, wipe_paths_gathered=True)
+    else:
+        _wipe_phase_files(1)
+    
+    # wipe phases 2 through 4
+    for phase_number in range(2, NUM_PHASES+1):
+        _wipe_phase_files(phase_number)
 
+    
 # given a filename of a txt file, line number, and message, update the line at line_number to be "message", ending in a new line
 def _update_txt_line(file_name, line_number, message):
      # read file, then update the phase line to be message with a \n
@@ -92,6 +91,45 @@ def _check_phase_number(phase_number):
         raise ValueError(f"phase_number ({phase_number}) must be an integer between 1 and {NUM_PHASES} inclusive\n")
 
 
+# given a phase number, clear the write and progress files for that phase
+def _wipe_phase_files(phase_number, wipe_paths_gathered=False):
+    # check proper input
+    _check_phase_number(phase_number)
+    if wipe_paths_gathered and phase_number != 1:
+        raise ValueError("wipe_paths_gathered can only be true if phase_number is 1. \
+            Phase_1 is the only phase that uses paths_gathered")
+    
+    # set up csv files per phase that need to be cleared
+    csv_files_to_reset = {
+        1: [PHASE_1_FILES['write'],PHASE_1_FILES['runs_df']],
+        2: [PHASE_2_FILES['write']],
+        3: [PHASE_3_FILES['write'],PHASE_3_FILES['query_progress']],
+        4: [PHASE_4_FILES['write']]
+        }
+    
+    # set up txt files per phase that need to be cleared
+    txts_files_to_reset = {
+        1: [PHASE_1_FILES['files_not_found']],
+        2: [NUM_DURATION_COLS_FILE],
+        3: [],
+        4: []
+    }
+    # add paths gathered files to files that need to be cleared if wipe_paths_gathered is True
+    if wipe_paths_gathered: 
+        txts_files_to_reset[1] += [
+            PHASE_1_FILES['paths'], PHASE_1_FILES['new_paths'], PHASE_1_FILES['path_directories']]
+        
+    # clear csv files for selected phase
+    empty_df = pd.DataFrame()
+    for file in csv_files_to_reset[phase_number]:
+        empty_df.to_csv(file)
+    
+    # clear txt files for selected phase
+    for file in txts_files_to_reset:
+        with open(file, 'w'):
+            continue
+
+
 # given a phase number (1 through 4): return True or False depending on whether the stater has been finished or not
 def is_phase_finished(phase_number):
     # check that input is valid
@@ -119,7 +157,8 @@ def set_phase_finished(phase_number):
 
 
 # given a phase number (1 through 4): set the phase's 'finished' progress to be False
-def set_phase_unfinished(phase_number):
+# if wipe_files is set to True, all progress and write files for the phase will be cleared
+def set_phase_unfinished(phase_number, wipe_files=False):
     # check input is a valid phase
     _check_phase_number(phase_number)
     # make sure phases aren't being set incorrecly out of order
@@ -131,9 +170,13 @@ def set_phase_unfinished(phase_number):
     line_num = phase_number-1
     _update_txt_line(file_name=MAIN_FILES['phases_progress'], line_number=line_num, message="F")
 
+    # if requested, wipe the progress files and phase files for the phase given
+    if wipe_files:
+        _wipe_phase_files(phase_number)
+
 
 # given the total number of phases, set the progress of all phases to False
-def reset_phases_progress():
+def reset_phases_progress(wipe_files=False):
     # if file does not have the proper number of phases represented, 
     if len(MAIN_FILES['phases_progress']) != NUM_PHASES+1:
         # rewrite file, setting all phases to incomplete
@@ -143,4 +186,4 @@ def reset_phases_progress():
         return
     # otherwise, set all phases to False
     for phase_number in range(1, NUM_PHASES+1):
-        set_phase_unfinished(phase_number)
+        set_phase_unfinished(phase_number, wipe_files=wipe_files)
