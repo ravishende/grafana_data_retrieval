@@ -31,7 +31,7 @@ def _init_num_duration_cols():
 # initialize _col_names_by_time based on self._num_duration_cols and self._non_static_metrics
 def _init_col_names_by_time(_num_duration_cols, _non_static_metrics):
     _col_names_by_time = []
-    for i in range(1, _num_duration_cols):
+    for i in range(1, _num_duration_cols+1):
         col_names_t_i = [name + "_t" + str(i) for name in _non_static_metrics]
         _col_names_by_time.append(col_names_t_i)
     return _col_names_by_time
