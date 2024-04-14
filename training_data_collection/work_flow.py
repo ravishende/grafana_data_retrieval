@@ -17,7 +17,9 @@ NOTE: If this is the first time ever running this file:
 all txt and csv files with their paths will be setup for you EXCEPT:
 you will need to put in the PHASE_1_FILES['read'] file with the appropiate name into csvs/
 Be sure to check workflow_files.py for the proper name of this file, but it is most likely
-'phase_1_read.csv'. Make sure it is in the csvs/ directory.
+'phase_1_read.csv'. 
+It should be a DataFrame containing the following columns:
+run_uuid, ensemble_uuid, run_status, ens_status
 '''
 
 
@@ -31,19 +33,19 @@ Be sure to check workflow_files.py for the proper name of this file, but it is m
 new_run = True
 if new_run:
     print(colored(
-        "\nATTENTION: new_run is set to True. This means that all phases' progress will be reset. \
-        \nAny runs gathered in phase_1 will be set to old and will not be regathered next time. \
+        "\nATTENTION: new_run is set to True. This means that all phases' progress will be reset.\
+        \nEverything except paths in phase_1 will have to be regathered.\
         \nAre you sure you want to continue?", "red"))
     response = input("type 'y' to continue resetting the progress. Any other response will continue as if new_run were set to False.\n")
     if response == "y":
         initialize_files()
-        reset_phases_progress()
+        reset_phases_progress(wipe_files=True)
 
 # get instances of Phase classes. Each one has a run() method to run its phase
-p_1 = Phase_1()
-p_2 = Phase_2()
-p_3 = Phase_3()
-p_4 = Phase_4()
+p_1 = Phase_1()  # for collecting runs and their inputs
+p_2 = Phase_2()  # for preprocessing - calculating runtime & area, inserting duration cols, etc.
+p_3 = Phase_3()  # for querying performance metrics - totals and at pseudo-random times
+p_4 = Phase_4()  # for finalizing data - cleaning, dropping, adding ratio columns, etc.
 phases = [p_1, p_2, p_3, p_4]
 
 
@@ -56,58 +58,13 @@ for i, phase in enumerate(phases):
         print(colored(f"\n\nPhase {phase_number} has already been completed. Moving on.", "green"))
     # for each unfinished phase, run the phase, then set phase_finished of that stage to True
     else:
+        # run the phase and see what the resulting success flag is
         print(colored(f"\n\nBeginning Phase {phase_number}...", "magenta"))
         success = phase.run()
-        # if phase not successful, break
+        # if phase isn't successful, break
         if not success:
             print(colored(f"\nProgram stop caused by phase {phase_number}\n", "magenta"))
             break
-        # otherwise, set phase as finished, move on
+        # otherwise, set phase as finished and move on to the next phase
         set_phase_finished(phase_number)
-        print(colored(f"\n\nPhase {phase_number} complete!", "green"))
-
-
-
-
-
-
-'''
-Work Flow
-
-=========================
-Phase 1:  Collecting Runs
-=========================
-1. get successful bp3d runs from bp3d-runs
-2. collect runs from successful bp3d runs and paths
-3. add in ensemble uuid
-
-======================
-Phase 2: Preprocessing
-======================
-4. calculate area and runtime
-    - filter_training_data.py 
-5. drop drop_cols_1
-    - filter_training_data.py
-6. add duration_t1, duration_t2 columns
-    - query_resources.py
-
-=================
-Phase 3: Querying
-=================
-7. query resource metrics (metrics total, t1, t2)
-    - query_resources.py
-
-====================================
-Phase 4: Sum and Ready Training Data
-====================================
-8. sum over json to get floats for resource metrics
-    - resource_json_summation.py
-9. add in percent columns
-    - resource_json_summation.py
-10. drop rows with zeros in cpu & mem total
-    - investigate_zero_usage.py
-11. add ratio cols for t1 & t2
-    - add_ratio_cols.py
-12. drop drop_cols_2
-    - finalize_training_data.py
-'''
+        print(colored(f"\n\nPhase {phase_number} complete!\n", "green"))
