@@ -46,6 +46,7 @@ All that needs to be done is select NUM_ROWS to be the value you would like and 
 # Internal Global Variables. Do not edit.
 CURRENT_ROW = 1  # for printing
 STATIC_METRICS = ["cpu_request", "mem_request"]
+VERBOSE = True
 # REQUEST_METRICS = ["cpu_request", "mem_request"]
 
 
@@ -82,7 +83,12 @@ STATIC_METRICS = ["cpu_request", "mem_request"]
 # Transmitted packets
 # Received packets
 # receive/transmit bandwidth
-
+def set_verbose(active):
+    global VERBOSE
+    if active:
+        VERBOSE = True
+    else:
+        VERBOSE = False
 
 def get_static_query_suffix(metric, start, duration_seconds, requery=False):
     # static metrics only need to be requested for one datapoint
@@ -161,8 +167,9 @@ def query_resource(metric, start, duration_seconds, row_index, n_rows):
     # print row information
     global CURRENT_ROW
     progress_message = f"Row complete: {CURRENT_ROW} / {n_rows}"
-    print(colored(progress_message, "green"))
-    print("Row index:", row_index)
+    if VERBOSE:
+        print(colored(progress_message, "green"))
+        print("Row index:", row_index)
     CURRENT_ROW += 1
 
     # if it is a static metric and resource data is empty, requery it
@@ -218,20 +225,22 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
     if(end_row > last_index):
         end_row = last_index
         n_rows = end_row - start_row + 1
-        print(colored("\n\nEnd row is greater than last index. Only generating to last index.", "yellow"))
+        if VERBOSE:
+            print(colored("\n\nEnd row is greater than last index. Only generating to last index.", "yellow"))
 
     # if no na values, there is nothing to generate.
     if start_row == 0 and df[insert_col][0]:
         print(colored("\n\nNo NA rows", "yellow"))
         return df
     
-    # since we're starting a new column, reset the current printing row to 1
+    # since we're starting a new column, reset the current printing row to start_row
     # this CURRENT_ROW is used for printing in the query_resource function
     global CURRENT_ROW
-    CURRENT_ROW = 1
+    CURRENT_ROW = start_row
 
     # Query metric and insert column into dataframe
-    print_title(f"Inserting {insert_col}")
+    if VERBOSE:
+        print_title(f"Inserting {insert_col}")
     df[insert_col] = df.apply(
         lambda row: query_resource(
             metric, row['start'], row[duration_col], row.name, n_rows) \
@@ -256,7 +265,11 @@ def query_and_insert_columns(df, query_metrics_list, col_names_list, duration_co
     if not isinstance(duration_col, str):
         raise ValueError("duration_col must be the name of the column for the durations to query over for each run")
 
-    print_heading(f"Inserting Columns for Duration Column: {duration_col}")
+    message = f"Inserting Columns for Duration Column: {duration_col}"
+    if VERBOSE:
+        print_heading(message)
+    else:
+        print(message)
     # loop over query_metrics_list and col_names_list, adding a 
     for metric, name in zip(query_metrics_list, col_names_list):
         df = insert_column(df, metric, name, duration_col, n_rows)

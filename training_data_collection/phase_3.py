@@ -2,7 +2,7 @@ import pandas as pd
 import shutil
 from workflow_files import PHASE_3_FILES
 from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES
-from helpers_training_data_collection.query_resources import query_and_insert_columns
+from helpers_training_data_collection.query_resources import query_and_insert_columns, set_verbose
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -69,8 +69,11 @@ class Phase_3():
     ======================
     '''
     # runs the whole phase. Returns True if successful, False otherwise
-    def run(self, rows_batch_size=20):
+    def run(self, rows_batch_size=20, verbose_status=False):
         success = False
+
+        # set printing status for query functions later on
+        set_verbose(verbose_status)
 
         # get preprocessed_df
         preprocessed_df = pd.read_csv(self.files['read'], index_col=0)
