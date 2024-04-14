@@ -14,6 +14,13 @@ from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict, print_title
 from helpers.querying import query_data
 
+'''
+==========================================================================================
+NOTE:
+This is the dashboard for the following Grafana page: 
+https://grafana.nrp-nautilus.io/d/dRG9q0Ymz/k8s-compute-resources-namespace-gpus?orgId=1&refresh=30s&var-namespace=ndp-test
+==========================================================================================
+'''
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -32,7 +39,6 @@ timestep = "1m"  # how often datapoints are queried for
 get_graphs_as_single_df = False
 visualize_graphs = False
 
-# This is the dashboard for the following Grafana page: https://grafana.nrp-nautilus.io/d/dRG9q0Ymz/k8s-compute-resources-namespace-gpus?orgId=1&refresh=30s&var-namespace=ndp-test
 
 def combine_dataframes_on_pod(df1, df2):
     # concatenate the dataframes along the columns axis

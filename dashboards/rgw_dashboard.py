@@ -8,10 +8,18 @@ from graphs import Graphs
 from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict
 
+'''
+==========================================================================================
+NOTE:
+This is the dashboard for the following Grafana page: 
+https://grafana.nrp-nautilus.io/d/WaJ_lohMk/ceph-s3?orgId=1&refresh=10s&from=now-1h&to=now
+==========================================================================================
+'''
+
+
 # display settings
 get_graphs_as_single_df=False
 visualize_graphs=False
-
 
 # define inputs for querying
 duration = '1h'
