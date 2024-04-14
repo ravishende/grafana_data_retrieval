@@ -59,37 +59,40 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
     # make sure that all metrics lists are the same size
     if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
         raise ValueError("percent_metrics, numerator_metrics, denominator_metrics must all be the same length")
-    try:
-        final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
-        int(final_duration_col)
-    except Exception as e:
-        raise ValueError("In insert_percent_cols(): num_inserted_duration_cols is either out of bounds or inserted duration columns are not set up correctly They should be in the form 'duration_t1'. \nHere is the error: {e}")
+    
+    # make sure num_duration_cols isn't out of bounds and duration columns are named correctly.
+    final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
+    assert(isinstance(final_duration_col[0], int) or isinstance(final_duration_col[0], float))
         
     # get columns lists by adding _t1, _t2, etc. to each metric in each metric_list in percent_metrics_format
-    percent_cols = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols, include_total=False)
-    numerator_cols = get_columns_from_metrics(numerator_metrics, num_inserted_duration_cols, include_total=False)
+    percent_col_names = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols, include_total=False)
+    numerator_col_names = get_columns_from_metrics(numerator_metrics, num_inserted_duration_cols, include_total=False)
     
-    denominator_cols = []
+    denominator_col_names = []
     # handle if any denominator metrics are static metrics. 
     for metric in denominator_metrics:
         if metric in static_metrics:
             # If they are, don't add _t_i to the end of them and just repeat them num_inserted_duration_cols times
-            denominator_cols += [metric]*num_inserted_duration_cols
+            denominator_col_names += [metric]*num_inserted_duration_cols
         else:
             # get column names for the one metric
-            denominator_cols += get_columns_from_metrics([metric], num_inserted_duration_cols, include_total=False)
+            denominator_col_names += get_columns_from_metrics([metric], num_inserted_duration_cols, include_total=False)
 
     # calculate percentage columns
-    for i in range(len(percent_cols)):
+    for i in range(len(percent_col_names)):
         # get numerator and denominator for calculation
-        numerator = df[numerator_cols[i]]
-        denominator = df[denominator_cols[i]]
-        # handle if denominator column is cpu_request (multiply it by duration_t{i} to get into cpu_seconds)
-        if denominator_cols[i] == "cpu_request":
-            duration_t_i = df[f"duration_t{i}"]
-            denominator = denominator * int(duration_t_i)
+        numerator_col = df[numerator_col_names[i]]
+        denominator_col = df[denominator_col_names[i]]
+        percent_col = percent_col_names[i]
+        # handle if denominator column is cpu_request (multiply it by duration_t{x} to get into cpu_seconds)
+        if denominator_col_names[i] == "cpu_request":
+            time_suffix = numerator_col_names[i].split('_')[-1]  # should be "total", "t1", "t2", etc. 
+            if time_suffix == "total":
+                continue
+            duration_t_x = df[f"duration_{time_suffix}"]
+            denominator_col = denominator_col * duration_t_x
         # calculate and insert percent column
-        df[percent_cols[i]] = 100 * numerator / denominator
+        df[percent_col] = 100 * numerator_col / denominator_col
 
     return df
 

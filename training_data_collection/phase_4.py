@@ -47,6 +47,7 @@ class Phase_4():
         non_zeros = df[~zero_mask]
         if reset_index:
             non_zeros = non_zeros.reset_index(drop=True)
+        return non_zeros
 
     # given a df and columns to drop (also a bool for reset_index),
     # drop the ccolumns from the df
@@ -106,7 +107,9 @@ class Phase_4():
     def run(self):
         success = False
 
+        # get queried df from previous phase
         queried_df = pd.read_csv(self.files['read'], index_col=0)
+
         # sum over json to get floats for resource metrics
         summed_df = self.update_queried_cols(queried_df)
 
@@ -124,7 +127,8 @@ class Phase_4():
 
         # save df to a csv file
         final_df.to_csv(self.files['write'])
-
+        print(final_df)
+        
         success = True
         return success
 
