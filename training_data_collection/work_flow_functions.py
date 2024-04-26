@@ -91,14 +91,14 @@ def _wipe_phase_files(phase_number, wipe_paths_gathered=False):
     
     # set up csv files per phase that need to be cleared
     csv_files_to_reset = {
-        1: [PHASE_1_FILES['write'],PHASE_1_FILES['runs_df']],
+        1: [PHASE_1_FILES['write'], PHASE_1_FILES['runs_df']],
         2: [PHASE_2_FILES['write']],
-        3: [PHASE_3_FILES['write'],PHASE_3_FILES['query_progress']],
+        3: [PHASE_3_FILES['write'], PHASE_3_FILES['query_progress']],
         4: [PHASE_4_FILES['write']]
         }
     
     # set up txt files per phase that need to be cleared
-    txts_files_to_reset = {
+    txt_files_to_reset = {
         1: [PHASE_1_FILES['files_not_found']],
         2: [NUM_DURATION_COLS_FILE],
         3: [],
@@ -106,17 +106,17 @@ def _wipe_phase_files(phase_number, wipe_paths_gathered=False):
     }
     # add paths gathered files to files that need to be cleared if wipe_paths_gathered is True
     if wipe_paths_gathered: 
-        txts_files_to_reset[1] += [
+        txt_files_to_reset[1] += [
             PHASE_1_FILES['paths'], PHASE_1_FILES['new_paths'], PHASE_1_FILES['path_directories']]
-        
+
     # clear csv files for selected phase
     empty_df = pd.DataFrame()
     for file in csv_files_to_reset[phase_number]:
         empty_df.to_csv(file)
     
     # clear txt files for selected phase
-    for file in txts_files_to_reset:
-        with open(file, 'w'):
+    for txt_file in txt_files_to_reset[phase_number]:
+        with open(txt_file, 'w'):
             continue
 
 
@@ -152,7 +152,7 @@ def set_phase_unfinished(phase_number, wipe_files=False):
     # check input is a valid phase
     _check_phase_number(phase_number)
     # make sure phases aren't being set incorrecly out of order
-    if phase_number < 4:
+    if phase_number < NUM_PHASES:
         if is_phase_finished(phase_number+1):
             raise ValueError(f"Phase {phase_number} cannot be set as unfinished because phase {phase_number+1} is finished. Phases must be done sequentially.")
     
@@ -168,22 +168,26 @@ def set_phase_unfinished(phase_number, wipe_files=False):
 # given the total number of phases, set the progress of all phases to False
 # also wipe progress & write files if requested, and wipe paths_gathered file if requested (not recommended)
 def reset_phases_progress(wipe_files=False, wipe_paths_gathered=False):
+    # handle invalid user input
+    if wipe_paths_gathered and not wipe_files:
+        raise ValueError(
+            "wipe_paths_gathered can only be True if wipe_files is also True.\
+            Paths gathered files can only be wiped if progress and write files are also wiped.")
+    
     # if file does not have the proper number of phases represented, 
     if len(MAIN_FILES['phases_progress']) != NUM_PHASES+1:
         # rewrite file, setting all phases to incomplete
         _write_txt_file(
             txt_file=MAIN_FILES['phases_progress'], 
             contents=['F' for _ in range(NUM_PHASES)])
-        return
-    # otherwise, set all phases to False
-    for phase_number in range(1, NUM_PHASES+1):
-        set_phase_unfinished(phase_number, wipe_files=wipe_files)
+        # if not wiping files, work is done
+        if not wipe_files:
+            return
 
-    # handle invalid user input
-    if wipe_paths_gathered and not wipe_files:
-        raise ValueError(
-            "wipe_paths_gathered can only be True if wipe_files is also True.\
-            Paths gathered files can only be wiped if progress and write files are also wiped.")
+    # otherwise, set all phases to False - loop from highest til 1 to avoid out of order errors
+    for phase_number in range(NUM_PHASES, 0, -1):
+        set_phase_unfinished(phase_number, wipe_files=False)
+
     # wipe files if requested
     if wipe_files:
         # wipe phase 1 according to wipe_paths_gathered

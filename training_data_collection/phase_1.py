@@ -2,6 +2,7 @@ import os
 import s3fs
 import json
 import math
+import warnings
 import pandas as pd
 from tqdm import tqdm
 from termcolor import colored
@@ -29,24 +30,24 @@ class Phase_1():
     def __init__(self, files=PHASE_1_FILES):
         self.files = files
         self.keep_attributes = [
-        'canopy_moisture',
-        'extent',
-        'run_end',
-        'run_max_mem_rss_bytes',
-        'run_start',
-        'sim_time',
-        'surface_moisture',
-        'threads',
-        'wind_direction',
-        'wind_speed'
-        ]
+            'canopy_moisture',
+            'extent',
+            'run_end',
+            'run_max_mem_rss_bytes',
+            'run_start',
+            'sim_time',
+            'surface_moisture',
+            'threads',
+            'wind_direction',
+            'wind_speed'
+            ]
         # fs and bucket for collecting paths and runs_df
         self.fs = None
         self.bucket = ""
-        self.init_fs_and_bucket()
+        self._init_fs_and_bucket()
         
     # initalize self.fs and self.bucket
-    def init_fs_and_bucket(self):
+    def _init_fs_and_bucket(self):
         # get login details from .env file
         if not load_dotenv():
             raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY for the s3 file system")
@@ -140,21 +141,25 @@ class Phase_1():
         # get all directories and previously gathered directories
         directories = self.fs.ls(self.bucket)
         gathered_directories = self._get_gathered_items("path_directories")
+        # TODO: improve temp fix - get rid of last directory to be able to regather subdirs in the
+        gathered_directories = gathered_directories[:-1]
         
         # get list of directories that have not been gathered
         ungathered_directories = [d for d in directories if d not in gathered_directories]
         # the last gathered directory may have new subdirectories. Add it into ungathered_directories to get new subdirs
+        '''
         if len(gathered_directories) > 0:
             ungathered_directories = [gathered_directories[-1]] + ungathered_directories
         # get rid of duplicates in ungathered_directories (from adding in gathered_directories[-1])
         ungathered_directories = list(set(ungathered_directories))
-        
+        '''
         # intialize a list to hold all simulation paths
         simulation_paths_list = self._get_gathered_items("paths")
         # handle if no new directories
+        '''
         if len(gathered_directories) > 0 and ungathered_directories == [gathered_directories[-1]]:
             return simulation_paths_list
-        
+        '''
         # start gathering directories
         print(f"{len(gathered_directories)} directories have already been gathered. \
             Gathering paths for the remaining {len(ungathered_directories)}.") 
@@ -163,7 +168,7 @@ class Phase_1():
 
         # if we're not using batches, run everything at once
         if batch_size is None:
-            new_sim_paths_list = self._get_paths_from_directories(ungathered_directories, self.fs)
+            new_sim_paths_list = self._get_paths_from_directories(ungathered_directories)
             self._append_txt_file(self.files['paths'], new_sim_paths_list)
             return simulation_paths_list + new_sim_paths_list
 
@@ -178,7 +183,7 @@ class Phase_1():
 
             # get simulation paths for this batch
             print(f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left.", colored(f"Batch {i+1}/{num_batches}", "magenta"))
-            sim_paths_batch = self._get_paths_from_directories(ungathered_directories[:end_index], self.fs)
+            sim_paths_batch = self._get_paths_from_directories(ungathered_directories[:end_index])
             # update all simulation paths and remove newly gathered directories from ungathered directories
             simulation_paths_list += sim_paths_batch
             ungathered_directories = ungathered_directories[end_index:]
@@ -294,7 +299,9 @@ class Phase_1():
             print("FileNotFound Error on the following Files:")
             for file_path in bad_paths:
                 print("\t" + file_path)
-        print(colored(f"\nRead from {start} to {stop-1}\n", "green"))
+        print(colored(f"\nFinished reading from {start} to {stop-1}\n", "green"))
+        num_successful_rows = len(rows)
+        print(f"{num_successful_rows} collected runs | {len(bad_paths)} files not found.\n{runs_missing_data} runs were missing at least some data\n")
 
         # append bad paths to files not found
         self._append_txt_file(self.files['files_not_found'], bad_paths)
@@ -310,7 +317,7 @@ class Phase_1():
             runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
             files_not_found = self.read_txt_file(self.files['files_not_found'])
             num_gathered_runs = len(runs_df) + len(files_not_found)
-            if len(runs_df_exists) > 0:
+            if len(runs_df) > 0:
                 runs_df_exists = True
             else:
                 runs_df_exists = False
@@ -339,9 +346,9 @@ class Phase_1():
                 if runs_df_exists:
                     # append to df and don't rewrite the header if the df already exists
                     partial_runs_df.to_csv(self.files['runs_df'], mode='a', header=False, index=False)
-                    runs_df_exists = True
                 else:
                     partial_runs_df.to_csv(self.files['runs_df'], mode='w', header=True, index=False)
+                    runs_df_exists = True
 
         # get the total runs df and return it
         runs_df = pd.read_csv(self.files['runs_df'])
@@ -351,6 +358,9 @@ class Phase_1():
     # given a dataframe of runs with ens_status and run_status columns,
     # return a new dataframe with only the successful runs 
     def get_successful_runs(self, df, reset_index=True):
+        if 'ens_status' not in df.columns or 'run_status' not in df.columns:
+            warnings.warn("\n\nDataFrame does not have 'ens_status' or 'run_status'. Returning df - will not filter by successful runs.")
+            return df;
         # handle if df is empty
         if len(df) == 0:
             raise ValueError("The read file df is empty; cannot get successful runs from it. Please provide a proper dataframe that contains the columns 'run_uuid', 'ensemble_uuid', 'ens_status', and 'runs_status'.")
@@ -377,7 +387,7 @@ class Phase_1():
         # Apply _run_id_from_path function to get run_uuid
         new_paths_df['run_uuid'] = new_paths_df['path'].apply(self._run_id_from_path)
         # Merge with successful_runs_list_df on 'run_uuid' to include 'ensemble_uuid' and filter out unsuccessful runs
-        result_df = pd.merge(new_paths_df, successful_runs_list_df[['run_uuid', 'ensemble_uuid']], on='run_uuid', how='inner')
+        result_df = new_paths_df.merge(successful_runs_list_df[['run_uuid', 'ensemble_uuid']], on='run_uuid', how='inner')  # how might be changed to right to include ensemble_id
         return result_df
 
     # given a df that contains all successful runs and a df that 
@@ -440,6 +450,7 @@ class Phase_1():
 
         if len(new_paths) == 0:
             print(colored("\nNo new runs since last collection! Nothing left to do.", "green"))
+            # if success is True, we go to the next stage. We shouldn't go to the next stage here
             success = False
             return success
 
@@ -455,6 +466,7 @@ class Phase_1():
         # get the actual runs from the successful runs paths
         runs_df = self.get_df_from_paths(final_paths_list, batch_size=500)
         # runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
+        print(len(runs_df), "\n\n", runs_df)
 
         print("getting finalized dataframe")
         # remove rows with na values for run_start, run_end, renaming those columns to start and stop
@@ -469,7 +481,7 @@ class Phase_1():
         # self._append_txt_file(self.files['old_paths'], new_paths)
 
         # clear files_not_found txt
-        self._write_txt_file(self.files['files_not_found'], [])
+        # self._write_txt_file(self.files['files_not_found'], [])
         
         # return phase_1 was successful
         success = True
