@@ -1,3 +1,4 @@
+from cgitb import reset
 import pandas as pd
 import warnings
 import shutil
@@ -26,6 +27,12 @@ class Phase_2():
         Helper functions
     ==========================
     '''
+    def _drop_no_extent(self, df, reset_index=True):
+        df = df.dropna(subset='extent')
+        if reset_index:
+            df = df.reset_index(drop=True)
+        return df
+
 
     def _calculate_area(self, corners_list):
         # where p1 in the bottom left = (x1,y1) and p2 in the bottom left = (x2,y2)
@@ -73,6 +80,9 @@ class Phase_2():
     # given a dataframe with 'extent', 'start', and 'stop' columns, 
     # return a df with added 'area' and 'runtime' columns
     def add_area_and_runtime(self, df):
+        # extent is required to calculate area - drop rows that don't contain it
+        df = self._drop_no_extent(df, reset_index=True)
+        # calculate area and runtime
         df['area'] = df['extent'].apply(self._calculate_area)
         df['runtime'] = df.apply(lambda row: self._calculate_runtime(row['start'], row['stop']), axis=1)
         return df

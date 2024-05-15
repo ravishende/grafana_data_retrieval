@@ -30,7 +30,7 @@ run_uuid, ensemble_uuid, run_status, ens_status
 '''
 
 # if this is the first time running it with new data, set new_run to True. Otherwise, if you are partway through running it, set new_run to False.
-new_run = True
+new_run = False
 if new_run:
     print(colored(
         "\nATTENTION: new_run is set to True. This means that all phases' progress will be reset.\

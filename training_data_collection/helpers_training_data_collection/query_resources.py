@@ -1,3 +1,4 @@
+from tabnanny import verbose
 import pandas as pd
 from datetime import datetime, timedelta
 from termcolor import colored
@@ -176,7 +177,11 @@ def query_resource(metric, start, duration_seconds, row_index, n_rows):
     if is_static_metric and (resource_data == []):
         query = get_resource_query(metric, start, duration_seconds, is_static_metric, requery=True)
         resource_data = query_data(query)
-
+    
+    # progress for phase 3 when not verbose
+    if not VERBOSE:
+        print(".", end="")
+    
     # return queried data
     return resource_data
 
@@ -245,8 +250,7 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
         lambda row: query_resource(
             metric, row['start'], row[duration_col], row.name, n_rows) \
             if start_row <= row.name <= end_row else row[insert_col], axis=1)  
-        # Note: row.name is just the index of the row.
-    
+            # Note: row.name is just the index of the row.
     return df
 
 
@@ -257,7 +261,7 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
 #   - query_metrics_list:   list of all metrics to query for, in same order as col_names_list
 #   - col_names_list:       list of all column names for each metric queried
 #   - duration_col:         name of the duration column to get the durations from
-#   - n_rows:               number of rows to query for
+#   - n_rows:               number of ro=ws to query for
 def query_and_insert_columns(df, query_metrics_list, col_names_list, duration_col, n_rows):
     # handle invalid user inputs
     if len(query_metrics_list) != len(col_names_list):
@@ -265,14 +269,17 @@ def query_and_insert_columns(df, query_metrics_list, col_names_list, duration_co
     if not isinstance(duration_col, str):
         raise ValueError("duration_col must be the name of the column for the durations to query over for each run")
 
-    message = f"Inserting Columns for Duration Column: {duration_col}"
+    
     if VERBOSE:
+        message = f"Inserting Columns for Duration Column: {duration_col}"
         print_heading(message)
-    else:
-        print(message)
     # loop over query_metrics_list and col_names_list, adding a 
     for metric, name in zip(query_metrics_list, col_names_list):
         df = insert_column(df, metric, name, duration_col, n_rows)
+        # print a dot for each succesfully updated col
+        if not VERBOSE:
+            print(colored(".", "green"), end="")
+    print("")
 
     return df
 
