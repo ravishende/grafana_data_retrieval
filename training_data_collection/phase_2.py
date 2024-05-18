@@ -1,11 +1,11 @@
-from cgitb import reset
 import pandas as pd
 import warnings
 import shutil
 import ast
 import random
 from datetime import datetime
-from workflow_files import PHASE_2_FILES, NUM_DURATION_COLS_FILE
+from workflow_files import PHASE_2_FILES
+from metrics_and_columns_setup import DURATION_COLS
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -13,10 +13,9 @@ terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
 class Phase_2():
-    def __init__(self, files=PHASE_2_FILES, file_num_duration_cols=NUM_DURATION_COLS_FILE):
+    def __init__(self, files=PHASE_2_FILES, duration_cols=DURATION_COLS):
         self.files = files
-        self.num_duration_cols = 3
-        self.file_num_duration_cols = file_num_duration_cols
+        self.num_duration_cols = duration_cols['num_cols']
         self.drop_cols = [
             "path",
             "extent"
@@ -113,10 +112,6 @@ class Phase_2():
     # given a dataframe and number of duration columns to insert, (also single_method, which is either -1 (not a single method) or some int between 0 and 2)
     # return an updated dataframe with an added n duration columns of various insert methods
     def insert_n_duration_columns(self, df, n, single_method=-1):
-        # initialize num_duration_cols to be n for later steps
-        with open(self.file_num_duration_cols, "w") as f:
-            f.write(str(self.num_duration_cols))
-
         num_insert_methods = 3
         # warn the user if they are expecting more insert methods than are available in _insert_rand_refresh_col
         if n > num_insert_methods and not single_method:
@@ -141,12 +136,8 @@ class Phase_2():
     ======================
     '''
     # runs the whole phase. Returns True if successful, False otherwise
-    def run(self, num_duration_cols=None):
+    def run(self):
         success = False
-
-        if num_duration_cols is not None:
-            self.num_duration_cols = num_duration_cols
-
         # get df from csv file
         ids_included_df = pd.read_csv(self.files['read'], index_col=0)
         # rename 'run_start', 'run_end' columns to 'start', 'stop' for add_area_and_runtime method to work (as well as many other methods in different phases)

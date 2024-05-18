@@ -5,7 +5,7 @@ from phase_1 import Phase_1
 from phase_2 import Phase_2
 from phase_3 import Phase_3
 from phase_4 import Phase_4
-from work_flow_functions import is_phase_finished, set_phase_finished, initialize_files, reset_phases_progress
+from work_flow_functions import is_phase_finished, set_phase_finished, initialize_files, reset_phases_progress, prompt_set_num_duration_cols
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -19,7 +19,10 @@ you will need to put in the PHASE_1_FILES['read'] file with the appropiate name 
 Be sure to check workflow_files.py for the proper name of this file, but it is most likely
 'phase_1_read.csv'. 
 It should be a DataFrame containing the following columns:
-run_uuid, ensemble_uuid, run_status, ens_status
+run_uuid, ensemble_uuid, <-- mandatory
+run_status, ens_status   <-- optional
+
+Finally, make sure that new_run is set to True at the start of the Main Program below
 '''
 
 
@@ -30,16 +33,18 @@ run_uuid, ensemble_uuid, run_status, ens_status
 '''
 
 # if this is the first time running it with new data, set new_run to True. Otherwise, if you are partway through running it, set new_run to False.
-new_run = False
+new_run = True
 if new_run:
     print(colored(
         "\nATTENTION: new_run is set to True. This means that all phases' progress will be reset.\
         \nEverything except paths in phase_1 will have to be regathered.\
         \nAre you sure you want to continue?", "red"))
-    response = input("type 'y' to continue resetting the progress. Any other response will continue as if new_run were set to False.\n")
+    response = input("Type 'y' to continue resetting the progress. Any other response will continue as if new_run were set to False.\n")
     if response == "y":
         initialize_files()
         reset_phases_progress(wipe_files=True)
+        # initialize num_duration_cols by asking the user how many partial duration columns to use
+        prompt_set_num_duration_cols()
 
 # get instances of Phase classes. Each one has a run() method to run its phase
 p_1 = Phase_1()  # for collecting runs and their inputs

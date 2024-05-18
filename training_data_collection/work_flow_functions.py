@@ -1,6 +1,7 @@
 import os
 import pandas as pd
-from multiprocessing.sharedctypes import Value
+from termcolor import colored
+from metrics_and_columns_setup import set_num_duration_cols
 from workflow_files import MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES, NUM_DURATION_COLS_FILE
 
 # constants - DO NOT EDIT
@@ -199,3 +200,34 @@ def reset_phases_progress(wipe_files=False, wipe_paths_gathered=False):
         # wipe phases 2 through 4
         for phase_number in range(2, NUM_PHASES+1):
             _wipe_phase_files(phase_number)
+
+
+# prompt the user for how many duration columns they would like to use for the run.
+# use that number to set the number of duration columns
+def prompt_set_num_duration_cols():
+    default_num_duration_cols = 3
+    # message strings
+    message = f"\n\nHow many partial duration columns would you like to query for?\
+        \n    - To continue with the default of {default_num_duration_cols}, press Enter.\
+        \n    - To choose a number, type the number (e.g. 2). \
+        \n    - For more information, type 'i'.\n"
+    more_info_message = "\
+        \nPartial duration columns take the form 'duration_t2', where 2 is a whole number.\
+        \nThey are used to get simulated 'real time' performance metrics and create more training data from the given runs.\
+        \n    - In this case, simulated 'real time' means it gets a pseudorandom time during each run and uses it to query performance metrics.\
+        \n\nIf partial_duration_cols is 0, no partial performance metrics will be queried, so each run will only have area and bp3d run inputs to predict total cpu/memory usage and runtime.\
+        \nIf partial_duration_cols is 3, duration_t1, duration_t2, and duration_t3 will be added to training data and used to query partial time metrics for each. Once everything is done, each partial_duration's metrics can be used for their own runs to essnetially multiply the amount of training data you have by the number of duration columns."
+    
+    # get response from user, then use it to call set_num_duration_cols
+    response = input(message)
+
+    # if they hit Enter, continue with default num duration cols
+    if response == "":
+        set_num_duration_cols(default_num_duration_cols)
+    # if they requested more info, give it, and rerun function
+    elif response in ["i", "'i'", "info"]:
+        print("\n\n", more_info_message, "\n\n", sep="")
+        prompt_set_num_duration_cols()
+    # Assume they input a number. If not, invalid input is handled in set_num_duration_cols
+    else:
+        set_num_duration_cols(response)

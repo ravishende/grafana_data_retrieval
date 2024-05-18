@@ -1,11 +1,13 @@
-from multiprocessing.sharedctypes import Value
 import pandas as pd
 from ast import literal_eval
 from termcolor import colored
 from uuid import UUID
 import shutil
+from metrics_and_columns_setup import DURATION_COLS
 import sys
 import os
+
+from training_data_collection.workflow_files import NUM_DURATION_COLS_FILE
 # get set up to be able to import helper files from parent directory (grafana_data_retrieval)
 sys.path.append("../../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath(__file__))
@@ -23,6 +25,8 @@ This file assumes there is already a column called 'ensemble'
 that contains the ensemble that each run is a part of.
 '''
 
+NUM_INSERTED_DURATION_COLS = DURATION_COLS['num_cols']
+
 # settings
 pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
@@ -31,15 +35,17 @@ pd.set_option('display.width', terminal_width)
 
 # given a list of metrics, return a new list that has _total, _t1, and _t2 appended to each metric
 # to create a new list that is 3 times the size of metrics_list
-def get_columns_from_metrics(metric_list, num_inserted_duration_cols=3, include_total=True):
+def get_columns_from_metrics(
+    metric_list, num_inserted_duration_cols=NUM_INSERTED_DURATION_COLS, include_total=True):
     summary_columns = []
     for name in metric_list:
         # get total duration column names
         if include_total:
             summary_columns.append(name + "_total")
         # get duration_t_i column names - append num_inserted_duraion_cols added to the name
-        for i in range(1, num_inserted_duration_cols+1):
-            summary_columns.append(name + "_t" + str(i))
+        if num_inserted_duration_cols > 0:
+            for i in range(1, num_inserted_duration_cols+1):
+                summary_columns.append(name + "_t" + str(i))
     return summary_columns
 
 
@@ -55,16 +61,17 @@ def get_columns_from_metrics(metric_list, num_inserted_duration_cols=3, include_
         # percent columns are formed by: 
         # get a columns list from each of the three input metric lists (by adding _total, _t1, and _t2 to each metric name)
         # insert the percent columns into the dataframe as 100 * numerator columns / denominator columns
-def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics, static_metrics, num_inserted_duration_cols=3):
+def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics, static_metrics, num_inserted_duration_cols=NUM_INSERTED_DURATION_COLS):
     # make sure that all metrics lists are the same size
     if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
         raise ValueError("percent_metrics, numerator_metrics, denominator_metrics must all be the same length")
     
     # make sure num_duration_cols isn't out of bounds and duration columns are named correctly.
-    final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
-    assert(isinstance(final_duration_col[0], int) or isinstance(final_duration_col[0], float))
+    if num_inserted_duration_cols > 0:
+        final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
+        assert(isinstance(final_duration_col[0], int) or isinstance(final_duration_col[0], float))
         
-    # get columns lists by adding _t1, _t2, etc. to each metric in each metric_list in percent_metrics_format
+    # get columns lists by adding _total, and _t1, _t2, etc. to each metric in each metric_list in percent_metrics_format. If num_inserted_duration_cols==0, it will just be _total metrics
     percent_col_names = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols, include_total=False)
     numerator_col_names = get_columns_from_metrics(numerator_metrics, num_inserted_duration_cols, include_total=False)
     

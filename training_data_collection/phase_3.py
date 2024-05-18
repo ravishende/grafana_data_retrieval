@@ -63,28 +63,30 @@ class Phase_3():
                 df[col_name] = None
 
         # set up batches
-        last_col_to_query = df[self.col_names_by_time[-1]]
+        last_col_to_query = df[self.col_names_total[-1]]
         num_queried_rows = self._get_first_unqueried_row_idx(last_col_to_query)
         num_rows_to_query = (len(df) - num_queried_rows)
         print(f"{num_queried_rows} rows queried, {num_rows_to_query} left.")
+        print(f"Batch size: {batch_size} rows")
         batch_number = 1
         total_batches = math.ceil(num_rows_to_query/batch_size)
-        # while there are still unqueried rows, keep querying batch_size rows at a time
-        # while pd.isna(df[self.col_names_total[-1]].iloc[len(df)-1]):  
-        while not isinstance(df[self.col_names_by_time[-1]].iloc[len(df) -1], (list, str)): # checks if last cell has been queried yet - once queried, it will be a list (empty or not) or str (of a list) if it has been been read in from a csv
+        # while there are still unqueried rows, keep querying batch_size rows at a time 
+        # loop condition checks if last cell has been queried yet - once queried, it will be a list (empty or not) or str (of a list) if it has been been read in from a csv
+        while not isinstance(df[self.col_names_total[-1]].iloc[len(df) -1], (list, str)):
             print(f"\nbatch {batch_number} / {total_batches}:")
             # query and insert static columns
             df = query_and_insert_columns(df, self.static_metrics, self.col_names_static, self.duration_col_total, batch_size)
-             # query and insert total columns
-            df = query_and_insert_columns(df, self.non_static_metrics, self.col_names_total, self.duration_col_total, batch_size)
             # query and insert duration_t_i columns
             # query based on duration columns - do one duration col at a time
-            for i in range(1, self.num_duration_cols+1):
-                # find all columns for this duration_t_i
-                col_names_t_i = [name for name in self.col_names_by_time if name[-1] == str(i)]
-                # query for this duration_t_i column
-                df = query_and_insert_columns(df, self.non_static_metrics, col_names_t_i, self.duration_col_names[i-1], batch_size)  
-                # ^^ duration_col_names is a list that starts at index 0, but duration columns are named duration_t1 through duration_tn, so we loop from i = 1...n, but index at i-1
+            if self.num_duration_cols > 0:
+                for i in range(1, self.num_duration_cols+1):
+                    # find all columns for this duration_t_i
+                    col_names_t_i = [name for name in self.col_names_by_time if name[-1] == str(i)]
+                    # query for this duration_t_i column
+                    df = query_and_insert_columns(df, self.non_static_metrics, col_names_t_i, self.duration_col_names[i-1], batch_size)  
+                    # ^^ duration_col_names is a list that starts at index 0, but duration columns are named duration_t1 through duration_tn, so we loop from i = 1...n, but index at i-1
+            # query and insert total columns
+            df = query_and_insert_columns(df, self.non_static_metrics, self.col_names_total, self.duration_col_total, batch_size)
             # save batch of partial querying progress
             batch_number += 1
             df.to_csv(self.files['query_progress'])

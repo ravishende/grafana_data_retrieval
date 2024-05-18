@@ -2,7 +2,6 @@ import os
 import s3fs
 import json
 import math
-import warnings
 import pandas as pd
 from tqdm import tqdm
 from termcolor import colored
@@ -359,7 +358,8 @@ class Phase_1():
     # return a new dataframe with only the successful runs 
     def get_successful_runs(self, df, reset_index=True):
         if 'ens_status' not in df.columns or 'run_status' not in df.columns:
-            warnings.warn("\n\nDataFrame does not have 'ens_status' or 'run_status'. Returning df - will not filter by successful runs.")
+            warning_message = "\n\nDataFrame does not have 'ens_status' or 'run_status'. Returning df - will not filter by successful runs.\n\n"
+            print(colored(warning_message, "red"))
             return df;
         # handle if df is empty
         if len(df) == 0:

@@ -1,4 +1,5 @@
 from workflow_files import NUM_DURATION_COLS_FILE
+from termcolor import colored
 
 
 '''
@@ -6,6 +7,41 @@ from workflow_files import NUM_DURATION_COLS_FILE
     Helper Functions
 ========================
 '''
+# Set the number of partial duration columns (e.g. 2 goes up to duration_t2)
+# Note: do not run this between phase 3 and 4, 
+# since they require the same amount of duation columns to be defined
+def set_num_duration_cols(num, suppress_warning=False):
+    # make sure input is an int or convertible to an int
+    if not type(num) == int:
+        try:
+            # make sure that num can be converted to an int and do so for comparisons later
+            num = int(num)
+        except ValueError:
+            raise TypeError("Input must be an int or convertible to an int.")
+    
+    # if num is greater than a threshold number, give a warning and promt to continue
+    max_num_before_warning = 3
+    if not suppress_warning and num > max_num_before_warning: 
+        # message strings
+        warning_message = "\
+            \nEach additional duration column is essentially replicating training data runs.\
+            \nHaving too many may lead to over fitting.\
+            \nAdditionally, it will take a long time to query for."
+        check_to_continue = f"\
+            \nAre you sure you want to continue? Type 'y' to continue with {num} duration columns.\
+            \nAny other response will repromt how many duration columns you would like."
+        # print warning and check if the user wants to continue
+        print(colored(warning_message, "red"))
+        response = input(check_to_continue)
+        # if they don't want to continue, rerun the function with a new number they give
+        if response != "y":
+            updated_num = input("How many partial duration columns would you like?")
+            set_num_duration_cols(updated_num)
+
+    # initialize num_duration_cols by writing to its specified file
+    num = str(num) # convert num back to a string so that it can be written to the file
+    with open(NUM_DURATION_COLS_FILE, "w") as file:
+        file.write(num)
 
 # read a txt file written by phase_2 that contains _num_duration_cols
 def _init_num_duration_cols():
@@ -65,7 +101,9 @@ _duration_col_total = "runtime"  # from phase_2
 
 # column names
 _static_col_names = _static_metrics
+# If total columns should include nonstatic metrics like received_packets, switch the _totals_col_names definition
 _totals_col_names = [name + "_total" for name in _non_static_metrics]
+# _totals_col_names = [name + "_total" for name in ["cpu_usage", "mem_usage"]]
 _col_names_by_time = _init_col_names_by_time(_num_duration_cols, _non_static_metrics)
 _all_col_names = _static_col_names + _totals_col_names + _col_names_by_time
 
