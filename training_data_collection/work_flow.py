@@ -35,11 +35,14 @@ Finally, make sure that new_run is set to True at the start of the Main Program 
 # if this is the first time running it with new data, set new_run to True. Otherwise, if you are partway through running it, set new_run to False.
 new_run = True
 if new_run:
-    print(colored(
-        "\nATTENTION: new_run is set to True. This means that all phases' progress will be reset.\
+    # ask user if they meant to start a new run or continue an old one
+    new_run_message = "\
+        \nATTENTION: new_run is set to True. This means that all phases' progress will be reset.\
         \nEverything except paths in phase_1 will have to be regathered.\
-        \nAre you sure you want to continue?", "red"))
+        \nAre you sure you want to continue?"
+    print(colored(new_run_message, "red"))
     response = input("Type 'y' to continue resetting the progress. Any other response will continue as if new_run were set to False.\n")
+    # if it is a new run, initialize files and reset progress, wiping files (but not paths gathered)
     if response == "y":
         initialize_files()
         reset_phases_progress(wipe_files=True)
