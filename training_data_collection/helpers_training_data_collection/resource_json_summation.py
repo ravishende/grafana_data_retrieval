@@ -1,13 +1,13 @@
+# autopep8: off
 import pandas as pd
 from ast import literal_eval
 from termcolor import colored
 from uuid import UUID
 import shutil
 from metrics_and_columns_setup import DURATION_COLS
+from workflow_files import PHASE_1_FILES
 import sys
 import os
-
-from training_data_collection.workflow_files import NUM_DURATION_COLS_FILE
 # get set up to be able to import helper files from parent directory (grafana_data_retrieval)
 sys.path.append("../../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath(__file__))
@@ -16,6 +16,7 @@ grandparent = os.path.dirname(parent)
 sys.path.append(grandparent)
 from helpers.filtering import get_worker_id
 from helpers.printing import print_heading
+# autopep8: off
 
 '''
 NOTE:
@@ -26,12 +27,21 @@ that contains the ensemble that each run is a part of.
 '''
 
 NUM_INSERTED_DURATION_COLS = DURATION_COLS['num_cols']
+ENSEMBLE_RUN_FILE = PHASE_1_FILES['read']
+IS_HELITACK = False # runs that are done through the dev that have non default hardware settings
 
 # settings
 pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 # pd.set_option("display.max_rows", None)
+
+def set_helitack_status(helitack_status=False):
+    if helitack_status != True and helitack_status != False:
+        raise ValueError("helitack_status must be either True or False, with False by default")
+    # update the helitack status
+    global IS_HELITACK
+    IS_HELITACK = helitack_status
 
 # given a list of metrics, return a new list that has _total, _t1, and _t2 appended to each metric
 # to create a new list that is 3 times the size of metrics_list
@@ -65,16 +75,16 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
     # make sure that all metrics lists are the same size
     if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
         raise ValueError("percent_metrics, numerator_metrics, denominator_metrics must all be the same length")
-    
+
     # make sure num_duration_cols isn't out of bounds and duration columns are named correctly.
     if num_inserted_duration_cols > 0:
         final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
         assert(isinstance(final_duration_col[0], int) or isinstance(final_duration_col[0], float))
-        
+
     # get columns lists by adding _total, and _t1, _t2, etc. to each metric in each metric_list in percent_metrics_format. If num_inserted_duration_cols==0, it will just be _total metrics
     percent_col_names = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols, include_total=False)
     numerator_col_names = get_columns_from_metrics(numerator_metrics, num_inserted_duration_cols, include_total=False)
-    
+
     denominator_col_names = []
     # handle if any denominator metrics are static metrics. 
     for metric in denominator_metrics:
@@ -104,6 +114,14 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
     return df
 
 
+#TODO: CLEAN UP MESSY HELITACK FIX
+def remove_dashes(input_string):
+    return input_string.replace('-', '')
+
+def truncate_str(uuid_string):
+    return uuid_string[:-2]
+
+
 # Given a json result_list (json-like data) of a queried metric (cpu or mem usage),
 # Return:
     # a float summation over all pods' values in that ensemble (if all conditions are met)
@@ -111,6 +129,9 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
     # result_list (if there is no ensemble id provided)
     # None (if there are no bp3d-workers to sum over in result_list)
 def sum_pods_for_ensemble(result_list, ensemble, sum=True):
+    ens_series = pd.read_csv(ENSEMBLE_RUN_FILE)['ensemble_uuid']
+    ens_series = ens_series.apply(remove_dashes)
+    truncated_ens_series = ens_series.apply(truncate_str)
     # handle if there is no ensemble id
     if not ensemble:
         return result_list
@@ -121,14 +142,32 @@ def sum_pods_for_ensemble(result_list, ensemble, sum=True):
     for item in result_list:
         # get worker id of each pod
         pod = item["metric"]["pod"]
-        worker_id = get_worker_id(pod)
+        worker_id = get_worker_id(pod, helitack=IS_HELITACK)
 
         # skip pod if it's not a bp3d-worker-pod
         if worker_id is None:
             continue
-
+        # get the uuid from the string
+        UUID_NO_DASHES_LEN = 36
+        TRUNCATED_ENS_LEN = 30
+        uuid = None
+        if len(worker_id) == UUID_NO_DASHES_LEN:
+            uuid = UUID(worker_id)
+        elif len(worker_id) == TRUNCATED_ENS_LEN:
+            try:
+                truncated_ens_index = truncated_ens_series[truncated_ens_series == worker_id].index[0]
+            except IndexError:
+                continue
+            full_ens = ens_series.iloc[truncated_ens_index]
+            uuid = UUID(full_ens)
+        else:
+            try:
+                uuid = UUID(worker_id)
+            except: 
+                print(colored(pod, "magenta"))
+                continue
         # if ensemble id matches run's ensemble, add it to total
-        if str(UUID(worker_id)) == ensemble:
+        if str(uuid) == ensemble:
             value = item["value"][1]
             total += float(value)
             worker_found = True

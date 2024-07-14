@@ -2,8 +2,11 @@ import re
 
 # for current bp3d-worker naming convention ((bp3d-worker-k8s-...):
 # gets the worker id for a given pod or returns None if it is not a bp3d-worker
-def get_worker_id(pod_name):
+def get_worker_id(pod_name, helitack=False):
     regex_pattern = r"bp3d-worker-k8s-([a-fA-F0-9]+)"
+    # if we're looking for a helitack run, look for a different worker id
+    if helitack:
+        regex_pattern = r"bp3d-worker-helitack-k8s-([a-fA-F0-9]+)"
     match = re.search(regex_pattern, pod_name)
     worker_id = match.group(1) if match else None
     return worker_id
@@ -32,7 +35,7 @@ def get_worker_id_old_ptrn(pod_name):
 # gets the worker id for a given pod or returns None if it is not a bp3d-worker
 def get_worker_id_any_ptrn(pod_name):
     old_id = get_worker_id_old_ptrn(pod_name)
-    if old_id is not None:
+    if old_id:
         return old_id
 
     current_id = get_worker_id(pod_name)
