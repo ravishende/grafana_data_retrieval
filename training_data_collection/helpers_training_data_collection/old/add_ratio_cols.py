@@ -1,3 +1,4 @@
+# autopep8: off
 import pandas as pd
 import shutil
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
@@ -8,7 +9,7 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.printing import print_title
-
+# autopep8: on
 
 # settings and constants
 read_file = "csv_files/summed.csv"
@@ -26,23 +27,29 @@ pd.set_option('display.width', terminal_width)
 ==============================
 '''
 
+
 # given a dataframe, name of a new column to insert, numerator column, and denominator column
 # return the updated dataframe with a new column inserted as a ratio of numerator_col/denominator_col
 def insert_ratio_col(df, col_to_insert, numerator_col, denominator_col):
-    df[col_to_insert] = df[numerator_col].astype(float) / df[denominator_col].astype(float)
+    df[col_to_insert] = df[numerator_col].astype(
+        float) / df[denominator_col].astype(float)
     return df
+
 
 # given a dataframe, name of a new columns to insert, numerator columns, and duration column (denominator)
 # return the updated dataframe with new columns inserted as a ratio of numerator_col/denominator_col
 def insert_ratio_columns(df, cols_to_insert, numerator_cols, duration_col):
     for insert_col, numerator_col in zip(cols_to_insert, numerator_cols):
-        df[insert_col] = df[numerator_col].astype(float) / df[duration_col].astype(float)
+        df[insert_col] = df[numerator_col].astype(
+            float) / df[duration_col].astype(float)
     return df
+
 
 # given a list of numerator columns, return a df without those numerator columns in it
 def drop_numerator_columns(df, numerator_cols):
     df = df.drop(columns=numerator_cols)
     return df
+
 
 '''
 =================================
@@ -82,8 +89,10 @@ print_title("Original DataFrame")
 print(training_data, "\n"*5)
 
 # insert ratio columns
-training_data = insert_ratio_columns(training_data, t1_insert_columns, t1_metric_columns, "duration_t1")
-training_data = insert_ratio_columns(training_data, t2_insert_columns, t2_metric_columns, "duration_t2")
+training_data = insert_ratio_columns(
+    training_data, t1_insert_columns, t1_metric_columns, "duration_t1")
+training_data = insert_ratio_columns(
+    training_data, t2_insert_columns, t2_metric_columns, "duration_t2")
 # with the ratio columns added, the numerators of the ratio columns no longer become useful
 df = drop_numerator_columns(t1_metric_columns)
 df = drop_numerator_columns(t2_metric_columns)

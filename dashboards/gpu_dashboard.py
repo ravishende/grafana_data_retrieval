@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+# autopep8: off
 import shutil
 import pandas as pd
 from termcolor import colored
@@ -13,6 +13,7 @@ from tables import Tables
 from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict, print_title
 from helpers.querying import query_data
+# autopep8: on
 
 '''
 ==========================================================================================
@@ -48,41 +49,49 @@ def combine_dataframes_on_pod(df1, df2):
         combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
     return combined_df
 
+
 def get_datapoint(query):
     result_list = query_data(query)
     if len(result_list) > 0:
         return result_list['value']
     return None
 
+
 # single cell query
-current_gpu_usage_query = 'sum(cDCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"})/count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"})'
+current_gpu_usage_query = 'sum(cDCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + \
+    '"})/count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"})'
 # graph queries
 graph_queries_no_sum = {
-    'Total GPU usage':'avg_over_time(namespace_gpu_utilization{namespace=~"' + namespace + '"}[5m])',
-    'Requested GPUs':'count(DCGM_FI_DEV_GPU_TEMP{namespace=~"' + namespace + '"})'
+    'Total GPU usage': 'avg_over_time(namespace_gpu_utilization{namespace=~"' + namespace + '"}[5m])',
+    'Requested GPUs': 'count(DCGM_FI_DEV_GPU_TEMP{namespace=~"' + namespace + '"})'
 }
 graph_queries_by_pod = {
-    "GPUs utilization % by pod":'sum(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod) / count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod)'
+    "GPUs utilization % by pod": 'sum(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod) / count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod)'
 }
 # table queries
 table_queries_by_pod = {
-    'GPU Utilization':'sum(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod) / count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod)'
+    'GPU Utilization': 'sum(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod) / count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"}) by (pod)'
 }
 table_queries_by_pod_model = {
-    'GPUs Requested':'count(DCGM_FI_DEV_GPU_TEMP{namespace=~"' + namespace + '"}) by (pod, modelName)'
+    'GPUs Requested': 'count(DCGM_FI_DEV_GPU_TEMP{namespace=~"' + namespace + '"}) by (pod, modelName)'
 }
 
 # get necessary classes
-graphs_class = Graphs(time_offset=time_range, time_step=timestep)  # if time_offset and time_step are not passed in, default values are used from inputs.py
+# if time_offset and time_step are not passed in, default values are used from inputs.py
+graphs_class = Graphs(time_offset=time_range, time_step=timestep)
 tables_class = Tables()
 
 # get tables and graphs data
 # table_cell_dict = tables_class.get_table_from_queries(table_queries_no_sum, sum_by=None, table_name="Current GPU Usage")``
 data_gpu_usage = get_datapoint(current_gpu_usage_query)
-table_1 = tables_class.get_table_from_queries(table_queries_by_pod, sum_by='pod')
-table_2 = tables_class.get_table_from_queries(table_queries_by_pod_model, sum_by=['pod', 'modelName'])
-graphs_dict_no_sum = graphs_class.get_graphs_from_queries(graph_queries_no_sum, sum_by=None)
-graphs_dict_by_pod = graphs_class.get_graphs_from_queries(graph_queries_by_pod, sum_by='pod')
+table_1 = tables_class.get_table_from_queries(
+    table_queries_by_pod, sum_by='pod')
+table_2 = tables_class.get_table_from_queries(
+    table_queries_by_pod_model, sum_by=['pod', 'modelName'])
+graphs_dict_no_sum = graphs_class.get_graphs_from_queries(
+    graph_queries_no_sum, sum_by=None)
+graphs_dict_by_pod = graphs_class.get_graphs_from_queries(
+    graph_queries_by_pod, sum_by='pod')
 
 # since the Panel Title table has two different sum_by's, it has to be combined from two tables
 table_final = combine_dataframes_on_pod(table_2, table_1)
@@ -104,13 +113,15 @@ if not get_graphs_as_single_df:
     print_dataframe_dict(graphs_dict_by_pod)
 else:
     # print graphs as single dataframe
-    graphs_df_no_sum = graphs_class.get_graphs_as_one_df(graphs_dict_no_sum, sum_by=None)
-    graphs_df_by_pod = graphs_class.get_graphs_as_one_df(graphs_dict_by_pod, sum_by="pod")
+    graphs_df_no_sum = graphs_class.get_graphs_as_one_df(
+        graphs_dict_no_sum, sum_by=None)
+    graphs_df_by_pod = graphs_class.get_graphs_as_one_df(
+        graphs_dict_by_pod, sum_by="pod")
     print(graphs_df_no_sum)
     print(graphs_df_by_pod)
 
 if visualize_graphs:
-    # display graphs in another window 
+    # display graphs in another window
     display_graphs(graphs_dict_no_sum, sum_by=None)
     display_graphs(graphs_dict_by_pod, sum_by="pod")
 

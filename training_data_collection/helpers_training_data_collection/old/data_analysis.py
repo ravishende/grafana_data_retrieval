@@ -1,3 +1,4 @@
+# autopep8: off
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -11,6 +12,7 @@ parent = os.path.dirname(current)
 grandparent = os.path.dirname(parent)
 sys.path.append(grandparent)
 from helpers.time_functions import datetime_ify
+# autopep8: on
 
 # csv files
 runs_csv = "csv_files/summed.csv"
@@ -31,7 +33,8 @@ non_zero_runs = pd.read_csv(non_zero_runs_csv, index_col=0)
 # Plotting the distribution of runtimes for zero and non-zero runs
 plt.figure(figsize=(12, 6))
 sns.histplot(zero_runs['runtime'], color="red", label='Zero Runs', kde=True)
-sns.histplot(non_zero_runs['runtime'], color="blue", label='Non-Zero Runs', kde=True)
+sns.histplot(non_zero_runs['runtime'], color="blue",
+             label='Non-Zero Runs', kde=True)
 plt.title('Distribution of Runtimes for Zero vs Non-Zero Runs')
 plt.xlabel('Runtime (seconds)')
 plt.ylabel('Frequency')
@@ -54,9 +57,11 @@ plt.show()
 
 # get start times as seconds since epoch (01/01/1970)
 zero_runs['start'] = zero_runs['start'].apply(datetime_ify)
-zero_runs['start_seconds'] = zero_runs['start'].apply(lambda time: time.timestamp())
+zero_runs['start_seconds'] = zero_runs['start'].apply(
+    lambda time: time.timestamp())
 non_zero_runs['start'] = non_zero_runs['start'].apply(datetime_ify)
-non_zero_runs['start_seconds'] = non_zero_runs['start'].apply(lambda time: time.timestamp())
+non_zero_runs['start_seconds'] = non_zero_runs['start'].apply(
+    lambda time: time.timestamp())
 # Plotting the distribution of start times for non_zero runs
 plt.figure(figsize=(12, 6))
 sns.histplot(zero_runs['start'], color="red", label='Zero Runs')
@@ -93,15 +98,22 @@ plt.show()
 # ======================
 
 # Calculating ratios for CPU and Memory usage vs duration for non-zero runs
-non_zero_runs['cpu_t1_ratio'] = non_zero_runs['cpu_t1'] / non_zero_runs['duration_t1']
-non_zero_runs['cpu_t2_ratio'] = non_zero_runs['cpu_t2'] / non_zero_runs['duration_t2']
-non_zero_runs['cpu_total_ratio'] = non_zero_runs['cpu_total'] / non_zero_runs['runtime']
-non_zero_runs['mem_t1_ratio'] = non_zero_runs['mem_t1'] / non_zero_runs['duration_t1']
-non_zero_runs['mem_t2_ratio'] = non_zero_runs['mem_t2'] / non_zero_runs['duration_t2']
-non_zero_runs['mem_total_ratio'] = non_zero_runs['mem_total'] / non_zero_runs['runtime']
+non_zero_runs['cpu_t1_ratio'] = non_zero_runs['cpu_t1'] / \
+    non_zero_runs['duration_t1']
+non_zero_runs['cpu_t2_ratio'] = non_zero_runs['cpu_t2'] / \
+    non_zero_runs['duration_t2']
+non_zero_runs['cpu_total_ratio'] = non_zero_runs['cpu_total'] / \
+    non_zero_runs['runtime']
+non_zero_runs['mem_t1_ratio'] = non_zero_runs['mem_t1'] / \
+    non_zero_runs['duration_t1']
+non_zero_runs['mem_t2_ratio'] = non_zero_runs['mem_t2'] / \
+    non_zero_runs['duration_t2']
+non_zero_runs['mem_total_ratio'] = non_zero_runs['mem_total'] / \
+    non_zero_runs['runtime']
 
 # Removing any infinite or NaN values for accurate plotting
-non_zero_runs_filtered = non_zero_runs.replace([np.inf, -np.inf], np.nan).dropna(subset=['cpu_t1_ratio', 'cpu_total_ratio'])
+non_zero_runs_filtered = non_zero_runs.replace(
+    [np.inf, -np.inf], np.nan).dropna(subset=['cpu_t1_ratio', 'cpu_total_ratio'])
 
 
 # ===============
@@ -111,7 +123,8 @@ non_zero_runs_filtered = non_zero_runs.replace([np.inf, -np.inf], np.nan).dropna
 # Plotting cpu_t1/duration_t1 vs cpu_total/runtime for non-zero runs
 plt.figure(figsize=(12, 6))
 sns.regplot(x='cpu_t1_ratio', y='cpu_total_ratio', data=non_zero_runs_filtered)
-plt.title('CPU Usage Ratio (cpu_t1/duration_t1) vs Total CPU Usage Ratio (cpu_total/runtime)')
+plt.title(
+    'CPU Usage Ratio (cpu_t1/duration_t1) vs Total CPU Usage Ratio (cpu_total/runtime)')
 plt.xlabel('CPU Usage Ratio (cpu_t1/duration_t1)')
 plt.ylabel('Total CPU Usage Ratio (cpu_total/runtime)')
 plt.show()
@@ -119,7 +132,8 @@ plt.show()
 
 # Plotting mem_t1/duration_t1 vs cpu_total/runtime for non-zero runs
 plt.figure(figsize=(12, 6))
-sns.scatterplot(x='mem_t1_ratio', y='mem_total_ratio', data=non_zero_runs_filtered)
+sns.scatterplot(x='mem_t1_ratio', y='mem_total_ratio',
+                data=non_zero_runs_filtered)
 plt.title('Memory Usage Ratio (mem_t1/duration_t1) vs Total Memory Usage Ratio (mem_total/runtime)')
 plt.xlabel('Memory Usage Ratio (mem_t1/duration_t1)')
 plt.ylabel('Total Memory Usage Ratio (mem_total/runtime)')
@@ -133,14 +147,16 @@ plt.show()
 # Plotting cpu_t2/duration_t2 vs cpu_total/runtime for non-zero runs
 plt.figure(figsize=(12, 6))
 sns.regplot(x='cpu_t2_ratio', y='cpu_total_ratio', data=non_zero_runs_filtered)
-plt.title('CPU Usage Ratio (cpu_t2/duration_t2) vs Total CPU Usage Ratio (cpu_total/runtime)')
+plt.title(
+    'CPU Usage Ratio (cpu_t2/duration_t2) vs Total CPU Usage Ratio (cpu_total/runtime)')
 plt.xlabel('CPU Usage Ratio (cpu_t2/duration_t2)')
 plt.ylabel('Total CPU Usage Ratio (cpu_total/runtime)')
 plt.show()
 
 # Plotting mem_t2/duration_t2 vs cpu_total/runtime for non-zero runs
 plt.figure(figsize=(12, 6))
-sns.scatterplot(x='mem_t2_ratio', y='mem_total_ratio', data=non_zero_runs_filtered)
+sns.scatterplot(x='mem_t2_ratio', y='mem_total_ratio',
+                data=non_zero_runs_filtered)
 plt.title('Memory Usage Ratio (mem_t2/duration_t2) vs Total Memory Usage Ratio (mem_total/runtime)')
 plt.xlabel('Memory Usage Ratio (mem_t2/duration_t2)')
 plt.ylabel('Total Memory Usage Ratio (mem_total/runtime)')

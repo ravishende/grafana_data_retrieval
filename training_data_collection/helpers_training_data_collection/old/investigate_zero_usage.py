@@ -1,3 +1,4 @@
+# autopep8: off
 import pandas as pd
 import shutil
 from termcolor import colored
@@ -10,6 +11,7 @@ parent = os.path.dirname(current)
 grandparent = os.path.dirname(parent)
 sys.path.append(grandparent)
 from helpers.printing import print_title
+# autopep8: on
 
 '''
 This file is to look at the summed runs and figure out statistics on runs
@@ -53,7 +55,8 @@ print(non_zeros)
 print_title("Zeros DataFrame")
 print(zeros, "\n"*10)
 print_title("Nontrivial Zeros DataFrame")
-print(nontrivial_zeros, "\n\nLowest runtime:", lowest_runtime, "seconds\nHighest runtime:", round(highest_runtime/3600, 1), "hours", "\n"*10)
+print(nontrivial_zeros, "\n\nLowest runtime:", lowest_runtime,
+      "seconds\nHighest runtime:", round(highest_runtime/3600, 1), "hours", "\n"*10)
 
 # save dataframes to csv files
 zeros.to_csv(zeros_write_file)
