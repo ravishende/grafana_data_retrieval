@@ -16,17 +16,18 @@ pd.set_option('display.max_columns', None)
 =========================
 Phase 1:  Collecting Runs
 =========================
-1. get successful bp3d runs from bp3d-runs
-    - run_selection.py
+1. get successful bp3d runs from read csv
 2. collect runs from successful bp3d runs
-    - gather.ipynb in collect_runs/
 
 FINISH:
 save df to a file
 '''
 
+
 class Phase_1():
-    def __init__(self, files=PHASE_1_FILES):
+    def __init__(self, files=PHASE_1_FILES, verbose=True, debug_mode=False):
+        self.verbose = verbose
+        self.debug_mode = debug_mode
         self.files = files
         self.keep_attributes = [
             'canopy_moisture',
@@ -39,23 +40,25 @@ class Phase_1():
             'threads',
             'wind_direction',
             'wind_speed'
-            ]
+        ]
         # fs and bucket for collecting paths and runs_df
         self.fs = None
         self.bucket = ""
         self._init_fs_and_bucket()
-        
+
     # initalize self.fs and self.bucket
     def _init_fs_and_bucket(self):
         # get login details from .env file
         if not load_dotenv():
-            raise EnvironmentError("Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY for the s3 file system")
+            raise EnvironmentError(
+                "Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY for the s3 file system")
         endpoint = 'https://wifire-data.sdsc.edu:9000'
         access_key = os.getenv("ACCESS_KEY")
         secret_key = os.getenv("SECRET_KEY")
 
         # login and get fs (file system) and bucket
-        fs = s3fs.S3FileSystem(key=access_key,
+        fs = s3fs.S3FileSystem(
+            key=access_key,
             secret=secret_key,
             client_kwargs={
                 'endpoint_url': endpoint,
@@ -83,15 +86,39 @@ class Phase_1():
     def _append_txt_file(self, txt_file, batch):
         with open(txt_file, "a") as file:  # Open the file in append mode ('a')
             for entry in batch:
-                file.write(entry + "\n")  # Write each entry on a new line
+                file.write(str(entry) + "\n")  # Write each entry on a new line
 
-    # given the path to a .txt file, return a list where each line of the 
+    # given the path to a .txt file, return a list where each line of the
     # txt file is an element in the list
     def read_txt_file(self, txt_file):
         contents = []
-        with open(txt_file,"r") as f:
-            contents = f.read().splitlines() 
+        with open(txt_file, "r") as file:
+            contents = file.read().splitlines()
         return contents
+
+    # If verbose, print the msg. end is the same as in the built in print() function
+    # If color (a string in line with termcolor colors) is passed in, print it with that color
+    def _print_if_verbose(self, msg, color=None, end="\n"):
+        # don't print if not verbose
+        if not self.verbose:
+            return
+        # print according to whether color was passed in
+        if color is not None:
+            print(colored(msg, color), end=end)
+        else:
+            print(msg, end=end)
+
+    # If debug, print the msg. end is the same as in the built in print() function
+    # If color (a string in line with termcolor colors) is passed in, print it with that color
+    def _print_if_debug(self, msg, color=None, end="\n"):
+        # don't print if not verbose
+        if not self.debug_mode:
+            return
+        # print according to whether color was passed in
+        if color is not None:
+            print(colored(msg, color), end=end)
+        else:
+            print(msg, end=end)
 
     # given a subdirectory, return all of the run simulation paths
     def _get_sim_paths(self, subdir):
@@ -110,15 +137,16 @@ class Phase_1():
         # make sure user input is valid
         valid_item_titles = ['path_directories', 'paths']
         if item_title not in valid_item_titles:
-            raise ValueError(f'item_title must be one of the following: {valid_item_titles}')
-        
+            raise ValueError(
+                f'item_title must be one of the following: {valid_item_titles}')
+
         # if no previously gathered items, get previously gathered items from past gatherings
         gathered_items = self.read_txt_file(self.files[item_title])
         if len(gathered_items) == 0:
-                # update gathered_items to contain the old gathered items
-                old_item_title = 'old_' + item_title
-                gathered_items = self.read_txt_file(self.files[old_item_title])
-                self._append_txt_file(self.files[item_title], gathered_items)
+            # update gathered_items to contain the old gathered items
+            old_item_title = 'old_' + item_title
+            gathered_items = self.read_txt_file(self.files[old_item_title])
+            self._append_txt_file(self.files[item_title], gathered_items)
         return gathered_items
 
     # given a list of ungathered directories, return all the paths from those directories.
@@ -132,19 +160,17 @@ class Phase_1():
         self._append_txt_file(self.files['path_directories'], directories)
         return paths
 
-
     # gather all paths in batches if requested.
     # batch size is a number of paths per batch to get
     def gather_all_paths(self, batch_size=None):
-        
         # get all directories and previously gathered directories
         directories = self.fs.ls(self.bucket)
         gathered_directories = self._get_gathered_items("path_directories")
-        # TODO: improve temp fix - get rid of last directory to be able to regather subdirs in the
         gathered_directories = gathered_directories[:-1]
-        
+
         # get list of directories that have not been gathered
-        ungathered_directories = [d for d in directories if d not in gathered_directories]
+        ungathered_directories = [
+            d for d in directories if d not in gathered_directories]
         # the last gathered directory may have new subdirectories. Add it into ungathered_directories to get new subdirs
         '''
         if len(gathered_directories) > 0:
@@ -160,36 +186,38 @@ class Phase_1():
             return simulation_paths_list
         '''
         # start gathering directories
-        print(f"{len(gathered_directories)} directories have already been gathered. \
-            Gathering paths for the remaining {len(ungathered_directories)}.") 
-            # note: if you were to calculate total based on these 2 values, you'd notice that len(directories) = total -1. This is because
-            # we added gathered_directories[-1] to ungathered_directories. We will also have to run .unique() on paths because of this
+        msg = f"{len(gathered_directories)} directories have already been gathered. \
+            Gathering paths for the remaining {len(ungathered_directories)}. \nThere are {len(directories)} total directories."
+        self._print_if_verbose(msg)
+        # note: if you were to calculate total based on these 2 values, you'd notice that len(directories) = total -1. This is because
+        # we added gathered_directories[-1] to ungathered_directories. We will also have to get the unique paths because of this
 
         # if we're not using batches, run everything at once
         if batch_size is None:
-            new_sim_paths_list = self._get_paths_from_directories(ungathered_directories)
+            new_sim_paths_list = self._get_paths_from_directories(
+                ungathered_directories)
             self._append_txt_file(self.files['paths'], new_sim_paths_list)
             return simulation_paths_list + new_sim_paths_list
-
         # collect runs in batches
         num_batches = math.ceil(len(ungathered_directories)/batch_size)
         for i in range(0, num_batches):
-            # get end index for batch. Shouldn't change because 
+            # get end index for batch. Shouldn't change because
             end_index = batch_size
             # if this is the last iteration, generate paths until the end of ungathered_directories
             if i == num_batches-1:
                 end_index = len(ungathered_directories)
-
             # get simulation paths for this batch
-            print(f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left.", colored(f"Batch {i+1}/{num_batches}", "magenta"))
-            sim_paths_batch = self._get_paths_from_directories(ungathered_directories[:end_index])
+            self._print_if_verbose(
+                f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left.", end=" ")
+            self._print_if_verbose(
+                f"Batch {i+1}/{num_batches}", "magenta")
+            sim_paths_batch = self._get_paths_from_directories(
+                ungathered_directories[:end_index])
             # update all simulation paths and remove newly gathered directories from ungathered directories
             simulation_paths_list += sim_paths_batch
             ungathered_directories = ungathered_directories[end_index:]
-
             # append newly collected paths to the paths.txt file
             self._append_txt_file(self.files['paths'], sim_paths_batch)
-        
         return simulation_paths_list
 
     # get the run_uuid (str) from a path (str)
@@ -198,14 +226,11 @@ class Phase_1():
         run_uuid = run_uuid_w_prefix.split('_')[-1]
         return run_uuid
 
-
-    # given a df with a 'path' column, add a new column called 'run_uuid' 
+    # given a df with a 'path' column, add a new column called 'run_uuid'
     # which gets the run_uuid from the path. Return the new df.
     def _add_run_uuid_col(self, df):
-        path_col = df['path']
         df['run_uuid'] = df['path'].apply(self._run_id_from_path)
         return df
-
 
     # Given a paths list and a method of dropping old paths ("txt" or "training_data")
     # Return a new list of paths that only contains new paths (paths not in old paths)
@@ -227,14 +252,14 @@ class Phase_1():
             training_data = pd.read_csv(self.files['training_data'])
             existing_uuids = training_data['run_uuid'].to_list()
             # Use the _run_id_from_path function to extract run_uuid from each path
-            new_paths = [p for p in paths if self._run_id_from_path(p) not in existing_uuids]
+            new_paths = [p for p in paths if self._run_id_from_path(
+                p) not in existing_uuids]
             # save new paths to a file
             self._write_txt_file(self.files['new_paths'], new_paths)
             return new_paths
-        
+
         # handle incorrect method user error
         raise ValueError("method must be either 'txt' or 'training_data'")
-
 
     # given a start and stop index and a list of paths,
     # return a df of runs in the section of paths[start:stop]
@@ -246,20 +271,23 @@ class Phase_1():
 
         # don't try to access out of bounds of path
         if stop > len(paths):
-            print(colored("stop index out of bounds - updating to be len(paths)", "yellow"))
+            self._print_if_verbose(
+                "stop index out of bounds - updating to be len(paths)", "yellow")
             stop = len(paths)
         if start >= len(paths):
-            raise ValueError("start cannot be greater than or equal to len(paths)")
+            raise ValueError(
+                "start cannot be greater than or equal to len(paths)")
 
-        print(f"Reading from line {start} to {stop-1}")
+        self._print_if_verbose(
+            f"Reading from line {start} to {stop-1}", "green")
         # get each path in the chunk and get the run from that path
-        rows = [] # list that will collect row dictionaries to be put into the df
+        rows = []  # list that will collect row dictionaries to be put into the df
         for path in tqdm(paths[start:stop]):
             # try to get the file from the path
             try:
                 name = 'quicfire.zarr'
                 with self.fs.open(path + '/' + name + '/.zattrs') as file:
-                    run_data=json.load(file)
+                    run_data = json.load(file)
             # if the file isn't there, append path to bad_paths
             except:
                 bad_paths.append(path)
@@ -284,7 +312,7 @@ class Phase_1():
 
         # if there are no successful rows, return an empty dataframe
         if len(rows) == 0:
-            print(colored("No runs found for this batch", "red"))
+            self._print_if_verbose("No runs found for this batch", "red")
             return pd.DataFrame()
 
         # create the df from all of the rows
@@ -295,12 +323,15 @@ class Phase_1():
 
         # print file not found files
         if len(bad_paths) > 0:
-            print("FileNotFound Error on the following Files:")
+            self._print_if_verbose(
+                "FileNotFound Error on the following Files:")
             for file_path in bad_paths:
-                print("\t" + file_path)
-        print(colored(f"\nFinished reading from {start} to {stop-1}\n", "green"))
+                self._print_if_verbose(f"\t{file_path}")
+        self._print_if_verbose(
+            f"\nFinished reading from {start} to {stop-1}\n", "green")
         num_successful_rows = len(rows)
-        print(f"{num_successful_rows} collected runs | {len(bad_paths)} files not found.\n{runs_missing_data} runs were missing at least some data\n")
+        self._print_if_debug(
+            f"{num_successful_rows} collected runs | {len(bad_paths)} files not found.\n{runs_missing_data} runs were missing at least some data\n")
 
         # append bad paths to files not found
         self._append_txt_file(self.files['files_not_found'], bad_paths)
@@ -318,35 +349,41 @@ class Phase_1():
             num_gathered_runs = len(runs_df) + len(files_not_found)
             if len(runs_df) > 0:
                 runs_df_exists = True
+                self._print_if_debug(f"RUN DF EXISTS: {len(runs_df)}," "green")
             else:
                 runs_df_exists = False
+                self._print_if_debug("RUN DF DOESNT EXIST", "magenta")
         except:
             num_gathered_runs = 0
             runs_df_exists = False
 
         # calculate how many batches to run
-        num_batches = math.ceil((len(simulation_paths) - num_gathered_runs) / batch_size)
-        
+        num_batches = math.ceil(
+            (len(simulation_paths) - num_gathered_runs) / batch_size)
+        self._print_if_debug(
+            f'\tnum_batches = {num_batches}\n\tbatch_size = {batch_size}\n\tnum simulation_paths = {len(simulation_paths)}\n\tnum_gathered_runs = {num_gathered_runs}', "magenta")
         # loop over unexplored simulation paths, getting df chunks for each batch
         current_batch = 1
         for start_index in range(num_gathered_runs, len(simulation_paths), batch_size):
-            # print current batch
-            print(colored(f"batch {current_batch}/{num_batches}:", "green"))
+            self._print_if_verbose(
+                f"batch {current_batch}/{num_batches}:", "green")
             current_batch += 1
 
             # get the stop_index, making sure not to have it larger than len(simulation_paths)
             stop_index = min(start_index + batch_size, len(simulation_paths))
-            
             # get the df from the runs
-            partial_runs_df = self.get_df_chunk(start_index, stop_index, simulation_paths)
+            partial_runs_df = self.get_df_chunk(
+                start_index, stop_index, simulation_paths)
 
             # save the df to a file
             if len(partial_runs_df) > 0:
                 if runs_df_exists:
                     # append to df and don't rewrite the header if the df already exists
-                    partial_runs_df.to_csv(self.files['runs_df'], mode='a', header=False, index=False)
+                    partial_runs_df.to_csv(
+                        self.files['runs_df'], mode='a', header=False, index=False)
                 else:
-                    partial_runs_df.to_csv(self.files['runs_df'], mode='w', header=True, index=False)
+                    partial_runs_df.to_csv(
+                        self.files['runs_df'], mode='w', header=True, index=False)
                     runs_df_exists = True
 
         # get the total runs df and return it
@@ -355,23 +392,31 @@ class Phase_1():
         return runs_df
 
     # given a dataframe of runs with ens_status and run_status columns,
-    # return a new dataframe with only the successful runs 
+    # return a new dataframe with only the successful runs
     def get_successful_runs(self, df, reset_index=True):
         if 'ens_status' not in df.columns or 'run_status' not in df.columns:
             warning_message = "\n\nDataFrame does not have 'ens_status' or 'run_status'. Returning df - will not filter by successful runs.\n\n"
             print(colored(warning_message, "red"))
-            return df;
+            return df
         # handle if df is empty
         if len(df) == 0:
-            raise ValueError("The read file df is empty; cannot get successful runs from it. Please provide a proper dataframe that contains the columns 'run_uuid', 'ensemble_uuid', 'ens_status', and 'runs_status'.")
+            raise ValueError(
+                "The read file df is empty; cannot get successful runs from it. Please provide a proper dataframe that contains the columns 'run_uuid', 'ensemble_uuid', 'ens_status', and 'runs_status'.")
         # get a df with only the successful runs
-        successful_runs = df[(df["ens_status"]=="Done") & (df["run_status"]=="Done")]
+        successful_runs = df[(df["ens_status"].str.lower() == "done")
+                             & (df["run_status"].str.lower() == "done")]
+        num_removed_runs = len(df) - len(successful_runs)
+        self._print_if_verbose(
+            f"number of removed unsuccessful runs:{num_removed_runs}")
         # if requested, reset the indices to 0 through end of new df after selection
         if reset_index:
             successful_runs = successful_runs.reset_index(drop=True)
+        # keep only the useful columns after ens_status and run_status are no longer needed
+        successful_runs = successful_runs.drop(
+            columns=['ens_status', 'run_status'])
         return successful_runs
 
-    # # get a df of path, run_uuid, where we filter new_paths, only including the paths with run_uuids that were successful.
+    # get a df of path, run_uuid, where we filter new_paths, only including the paths with run_uuids that were successful.
     # def get_runs_to_gather_df(self, new_paths, successful_runs_list_df):
     #     # Convert new_paths list to a DataFrame
     #     new_paths_df = pd.DataFrame(new_paths, columns=['path'])
@@ -380,29 +425,52 @@ class Phase_1():
     #     # Merge with successful_runs_list_df to filter out unsuccessful runs
     #     result_df = new_paths_df[new_paths_df['run_uuid'].isin(successful_runs_list_df['run_uuid'])]
     #     return result_df
-
     def get_runs_to_gather_df(self, new_paths, successful_runs_list_df):
         # Convert new_paths list to a DataFrame
-        new_paths_df = pd.DataFrame(new_paths, columns=['path'])
+        new_paths_df = pd.DataFrame(data={'path': new_paths})
         # Apply _run_id_from_path function to get run_uuid
-        new_paths_df['run_uuid'] = new_paths_df['path'].apply(self._run_id_from_path)
+        new_paths_df['run_uuid'] = new_paths_df['path'].apply(
+            self._run_id_from_path)
+        self._print_if_debug(
+            f"new paths df length: {len(new_paths_df)}", "green")
+        self._print_if_debug(
+            f"successful_runs_list_df length: {len(successful_runs_list_df)}", "green")
         # Merge with successful_runs_list_df on 'run_uuid' to include 'ensemble_uuid' and filter out unsuccessful runs
-        result_df = new_paths_df.merge(successful_runs_list_df[['run_uuid', 'ensemble_uuid']], on='run_uuid', how='inner')  # how might be changed to right to include ensemble_id
+        result_df = pd.merge(
+            new_paths_df, successful_runs_list_df, on='run_uuid', how='right')
+        self._print_if_debug(
+            f"\n\nNA ensembles: \n{result_df['path'].isna().value_counts()}")
+        self._print_if_debug(
+            f"result df length: {len(result_df)}\n\n\n", "green")
+        self._print_if_verbose(result_df)
         return result_df
 
-    # given a df that contains all successful runs and a df that 
+    # given a df that contains all successful runs and a df that
     def merge_dfs(self, runs_data_df, successful_runs_list_df):
         # select the required columns from successful_runs_list_df
-        if len(runs_data_df) == 0 or len(successful_runs_list_df) == 0:
-            raise ValueError("\n\nEither runs_data_df or successful_runs_list_df are empty, so they cannot be merged.\n\n")
+        if len(runs_data_df) == 0:
+            raise ValueError(
+                "\n\nruns_data_df is empty, so it cannot be merged with successful runs df")
+        if len(successful_runs_list_df) == 0:
+            raise ValueError(
+                "\n\nsuccessful_runs_list_df is empty, so it cannot be merged with runs data df.\nFirst, make sure that there are some successful runs in the read df. If there are, try setting `new_run=True`, `thorough_refresh=True` in work_flow.py and rerunning.\n\n")
 
-        successful_runs_cols = successful_runs_list_df[['ensemble_uuid', 'run_uuid']]
-        
-        # merge the dataframes on 'run_uuid' with an inner join
-        merged_df = pd.merge(successful_runs_cols, runs_data_df, on='run_uuid', how='inner')
-        
+        # remove duplicate runs (drop duplicate run ids)
+        runs_data_df = runs_data_df.drop_duplicates(subset='run_uuid')
+        successful_runs_list_df = successful_runs_list_df.drop_duplicates(
+            subset='run_uuid')
+
+        # get only the important columns (not statuses of successful_runs_cols)
+        cols_to_keep = ['ensemble_uuid', 'run_uuid']
+        if 'queue_time' in successful_runs_list_df.columns:
+            cols_to_keep.append("queue_time")
+        successful_runs = successful_runs_list_df[cols_to_keep]
+
+        # merge the dataframes on 'run_uuid' with a left join to include only the rows from runs_data_df - merged_df['run_uuid'] is the same as runs_data_df['run_uuid]
+        merged_df = pd.merge(
+            runs_data_df, successful_runs, on='run_uuid', how='left')
+
         return merged_df
-
 
     # given a df returns an updated df with the NaN time rows removed
     def remove_na_rows(self, df, reset_index=True):
@@ -413,7 +481,7 @@ class Phase_1():
         # Then store it in a csv file called na_times
         na_mask = df[time_cols].isna()
         na_rows_df = df[na_mask.any(axis=1)]
-        if len(na_rows_df)>0:
+        if len(na_rows_df) > 0:
             na_rows_df.to_csv('csvs/na_times.csv', mode='a')
 
         # Drop columns with NA values in any of the time columns
@@ -433,56 +501,60 @@ class Phase_1():
         Main Program
     ======================
     '''
+
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self, paths_gathered=False):
-        success=False
+        success = False
         # for if simulation_paths are fully gathered and we're just getting df from runs
         if paths_gathered:
             simulation_paths = self.read_txt_file(self.files['paths'])
-            new_paths = self.read_txt_file(self.files['new_paths']) 
-        # gather simulation paths to be read 
+            new_paths = self.read_txt_file(self.files['new_paths'])
+        # gather simulation paths to be read
         else:
-            simulation_paths = self.gather_all_paths(batch_size=5)  # for if simulation_paths are not yet fully gathered
-            new_paths = self._drop_old_paths(simulation_paths, method="txt")  # for if new_paths are not yet generated
-        
-        print("simulation paths length:", len(simulation_paths))
-        print("New paths length:", len(new_paths))
+            # gather paths if they are not yet fully gathered
+            simulation_paths = self.gather_all_paths(batch_size=5)
+            # drop old paths if new_paths are not yet generated
+            new_paths = self._drop_old_paths(simulation_paths, method="txt")
+
+        self._print_if_verbose(
+            f"simulation paths length:{len(simulation_paths)}")
+        self._print_if_verbose(f"New paths length:{len(new_paths)}")
 
         if len(new_paths) == 0:
-            print(colored("\nNo new runs since last collection! Nothing left to do.", "green"))
+            success_msg = "\nNo new runs since last collection! Nothing left to do."
+            print(colored(success_msg, "green"))
             # if success is True, we go to the next stage. We shouldn't go to the next stage here
             success = False
             return success
 
-        # get a df that only contains the ids and status of successful runs
-        runs_list_df = pd.read_csv(self.files['read'])  # note: doesn't have an index column, so don't set index_col=0
-        successful_runs_list_df = self.get_successful_runs(runs_list_df, reset_index=True)
+        # get a df that only contains the ids and potentially queue_time of successful runs
+        runs_list_df = pd.read_csv(self.files['read'])
+        # Make sure there is no unnamed column from if the csv was saved with/without an index col
+        unnamed_cols = runs_list_df.columns.str.match('Unnamed')
+        runs_list_df = runs_list_df.loc[:, ~unnamed_cols]
+
+        successful_runs_list_df = self.get_successful_runs(
+            runs_list_df, reset_index=True)
 
         # get a df of [path, run_uuid], where we filter new_paths, only including the paths with run_uuids that were successful.
-        runs_to_gather_df = self.get_runs_to_gather_df(new_paths, successful_runs_list_df)
+        runs_to_gather_df = self.get_runs_to_gather_df(
+            new_paths, successful_runs_list_df)
         final_paths_list = runs_to_gather_df['path'].to_list()
 
-        print("getting df from paths\n")
+        self._print_if_verbose("getting df from paths\n")
         # get the actual runs from the successful runs paths
         runs_df = self.get_df_from_paths(final_paths_list, batch_size=500)
-        # runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
-        print(len(runs_df), "\n\n", runs_df)
 
-        print("getting finalized dataframe")
+        self._print_if_verbose("getting finalized dataframe")
         # remove rows with na values for run_start, run_end, renaming those columns to start and stop
-        result_df = self.merge_dfs(runs_data_df=runs_df, successful_runs_list_df=runs_to_gather_df)
+        result_df = self.merge_dfs(
+            runs_data_df=runs_df, successful_runs_list_df=successful_runs_list_df)
         result_df = self.remove_na_rows(result_df, reset_index=True)
 
         # save final_df
         print(result_df)
         result_df.to_csv(self.files['write'])
 
-        # update old_paths txt to include newly found paths
-        # self._append_txt_file(self.files['old_paths'], new_paths)
-
-        # clear files_not_found txt
-        # self._write_txt_file(self.files['files_not_found'], [])
-        
         # return phase_1 was successful
         success = True
         return success
