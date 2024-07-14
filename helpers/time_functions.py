@@ -2,6 +2,18 @@ import pandas as pd
 from datetime import datetime, timedelta
 import re
 
+
+# returns datetime of time if it matches one of the format strings, otherwise none
+def _try_strptime(time, format_strings):
+    for format_str in format_strings:
+        try:
+            time = datetime.strptime(time, format_str)
+            return time
+        except ValueError:
+            continue
+    return None
+
+
 # convert a time string into a datetime object
 def datetime_ify(time):
     # handle if time is already of type pandas datetime or actual datetime
@@ -9,24 +21,23 @@ def datetime_ify(time):
         return time.to_pydatetime(warn=False)
     if isinstance(time, datetime):
         return time
-    
     # handle if time is a float (seconds since the epoch: 01/01/1970)
     if isinstance(time, float) or isinstance(time, int):
         return datetime.fromtimestamp(time)
 
-    # get time as datetime object. Time format should be one of two patterns.
-    try:
-        # get time down to the second, no decimal seconds.
-        time = time[0:time.find(".")]
-        # get time as datetime
-        format_string = "%Y-%m-%d %H:%M:%S"
-        time = datetime.strptime(time, format_string)
+    # get time as datetime object. Time format should be one of three patterns.
+    # get time down to the second, no decimal seconds.
+    time = time[0:time.find(".")]
+    # define expected format strings
+    format_strings = ["%Y-%m-%dT%H:%M:%S",
+                      "%m/%d/%Y, %H:%M:%S", '%Y-%m-%d %H:%M:%S']
+    time = _try_strptime(time, format_strings)
+    # return the datetime or raise a value error
+    if time is not None:
         return time
-    except ValueError:
-        # get start and stop as datetimes, then find the difference between them for the runtime
-        format_string = "%Y-%m-%dT%H:%M:%S"
-        time = datetime.strptime(time, format_string)
-        return time
+    else:
+        raise ValueError(
+            "time did not match one of the expected time string formats")
 
 
 # given a timedelta, get it in the form 2d4h12m30s for use with querying
@@ -69,7 +80,7 @@ def time_str_to_delta(time_str):
     return time_delta
 
 
-# given a start (datetime object) of a run and duration in seconds, 
+# given a start (datetime object) of a run and duration in seconds,
 # return the offset of the end of the run from the current time
 def calculate_offset(start, duration):
     # check for proper inputs
@@ -83,7 +94,8 @@ def calculate_offset(start, duration):
     # calculate offset from current time by finding end time and subtracting now from end
     end = start + timedelta(seconds=duration)
     offset_delta = datetime.now() - end
-    offset = delta_to_time_str(offset_delta) #convert offset from timedelta to time string
+    # convert offset from timedelta to time string
+    offset = delta_to_time_str(offset_delta)
 
     return offset
 
@@ -96,3 +108,34 @@ def find_time_from_offset(end, offset):
     # return the start time
     return end-time_offset
 
+
+'''
+====================================
+            old function
+====================================
+# convert a time string into a datetime object
+def datetime_ify(time):
+    # handle if time is already of type pandas datetime or actual datetime
+    if isinstance(time, pd.Timestamp):
+        return time.to_pydatetime(warn=False)
+    if isinstance(time, datetime):
+        return time
+    
+    # handle if time is a float (seconds since the epoch: 01/01/1970)
+    if isinstance(time, float) or isinstance(time, int):
+        return datetime.fromtimestamp(time)
+
+    # get time as datetime object. Time format should be one of two patterns.
+    try:
+        # get time down to the second, no decimal seconds.
+        time = time[0:time.find(".")]
+        # get time as datetime
+        format_string = "%Y-%m-%d %H:%M:%S"
+        time = datetime.strptime(time, format_string)
+        return time
+    except ValueError:
+        # get start and stop as datetimes, then find the difference between them for the runtime
+        format_string = "%Y-%m-%dT%H:%M:%S"
+        time = datetime.strptime(time, format_string)
+        return time
+'''
