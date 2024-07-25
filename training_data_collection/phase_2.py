@@ -166,8 +166,9 @@ class Phase_2():
         Main Program
     ======================
     '''
-    # runs the whole phase. Returns True if successful, False otherwise
 
+
+    # runs the whole phase. Returns True if successful, False otherwise
     def run(self):
         success = False
         # get df from csv file

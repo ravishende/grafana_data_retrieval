@@ -38,7 +38,7 @@ new_run = True
 # if running into unexpected issues in phase 1 with paths and run uuids not matching up, try setting thorough_refresh to True. Otherwise, keep it False to not waste time regathering paths.
 thorough_refresh = False
 # if we're looking at helitack (nonstandard - dev) runs, set this to True, otherwise by default, set it to False
-is_helitack_run = True
+is_helitack_run = False
 
 '''
 ========================
@@ -51,9 +51,12 @@ display_new_run_prompt(new_run, thorough_refresh_status=thorough_refresh)
 is_helitack_run = prompt_helitack_status(is_helitack_run)
 
 # get instances of Phase classes. Each one has a run() method to run its phase
-p_1 = Phase_1(debug_mode=True)  # collecting runs and their inputs
-p_2 = Phase_2()  # preprocessing - calc runtime & area, insert duration cols.
-p_3 = Phase_3()  # querying performance metrics - totals and at pseudo-random times
+# collecting runs and their inputs
+p_1 = Phase_1(debug_mode=True)
+# preprocessing - calc runtime & area, insert duration cols.
+p_2 = Phase_2()
+# querying performance metrics - totals and at pseudo-random times
+p_3 = Phase_3()
 # finalizing data - cleaning, dropping, adding ratio columns, etc.
 p_4 = Phase_4(helitack_status=is_helitack_run)
 phases = [p_1, p_2, p_3, p_4]
@@ -66,7 +69,7 @@ for i, phase in enumerate(phases):
     if is_phase_finished(phase_number):
         # If all phases have already been completed give a message on setting new_run to True
         if phase_number == 4:
-            print("entire work flow has already been completed. Perhaps you would like a new run? If so, set new_run to be True.")
+            print("Entire work flow has already been completed. Perhaps you would like a new run? If so, set new_run to be True and run again.")
             break
         print(colored(
             f"\n\nPhase {phase_number} has already been completed. Moving on.", "green"))
