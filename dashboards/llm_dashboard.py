@@ -34,9 +34,7 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-# display settings
-get_graphs_as_single_df = False
-visualize_graphs = False
+# query settings
 filter_graphs_for_pod = False
 
 # optional filtering for pods with a given prefix
@@ -52,15 +50,6 @@ queries = {
     'Temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
     'Fan Speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}'
 }
-
-host = "node-2-3.sdsc.optiputer.net"
-# queries = {
-#     'GPU Utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-#     'Memory Copy Utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-#     'Power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-#     'Temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-#     'Fan Speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}'
-# }
 
 # get graphs class
 graphs_class = Graphs()
@@ -151,46 +140,3 @@ df['end'] = df['end'].apply(datetime_ify)
 
 queried_df = query_df(df)
 print(queried_df)
-# df = df.iloc[len(df)-5:]
-# df = df.apply(lambda row: query_row(row), axis=1)
-# print(df)
-
-'''
-================================================
-                Querying right now
-================================================
-'''
-'''
-# get dict containing all queried graphs
-graphs_dict = graphs_class.get_graphs_from_queries(
-    queries, sum_by=["namespace", "pod"])
-for title, graph in graphs_dict.items():
-    if graph is None:
-        continue
-
-    graph['Time'] = pd.to_datetime(graph['Time'])
-    # filtered_graph = graph[graph['Pod'].str.contains(POD_PREFIX)]
-    # # handle filtering (or not) for graphs that contain pod prefix
-    # if not filter_graphs_for_pod:
-    #     continue
-    # if (filter_graphs_for_pod is None) and (len(filtered_graph) == 0):
-    #     continue
-
-    # graph = filtered_graph
-    graphs_dict[title] = graph
-
-
-# logic for displaying graphs
-if not get_graphs_as_single_df:
-    # print multiple graphs
-    print_dataframe_dict(graphs_dict)
-else:
-    # print graphs as single dataframe
-    graphs_df = graphs_class.get_graphs_as_one_df(
-        graphs_dict, sum_by=["namespace", "pod"])
-    print(graphs_df)
-
-if visualize_graphs:
-    # display graphs in another window
-    display_graphs(graphs_dict, sum_by=["namespace", "pod"])
-'''
