@@ -5,7 +5,8 @@ from helpers_training_data_collection.resource_json_summation import update_colu
 
 
 class Phase_4():
-    def __init__(self, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS, helitack_status=False):
+    def __init__(self, output_several_dfs=False, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS, helitack_status=False):
+        self.output_several_dfs = output_several_dfs
         self.files = files
         self.drop_cols = ["start", "stop", "ensemble_uuid"]
         # metrics
@@ -115,6 +116,43 @@ class Phase_4():
 
         return df
 
+    # given a df, return the base columns, total columns, and t_i columns as 3 lists
+    def _get_split_cols(self, df):
+        base_cols = []
+        total_cols = []
+        # metric_t1 cols will be indexed at 0, metric_t2 cols indexed at 1, ...
+        t_i_cols = []
+        for i in range(self.num_duration_cols):
+            t_i_cols.append([])
+
+        # split columns into base cols, total cols, and t_i cols
+        for col in df.columns:
+            # total col
+            if col.endswith("_total"):
+                total_cols.append(col)
+                continue
+            # t_i col
+            for i in range(self.num_duration_cols):
+                if col.endswith(str(i+1)):
+                    t_i_cols[i].append(col)
+                    continue
+            # base col
+            base_cols.append(col)
+
+        return base_cols, total_cols, t_i_cols
+
+    # given a single df, split it up by duration metrics and save them
+    def split_and_save_dfs(self, df):
+        base_cols, total_cols, t_i_cols = self._get_split_cols(df)
+        folder_path = "csvs/output"
+
+        # save the whole df, a df with the totals cols, and dfs with t_i cols for each i
+        df.to_csv(f"{folder_path}/whole_output.csv")
+        df[base_cols + total_cols].to_csv(f"{folder_path}/output_total.csv")
+        for i in range(self.num_duration_cols):
+            t_i_df = df[base_cols + t_i_cols[i]]
+            t_i_df.to_csv(f"{folder_path}/output_t{i+1}.csv")
+
     '''
     ====================================
             Main Program
@@ -149,6 +187,9 @@ class Phase_4():
         # save df to a csv file
         final_df.to_csv(self.files['write'])
         print(final_df)
+
+        if self.output_several_dfs:
+            self.split_and_save_dfs(final_df)
 
         success = True
         return success
