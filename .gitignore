@@ -5,6 +5,8 @@ old/
 extras/.DS_Store
 helpers/__pycache__/
 data/remove_unnamed.py
+data/burn_unit_distr.py
+data/compare_contrast.py
 data/analysis/
 training_data_collection/txts/
 training_data_collection/csvs/
