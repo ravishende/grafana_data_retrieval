@@ -68,9 +68,8 @@ def _init_num_duration_cols():
     # return 0 if there is an error (no file setup) to avoid errors before resetting files
     return 0
 
+
 # initialize _col_names_by_time based on self._num_duration_cols and self._non_static_metrics
-
-
 def _init_col_names_by_time(_num_duration_cols, _non_static_metrics):
     col_names_by_time = []
     for i in range(1, _num_duration_cols+1):
