@@ -44,8 +44,8 @@ if filter_graphs_for_pod:
     filter_pod_str = f', pod=~"^{pod_prefix}.*"'
 
 queries = {
-    # 'GPU Utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
-    # 'Memory Copy Utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
+    'GPU Utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
+    'Memory Copy Utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
     'Power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
     'Temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
     'Fan Speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}'
