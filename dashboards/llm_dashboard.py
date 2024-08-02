@@ -44,8 +44,8 @@ if filter_graphs_for_pod:
     filter_pod_str = f', pod=~"^{pod_prefix}.*"'
 
 queries = {
-    'GPU Utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
-    'Memory Copy Utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
+    # 'GPU Utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
+    # 'Memory Copy Utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
     'Power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
     'Temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}',
     'Fan Speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node!=""' + filter_pod_str + '}'
@@ -59,8 +59,8 @@ graphs_class = Graphs()
                 Querying over time
 ================================================
 '''
-READ_FILE = "csvs/stress_tests.csv"
-SAVE_FILE = "csvs/queried_df.csv"
+READ_FILE = "csvs/queried2_df.csv"
+SAVE_FILE = "csvs/queried3_df.csv"
 
 
 # get the queried df from the save file, or an empty df otherwise
@@ -82,7 +82,7 @@ def query_row(row):
             row[f'Max {title}'] = df[title].max()
             row[f'Min {title}'] = df[title].min()
             row[f'Standard Deviation {title}'] = df[title].std()
-            return row
+            continue
 
         row[f'Average {title}'] = None
         row[f'Max {title}'] = None
