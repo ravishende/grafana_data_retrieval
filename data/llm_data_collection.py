@@ -12,19 +12,6 @@ from graphs import Graphs
 from helpers.time_functions import datetime_ify
 # autopep8: on
 
-'''
-==========================================================================================
-TODO:
-Fan Speed doesn't seem to be tracked by the pod on our ndp namespace. All of the other 
-queries work, but when you specify the same pod prefix for the fan speed, there are no
-results. However, if you specify any pod, there are many many results.
-To verify if this is true, first find the Node that corresponds to this pod
-    pod name: "fc-worker-1-64dbc56b5c-qnqpk"
-    node name = ?
-Then use that as the Host in the following Grafana dashbaord
-    Grafana dashboard: https://grafana.nrp-nautilus.io/d/Tf9PkuSik/k8s-nvidia-gpu-node?orgId=1&refresh=15m&from=now-3h&to=now&var-interval=1m&var-host=fc-worker-1-64dbc56b5c-qnqpk
-==========================================================================================
-'''
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -51,19 +38,16 @@ queries = {
 # get graphs class
 graphs_class = Graphs()
 
-'''
-================================================
-                Querying over time
-================================================
-'''
-READ_FILE = "csvs/queried2_df.csv"
-SAVE_FILE = "csvs/queried3_df.csv"
+# constants
+READ_FILE = "llm/stress_tests.csv"
+QUERIED_SAVE_FILE = "llm/queried_df.csv"
+FINAL_SAVE_FILE = "llm/llm_data.csv"
 
 
 # get the queried df from the save file, or an empty df otherwise
 def _get_queried_df():
-    if os.path.exists(SAVE_FILE):
-        return pd.read_csv(SAVE_FILE)
+    if os.path.exists(QUERIED_SAVE_FILE):
+        return pd.read_csv(QUERIED_SAVE_FILE)
     return pd.DataFrame()
 
 
@@ -123,17 +107,34 @@ def query_df(df, batch_size=100, track_batch_times=True):
         queried_chunk = query_chunk(df_chunk, track_time=track_batch_times)
         queried_df = pd.concat([queried_df, queried_chunk], ignore_index=True)
         queried_rows += len(queried_chunk)
-        queried_df.to_csv(SAVE_FILE)
+        queried_df.to_csv(QUERIED_SAVE_FILE)
 
     return queried_df
 
 
-df = pd.read_csv(READ_FILE, index_col=0)
+# given a column, rename it to remove spaces, make lowercase, and shorten words
+def rename_col(column):
+    column = column.lower()
+    column = column.replace(" ", "_")
+    column = column.replace("memory", "mem")
+    column = column.replace("standard deviation", "std")
+    column = column.replace("average", "avg")
+    return column
 
 
+df = pd.read_csv(READ_FILE)
 # get times back to datetimes from strings
 df['start'] = df['start'].apply(datetime_ify)
 df['end'] = df['end'].apply(datetime_ify)
 
+# querying - takes a while
 queried_df = query_df(df)
-print(queried_df)
+
+# take a queried dataframe and get it ready for machine learning
+rename_dict = {col: rename_col(col) for col in queried_df.columns}
+final_df = queried_df.rename(columns=rename_dict)
+final_df = final_df.drop(columns=['start', 'end', 'question_method',
+                                  'pdf_pages', 'pdf_load_time'])
+
+final_df.to_csv(FINAL_SAVE_FILE)
+print(final_df)
