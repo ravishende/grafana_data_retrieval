@@ -1,25 +1,29 @@
 import pandas as pd
 from workflow_files import PHASE_4_FILES
-from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES, ID_COLS
+from metrics_and_columns_setup import GET_METRICS, GET_DURATION_COLS, GET_COL_NAMES, GET_ID_COLS
 from helpers_training_data_collection.resource_json_summation import update_columns, insert_percent_cols, set_helitack_status
 
 
 class Phase_4():
-    def __init__(self, output_several_dfs=False, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS, helitack_status=False):
+    def __init__(self, output_several_dfs=False, files=PHASE_4_FILES, helitack_status=False):
         self.output_several_dfs = output_several_dfs
         self.files = files
         # id columns (for updating queried cols)
+        id_cols = GET_ID_COLS()
         self.ensemble_col = id_cols["ensemble"]
         # drop columns
         self.drop_cols = ["start", "stop", self.ensemble_col]
         # duration columns
+        duration_cols = GET_DURATION_COLS()
         self.num_duration_cols = duration_cols["num_cols"]
         self.duration_col_names = duration_cols["col_names"]
         self.duration_col_total = duration_cols["total_col"]
         # column names
+        col_names = GET_COL_NAMES()
         self.col_names_by_time = col_names["by_time"]
         self.all_col_names = col_names["all"]
         # metrics
+        metrics = GET_METRICS()
         self.static_metrics = metrics["static"]
 
         # handle improper input (non boolean)

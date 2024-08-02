@@ -6,7 +6,7 @@ import ast
 import random
 from datetime import datetime
 from workflow_files import PHASE_2_FILES
-from metrics_and_columns_setup import DURATION_COLS
+from metrics_and_columns_setup import GET_DURATION_COLS
 import sys
 import os
 # Adjust the path to go up one level
@@ -24,9 +24,9 @@ pd.set_option('display.width', terminal_width)
 
 
 class Phase_2():
-    def __init__(self, files=PHASE_2_FILES, duration_cols=DURATION_COLS):
+    def __init__(self, files=PHASE_2_FILES):
         self.files = files
-        self.num_duration_cols = duration_cols['num_cols']
+        self.num_duration_cols = GET_DURATION_COLS()['num_cols']
         self.drop_cols = [
             "path",
             "extent"
@@ -155,7 +155,7 @@ class Phase_2():
                 if insert_method >= num_insert_methods:
                     insert_method = num_insert_methods - 1
             # assemble the duration_title
-            duration_title = "duration_t" + str(insert_method + 1)
+            duration_title = "duration_t" + str(i + 1)
             # insert the duration column into the df
             df = self._insert_rand_refresh_col(
                 df, duration_title, method=insert_method)
@@ -166,7 +166,6 @@ class Phase_2():
         Main Program
     ======================
     '''
-
 
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self):

@@ -1,10 +1,9 @@
-from distutils.command.build_scripts import first_line_re
 import math
 import shutil
 import pandas as pd
 from termcolor import colored
 from workflow_files import PHASE_3_FILES
-from metrics_and_columns_setup import METRICS, DURATION_COLS, COL_NAMES
+from metrics_and_columns_setup import GET_METRICS, GET_DURATION_COLS, GET_COL_NAMES
 from helpers_training_data_collection.query_resources import query_and_insert_columns, set_verbose
 
 # display settings
@@ -14,18 +13,21 @@ pd.set_option('display.width', terminal_width)
 
 
 class Phase_3():
-    def __init__(self, verbose=True, files=PHASE_3_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES):
+    def __init__(self, verbose=True, files=PHASE_3_FILES):
         self.verbose = verbose
         self.files = files
         # metrics (to be queried)
+        metrics = GET_METRICS()
         self.all_metrics = metrics["all"]
         self.static_metrics = metrics["static"]
         self.non_static_metrics = metrics["non_static"]
         # duration columns (for querying)
+        duration_cols = GET_DURATION_COLS()
         self.num_duration_cols = duration_cols["num_cols"]
         self.duration_col_names = duration_cols["col_names"]
         self.duration_col_total = duration_cols["total_col"]
         # column names (for queried results)
+        col_names = GET_COL_NAMES()
         self.col_names_static = col_names["static"]
         self.col_names_total = col_names["totals"]
         self.col_names_by_time = col_names["by_time"]

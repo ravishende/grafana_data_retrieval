@@ -233,8 +233,9 @@ def prompt_set_num_duration_cols():
     # if they hit Enter, continue with default num duration cols
     if response == "":
         set_num_duration_cols(default_num_duration_cols)
+        return
     # if they requested more info, give it, and rerun function
-    elif response in ["i", "'i'", "info"]:
+    if response in ["i", "'i'", "info"]:
         print("\n\n", more_info_message, "\n\n", sep="")
         prompt_set_num_duration_cols()
     # Assume they input a number. If not, invalid input is handled in set_num_duration_cols

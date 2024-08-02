@@ -1,10 +1,11 @@
 # autopep8: off
+from multiprocessing.sharedctypes import Value
 import pandas as pd
 from ast import literal_eval
 from termcolor import colored
 from uuid import UUID
 import shutil
-from metrics_and_columns_setup import DURATION_COLS
+from metrics_and_columns_setup import GET_DURATION_COLS
 from workflow_files import PHASE_1_FILES
 import sys
 import os
@@ -25,8 +26,8 @@ of the training data with an included ensemble_id column.
 This file assumes there is already a column called 'ensemble'
 that contains the ensemble that each run is a part of.
 '''
-
-NUM_INSERTED_DURATION_COLS = DURATION_COLS['num_cols']
+def GET_NUM_INSERTED_DURATION_COLS():
+    return GET_DURATION_COLS()['num_cols']
 ENSEMBLE_RUN_FILE = PHASE_1_FILES['read']
 IS_HELITACK = False # runs that are done through the dev that have non default hardware settings
 
@@ -46,7 +47,9 @@ def set_helitack_status(helitack_status=False):
 # given a list of metrics, return a new list that has _total, _t1, and _t2 appended to each metric
 # to create a new list that is 3 times the size of metrics_list
 def get_columns_from_metrics(
-    metric_list, num_inserted_duration_cols=NUM_INSERTED_DURATION_COLS, include_total=True):
+    metric_list, num_inserted_duration_cols=None, include_total=True):
+    if num_inserted_duration_cols is None:
+        num_inserted_duration_cols = GET_NUM_INSERTED_DURATION_COLS()
     summary_columns = []
     for name in metric_list:
         # get total duration column names
@@ -71,7 +74,10 @@ def get_columns_from_metrics(
         # percent columns are formed by: 
         # get a columns list from each of the three input metric lists (by adding _total, _t1, and _t2 to each metric name)
         # insert the percent columns into the dataframe as 100 * numerator columns / denominator columns
-def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics, static_metrics, num_inserted_duration_cols=NUM_INSERTED_DURATION_COLS):
+def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics, static_metrics, num_inserted_duration_cols=None):
+    if num_inserted_duration_cols is None:
+        num_inserted_duration_cols = GET_NUM_INSERTED_DURATION_COLS()
+
     # make sure that all metrics lists are the same size
     if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
         raise ValueError("percent_metrics, numerator_metrics, denominator_metrics must all be the same length")
@@ -79,7 +85,10 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
     # make sure num_duration_cols isn't out of bounds and duration columns are named correctly.
     if num_inserted_duration_cols > 0:
         final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
-        assert(isinstance(final_duration_col[0], int) or isinstance(final_duration_col[0], float))
+        try:
+            final_duration_col = final_duration_col.astype(int)
+        except:
+            raise ValueError(f"Expected final duration column to be numeric, but was type {type(final_duration_col[0])}")
 
     # get columns lists by adding _total, and _t1, _t2, etc. to each metric in each metric_list in percent_metrics_format. If num_inserted_duration_cols==0, it will just be _total metrics
     percent_col_names = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols, include_total=False)
