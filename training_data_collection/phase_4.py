@@ -8,9 +8,10 @@ class Phase_4():
     def __init__(self, output_several_dfs=False, files=PHASE_4_FILES, metrics=METRICS, duration_cols=DURATION_COLS, col_names=COL_NAMES, id_cols=ID_COLS, helitack_status=False):
         self.output_several_dfs = output_several_dfs
         self.files = files
-        self.drop_cols = ["start", "stop", "ensemble_uuid"]
-        # metrics
-        self.static_metrics = metrics["static"]
+        # id columns (for updating queried cols)
+        self.ensemble_col = id_cols["ensemble"]
+        # drop columns
+        self.drop_cols = ["start", "stop", self.ensemble_col]
         # duration columns
         self.num_duration_cols = duration_cols["num_cols"]
         self.duration_col_names = duration_cols["col_names"]
@@ -18,8 +19,8 @@ class Phase_4():
         # column names
         self.col_names_by_time = col_names["by_time"]
         self.all_col_names = col_names["all"]
-        # id columns (for updating queried cols)
-        self.ensemble_col = id_cols["ensemble"]
+        # metrics
+        self.static_metrics = metrics["static"]
 
         # handle improper input (non boolean)
         if helitack_status != True and helitack_status != False:
