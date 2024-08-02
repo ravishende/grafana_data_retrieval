@@ -19,7 +19,6 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 # autopep8: on
 
 # Settings - You can edit these, especially NUM_ROWS, which is how many rows to generate per run
-# Note: read file and write file should be the same once the write file has some data.
 NUM_ROWS = 10
 NAMESPACE = 'wifire-quicfire'
 
@@ -30,9 +29,7 @@ pd.set_option('display.width', terminal_width)
 
 
 '''
------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
 This file reads in a csv which contains all the training data from Devin's inputs as well as columns
 for cpu_total, cpu_t1, cpu_t2, mem_total, mem_t1, and mem_t2 usage for the run. Running this appends NUM_ROWS values 
 for those 6 columns to what has already been queried for, filling out more and 
@@ -40,9 +37,7 @@ more of the datapoints. This can be edited in the main program portion of the fi
 usage up until a certain duration. The only requirement is adding that new duration column.
 
 All that needs to be done is select NUM_ROWS to be the value you would like and then run the file.
------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
 '''
 
 # Internal Global Variables. Do not edit.
@@ -67,15 +62,15 @@ VERBOSE = True
 # Receive Bandwidth
 # Transmit Bandwidth
 
-# static
+# static metrics
 # 'CPU Requests': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests',
 # 'Memory Requests': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests',
-# increase
+# increase metrics
 # 'Current Receive Bandwidth': 'container_network_receive_bytes_total',
 # 'Current Transmit Bandwidth': 'container_network_transmit_bytes_total',
 # 'Rate of Received Packets': 'container_network_receive_packets_total',
 # 'Rate of Transmitted Packets': 'container_network_transmit_packets_total',
-# calculated
+# calculated metrics
 # cpu/mem request percentages (t1, t2, total)
 
 
@@ -92,20 +87,19 @@ def set_verbose(active):
         VERBOSE = False
 
 
+# given a metric ("cpu" or "memory"), a start time (datetime), duration_seconds (int), and optional requery (bool)
+# get the
 def get_static_query_suffix(metric, start, duration_seconds, requery=False):
     # static metrics only need to be requested for one datapoint
     if requery:
-        # query at the beginning of the run (10 seconds in)
+        # query at halfway through the run
         offset = calculate_offset(start, duration_seconds//2)
     else:
-        # query at halfway through the run
+        # query at the beginning of the run (10 seconds in)
         offset = calculate_offset(start, 10)
 
     suffixes = {
-        # set resource to cpu and multiply by duration seconds to get metric from measuring cpu cores to cpu seconds
-        # ex: cpu_usage is measured in cpu seconds, so to make the cpu requests % (cpu_usage/cpu_requests) accurate, they both have to be in the same units.
         'cpu': '{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')',
-        # set resource to memory. It is already in the preferred unit of bytes
         'mem': '{resource="memory", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')'
     }
 
@@ -120,28 +114,24 @@ def get_static_query_suffix(metric, start, duration_seconds, requery=False):
 def get_resource_query(metric, start, duration_seconds, is_static_metric, requery=False):
     # all resources and the heart of their queries
     query_bodies = {
-        # increase metric
-        "cpu_usage": "increase(container_cpu_usage_seconds_total",
         # max over time metric
         "mem_usage": "max_over_time(container_memory_working_set_bytes",
-        "cpu_request": "cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests",  # static metric
-        "mem_request": "cluster:namespace:pod_memory:active:kube_pod_container_resource_requests",  # static metric
-        # increase metric
+        # static metrics
+        "cpu_request": "cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests",
+        "mem_request": "cluster:namespace:pod_memory:active:kube_pod_container_resource_requests",
+        # increase metrics
+        "cpu_usage": "increase(container_cpu_usage_seconds_total",
         "transmitted_packets": "increase(container_network_transmit_packets_total",
-        # increase metric
         "received_packets": "increase(container_network_receive_packets_total",
-        # increase metric
         "transmitted_bandwidth": "increase(container_network_transmit_bytes_total",
-        # increase metric
         "received_bandwidth": "increase(container_network_receive_bytes_total"
     }
 
     # check proper user inputs
-    # make sure user input metric is in known resources
     metrics = query_bodies.keys()
     if metric not in metrics:
         raise ValueError(
-            f'query metric "{metric}" must be within one of the following metrics:\n{metric}')
+            f'query metric "{metric}" must be within one of the following metrics:\n{metrics}')
     # can only requery static metrics
     if requery and not is_static_metric:
         raise ValueError(
@@ -169,7 +159,6 @@ def get_resource_query(metric, start, duration_seconds, is_static_metric, requer
 # (Also takes in row_index and n_rows for printing purposes)
 # return the queried data of that metric over the duration of the run
 def query_resource(metric, start, duration_seconds, row_index, n_rows):
-    # determine if the metric is static or not
     is_static_metric = (metric in STATIC_METRICS)
 
     # query for data
@@ -192,13 +181,12 @@ def query_resource(metric, start, duration_seconds, row_index, n_rows):
             metric, start, duration_seconds, is_static_metric, requery=True)
         resource_data = query_data(query)
 
-    # progress for phase 3 when not verbose
+    # When not verbose, print a '.' that, when done several times, gives a progress bar
     if not VERBOSE:
         print(".", end="")
-        # make sure it prints immediately rather than once a apply is finished
+        # make sure it prints immediately rather than once an apply is finished
         sys.stdout.flush()
 
-    # return queried data
     return resource_data
 
 
@@ -245,7 +233,7 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
     start_row = df[insert_col].isna().idxmax()
     end_row = start_row + n_rows - 1
 
-    # make sure you don't try to query past the end of the dataframe
+    # don't try to query past the end of the dataframe
     last_index = len(df) - 1
     if (end_row > last_index):
         end_row = last_index
@@ -254,7 +242,7 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
             print(colored(
                 "\n\nEnd row is greater than last index. Only generating to last index.", "yellow"))
 
-    # if no na values, there is nothing to generate.
+    # if no NA values, there is nothing to generate.
     if start_row == 0 and df[insert_col][0]:
         print(colored("\n\nNo NA rows", "yellow"))
         return df
@@ -295,12 +283,13 @@ def query_and_insert_columns(df, query_metrics_list, col_names_list, duration_co
     if VERBOSE:
         message = f"Inserting Columns for Duration Column: {duration_col}"
         print_heading(message)
-    # loop over query_metrics_list and col_names_list, adding a
+
+    # query and add in columns
     for metric, name in zip(query_metrics_list, col_names_list):
         df = insert_column(df, metric, name, duration_col, n_rows)
-        # print a dot for each succesfully updated col
+        # print symbol for each succesfully updated col - if VERBOSE, there would be words printed
         if not VERBOSE:
-            print(colored(".", "green"), end="")
+            print(colored("|", "green"), end="")
             # make sure it prints immediately rather than once a df.apply is finished
             sys.stdout.flush()
     print("")
