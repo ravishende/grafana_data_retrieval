@@ -5,7 +5,7 @@ from phase_1 import Phase_1
 from phase_2 import Phase_2
 from phase_3 import Phase_3
 from phase_4 import Phase_4
-from training_data_collection.work_flow_functions import prompt_helitack_status
+from metrics_and_columns_setup import include_all_totals_metrics
 from work_flow_functions import is_phase_finished, set_phase_finished, display_new_run_prompt, prompt_helitack_status
 
 # display settings
@@ -39,13 +39,15 @@ new_run = True
 thorough_refresh = False
 # if we're looking at helitack (nonstandard - dev) runs, set this to True, otherwise by default, set it to False
 is_helitack_run = False
+# if the "..._total" columns should be more than just cpu_usage and mem_usage
+all_totals_included = True
 
 '''
 ========================
     Main Program
 ========================
 '''
-
+include_all_totals_metrics(all_totals_included)
 # handle what to do if there is a new run
 display_new_run_prompt(new_run, thorough_refresh_status=thorough_refresh)
 is_helitack_run = prompt_helitack_status(is_helitack_run)

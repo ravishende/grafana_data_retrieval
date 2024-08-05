@@ -41,6 +41,8 @@ def _init_col_names_by_time(_num_duration_cols, _non_static_metrics):
     return col_names_by_time
 
 
+_INCLUDE_ALL_TOTALS_METRICS = True
+
 '''
 ========================
     Public Functions
@@ -48,9 +50,18 @@ def _init_col_names_by_time(_num_duration_cols, _non_static_metrics):
 '''
 
 
+def include_all_totals_metrics(status=True):
+    if not isinstance(status, bool):
+        raise ValueError(
+            f"status ({status}) must be of type bool but was type {type(status)}.")
+    global _INCLUDE_ALL_TOTALS_METRICS
+    _INCLUDE_ALL_TOTALS_METRICS = status
+
 # Set the number of partial duration columns (e.g. 2 goes up to duration_t2)
 # Note: do not run this between phase 3 and 4,
 # since they require the same amount of duation columns to be defined
+
+
 def set_num_duration_cols(num, suppress_warning=False):
     # make sure input is an int or convertible to an int
     if not type(num) == int:
@@ -104,10 +115,16 @@ def GET_METRICS():
     non_static_metrics = [
         metric for metric in all_metrics if metric not in static_metrics]
 
+    totals_metrics = []
+    if _INCLUDE_ALL_TOTALS_METRICS:
+        totals_metrics = non_static_metrics
+    else:
+        totals_metrics = ['cpu_usage', 'mem_usage']
     metrics_dict = {
         "all": all_metrics,
         "static": static_metrics,
-        "non_static": non_static_metrics
+        "non_static": non_static_metrics,
+        "totals": totals_metrics
     }
     return metrics_dict
 
@@ -137,9 +154,7 @@ def GET_COL_NAMES():
     num_duration_cols = GET_DURATION_COLS()['num_cols']
     # column names
     static_col_names = metrics['static']
-    # If total columns should(n't) include nonstatic metrics like received_packets, switch the _totals_col_names definition
-    totals_col_names = [name + "_total" for name in metrics['non_static']]
-    # _totals_col_names = [name + "_total" for name in metrics['static']]
+    totals_col_names = [name + "_total" for name in metrics['totals']]
     col_names_by_time = _init_col_names_by_time(
         num_duration_cols, metrics['non_static'])
     all_col_names = static_col_names + totals_col_names + col_names_by_time

@@ -21,6 +21,7 @@ class Phase_3():
         self.all_metrics = metrics["all"]
         self.static_metrics = metrics["static"]
         self.non_static_metrics = metrics["non_static"]
+        self.totals_metrics = metrics["totals"]
         # duration columns (for querying)
         duration_cols = GET_DURATION_COLS()
         self.num_duration_cols = duration_cols["num_cols"]
@@ -110,7 +111,7 @@ class Phase_3():
                     # ^^ duration_col_names is a list that starts at index 0, but duration columns are named duration_t1 through duration_tn, so we loop from i = 1...n, but index at i-1
             # query and insert total columns
             df = query_and_insert_columns(
-                df, self.non_static_metrics, self.col_names_total, self.duration_col_total, batch_size)
+                df, self.totals_metrics, self.col_names_total, self.duration_col_total, batch_size)
             # save batch of partial querying progress
             batch_number += 1
             df.to_csv(self.files['query_progress'])
