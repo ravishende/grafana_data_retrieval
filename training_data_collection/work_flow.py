@@ -54,12 +54,12 @@ is_helitack_run = prompt_helitack_status(is_helitack_run)
 
 # Get instances of Phase classes. Each one has a run() method to run its phase
 # Phase 1 - collecting runs and their inputs
-p_1 = Phase_1(debug_mode=True)
-# Phase 2 - preprocessing - calc runtime & area, insert duration cols.
+p_1 = Phase_1()
+# Phase 2 - preprocessing - calculate runtime & area, insert duration cols.
 p_2 = Phase_2()
 # Phase 3 - querying performance metrics - totals and at pseudo-random times
 p_3 = Phase_3()
-# Phase 4 - finalizing data - cleaning, dropping, adding ratio columns, etc.
+# Phase 4 - finalizing data - cleaning, dropping columns, adding ratio columns, etc.
 p_4 = Phase_4(helitack_status=is_helitack_run)
 phases = [p_1, p_2, p_3, p_4]
 
