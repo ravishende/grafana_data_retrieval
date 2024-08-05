@@ -248,7 +248,7 @@ def display_new_run_prompt(new_run, thorough_refresh_status=False):
     if new_run:
         # ask user if they meant to start a new run or continue an old one
         new_run_message = "\
-            \nATTENTION: new_run is set to True. This means that all phases' progress will be reset.\
+            \nATTENTION: new_run is set to True. This means all phases' progress will be reset.\
             \nEverything except paths in phase_1 will have to be regathered.\
             \nAre you sure you want to continue?"
         print(colored(new_run_message, "red"))
