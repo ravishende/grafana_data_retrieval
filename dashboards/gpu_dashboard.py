@@ -29,7 +29,7 @@ terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
 # inputs and settings
-namespace = "csusb-chaseci"
+namespace = "ndp-test"
 # namespace = "bvl"  # namespace that often has data - for testing
 # for graphs:
 time_range = "1h"  # the amount of time that the graph will have data for
