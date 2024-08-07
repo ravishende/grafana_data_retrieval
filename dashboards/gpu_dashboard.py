@@ -25,12 +25,11 @@ https://grafana.nrp-nautilus.io/d/dRG9q0Ymz/k8s-compute-resources-namespace-gpus
 
 # display settings
 pd.set_option("display.max_columns", None)
-pd.set_option("display.max_rows", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
 # inputs and settings
-namespace = "ndp-test"
+namespace = "csusb-chaseci"
 # namespace = "bvl"  # namespace that often has data - for testing
 # for graphs:
 time_range = "1h"  # the amount of time that the graph will have data for
@@ -41,24 +40,21 @@ get_graphs_as_single_df = False
 visualize_graphs = False
 
 
-def combine_dataframes_on_pod(df1, df2):
-    # concatenate the dataframes along the columns axis
-    combined_df = pd.concat([df1, df2], axis=1)
-    # drop one of the duplicate 'Pod' columns
-    if 'Pod' in combined_df.columns:
-        combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
-    return combined_df
-
-
 def get_datapoint(query):
     result_list = query_data(query)
     if len(result_list) > 0:
-        return result_list['value']
+        data_values = []
+        for item in result_list:
+            value = float(item['value'][1])
+            data_values.append(round(value, 2))
+        if len(data_values) == 1:
+            return data_values[0]
+        return data_values
     return None
 
 
 # single cell query
-current_gpu_usage_query = 'sum(cDCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + \
+current_gpu_usage_query = 'sum(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + \
     '"})/count(DCGM_FI_DEV_GPU_UTIL{namespace=~"' + namespace + '"})'
 # graph queries
 graph_queries_no_sum = {
@@ -94,7 +90,7 @@ graphs_dict_by_pod = graphs_class.get_graphs_from_queries(
     graph_queries_by_pod, sum_by='pod')
 
 # since the Panel Title table has two different sum_by's, it has to be combined from two tables
-table_final = combine_dataframes_on_pod(table_2, table_1)
+table_final = pd.merge(table_2, table_1, on='Pod', how='outer')
 table_dict = {"Panel Title": table_final}
 
 # display Current GPU Usage cell
