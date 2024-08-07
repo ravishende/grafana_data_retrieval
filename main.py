@@ -36,11 +36,12 @@ graphs = result_dict['graphs']
 losses_and_requeried_graphs = \
     check_graphs_losses(
         graphs=graphs,  # if this is not passed in, it will be regenerated. This may take time
+        drop_threshold=5,  # minimum dip to 0 for some value change to be considered a drop
         print_info=False,  # prints information on pods dropped/recovered
         # requeries pods dropped/recovered at higher resolution if True, doesn't if False.
         # When None, prompts user if it should requery after collecting info
         requery=None,
-        # displays in the terminal how long each query and graph creation takes
+        # displays how long each query and graph creation takes
         show_runtimes=False,
         # displays time in readable format instead of seconds since epoch (01/01/1970)
         display_time_as_datetime=True

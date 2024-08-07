@@ -99,7 +99,7 @@ def print_all_data(data_dict=None):
 
 
 # get information on dropped/recovered pods and requery if requested. Then return a dict of 'losses' (dropped/recovered pods) and 'requeried' graphs
-def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=False, display_time_as_datetime=False):
+def check_graphs_losses(graphs, drop_threshold=0, print_info=True, requery=None, show_runtimes=False, display_time_as_datetime=False):
     # check for if graphs was input as single dataframe instead of graph
     if isinstance(graphs, pd.DataFrame):
         # check if there is data in the dataframe
@@ -111,7 +111,7 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
 
     # get losses
     graphs_losses_dict = graphs_class.check_for_losses(
-        graphs, print_info=print_info)
+        graphs, drop_threshold=drop_threshold, print_info=print_info)
     if all(value is None for value in graphs_losses_dict.values()):
         print(colored("No pods were dropped, so no need for requerying.", "green"), "\n\n")
         return {"Losses": None, "requeried": None}

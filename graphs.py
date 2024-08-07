@@ -22,7 +22,7 @@ class Graphs():
         self.requery_step_divisor = requery_step_divisor
 
         # dict storing titles and their queries.
-        self.queries = {  # Note: Do not change the white space in 'sum by(node, pod) ' because _update_query_for_requery() relies on it
+        self.queries = {
             'CPU Usage': 'sum by(node, pod) (irate(node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'Memory Usage (w/o cache)': 'sum by(node, pod) (irate(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""}[' + self.duration + ']))',
             'Receive Bandwidth': 'sum by(node, pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
@@ -33,11 +33,11 @@ class Graphs():
             'Rate of Transmitted Packets Dropped': 'sum by(node, pod) (irate(container_network_transmit_packets_dropped_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
         }
         self.partial_queries = {
-            # These two graphs need 2 queries each to calculate them.
+            # These graphs need 2 queries each to calculate them.
             # It didn't work to get everything with one query
             'IOPS(Read+Write)': [
                 'ceil(sum by(node, pod) (rate(container_fs_reads_total{container!="", namespace="' +
-                self.namespace + '"}[' + self.duration + ']) + ))',
+                self.namespace + '"}[' + self.duration + '])))',
                 'ceil(sum by(node, pod) (rate(container_fs_writes_total{container!="", namespace="' +
                 self.namespace + '"}[' + self.duration + '])))'
             ],
@@ -326,56 +326,118 @@ class Graphs():
 
         return updated_query
 
+    def _print_pod_losses(self, graph_title, pods_dropped, pods_recovered):
+        print_sub_title(graph_title)
+        # Print Info for Pods Dropped: pod, previous value, time of last value, time dropped,
+        print(colored(
+            "Pods Dropped || Previous Value || Time of Previous Value || Time Dropped", "green"))
+        for pod in pods_dropped:
+            print(
+                f'{pod["pod"]} || {round(pod["prev_val"],3)} || {pod["start"]} || {pod["end"]}')
+
+        if len(pods_recovered) > 0:
+            # Print Info for Pods Recovered: pod, value, time of last 0, time recovered
+            print(colored(
+                "\nPods Recovered || Recovered Value || Time of Previous 0 || Time Recovered", "green"))
+            for pod in pods_recovered:
+                print(
+                    f'{pod["pod"]} || {round(pod["val"],3)} || {pod["start"]} || {pod["end"]}')
+
+    # if drop_threshold > 0: only include drops if the drop is greater than the drop threshold
     # returns a dictionary containing potential pod drops and recoveries in the form:
-    # {'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, {...}, ...],
+    # {'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev_val':float}, {...}, ...],
     #  'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]}
     # returns none if no losses
-    def _check_graph_loss(self, graph_title, graph_df, print_info=False):
-        previous_value = 0
-        previous_pod = None
-
+    def _check_graph_loss(self, graph_title, graph_df, drop_threshold=0, print_info=False):
+        if drop_threshold < 0:
+            raise ValueError(
+                "drop_threshold must be greater than or equal to 0.")
         # data to return
         pods_dropped = []
         pods_recovered = []
-
-        # loop through looking for lost and/or recovered pods
-        for index in range(len(graph_df)):
-            # store new pod and value
+        pods_dropped_indices_by_name = {}
+        pods_recovered_indices_by_name = {}
+        # loop through looking for lost and/or recovered pods - start at index 1 because at 0 there was nothing to have dropped/recovered
+        for index in range(1, len(graph_df)):
+            # get current and previous pod info
             current_value = graph_df[graph_title][index]
-            current_pod = graph_df["Pod"][index]
+            current_time = graph_df['Time'][index]
+            current_pod = graph_df['Pod'][index]
+            previous_value = graph_df[graph_title][index-1]
+            previous_time = graph_df['Time'][index-1]
+            previous_pod = graph_df['Pod'][index-1]
 
-            # when switching between pods, it doesn't matter if values change
+            # only check pods dropped/recovered between the same pods
             if previous_pod != current_pod:
                 previous_value = current_value
                 previous_pod = current_pod
                 continue
 
             # pod dropped: was nonzero, now is zero
-            if previous_value != 0 and current_value == 0:
+            if previous_value > 0 and current_value == 0:
+                # check if drop is big enough to record
+                if previous_value < drop_threshold:
+                    continue
+
                 drop = {
                     'pod': current_pod,
-                    'start': graph_df['Time'][index-1],
-                    'end': graph_df['Time'][index],
-                    'prev val': previous_value
+                    'start': previous_time,
+                    'end': current_time,
+                    'prev_val': previous_value
                 }
                 pods_dropped.append(drop)
+                pod_dropped_index = len(pods_dropped) - 1
+                # save the name and index of the pod dropped for quick lookup
+                if current_pod in pods_dropped_indices_by_name.keys():
+                    pods_dropped_indices_by_name[current_pod].append(
+                        pod_dropped_index)
+                else:
+                    pods_dropped_indices_by_name[current_pod] = [
+                        pod_dropped_index]
+                continue
+
+            # pod not dropped or recovered
+            if not (previous_value == 0 and current_value != 0):
+                continue
 
             # pod recovered: was zero, now is nonzero
-            if previous_value == 0 and current_value != 0:
-                # check that pod was dropped in order for it to be recovered
-                if any(pod_dict['pod'] == current_pod for pod_dict in pods_dropped):
-                    recovery = {
-                        'pod': current_pod,
-                        'start': graph_df['Time'][index-1],
-                        'end': graph_df['Time'][index],
-                        'val': current_value
-                    }
-                    pods_recovered.append(recovery)
+            # check that pod was dropped in order for it to be recovered
+            if current_pod not in pods_dropped_indices_by_name.keys():
+                continue
 
-            # update previous pod and value for next iteration
-            previous_value = current_value
-            previous_pod = current_pod
+            # check that pod has been recovered fewer times than dropped
+            dropped_pod_indices = pods_dropped_indices_by_name[current_pod]
+            recovered_pod_indices = []
+            if current_pod in pods_recovered_indices_by_name.keys():
+                recovered_pod_indices = pods_recovered_indices_by_name[current_pod]
+            if len(recovered_pod_indices) >= len(dropped_pod_indices):
+                continue
 
+            # get the pod drop corresponding to this recovery
+            dropped_pod_index = dropped_pod_indices[len(
+                recovered_pod_indices)]
+            dropped_pod = pods_dropped[dropped_pod_index]
+            # check that recovery isn't before drop
+            time_down = current_time - dropped_pod['end']
+            if time_down.total_seconds() <= 0:
+                continue
+
+            # save this pod recovery
+            recovery = {
+                'pod': current_pod,
+                'start': previous_time,
+                'end': current_time,
+                'val': current_value
+            }
+            pods_recovered.append(recovery)
+            pod_recovered_index = len(pods_recovered) - 1
+            # save the name and index of the pod recovery for quick lookup
+            if len(recovered_pod_indices) > 0:
+                pods_recovered_indices_by_name[current_pod].append(
+                    pod_recovered_index)
+            else:
+                pods_recovered_indices_by_name[current_pod] = [
+                    pod_recovered_index]
         # once pod loss info is collected, check if there are any drops
         # cannot have recoverd pods if none were dropped.
         # if both dropped and recovered are empty, return None
@@ -384,21 +446,7 @@ class Graphs():
 
         # print collected statistics
         if print_info and len(pods_dropped) > 0:
-            print_sub_title(graph_title)
-            # Print Info for Pods Dropped: pod, previous value, time of last value, time dropped,
-            print(colored(
-                "Pods Dropped || Previous Value || Time of Previous Value || Time Dropped", "green"))
-            for pod in pods_dropped:
-                print(
-                    f'{pod["pod"]} || {round(pod["prev val"],3)} || {pod["start"]} || {pod["end"]}')
-
-            if len(pods_recovered) > 0:
-                # Print Info for Pods Recovered: pod, value, time of last 0, time recovered
-                print(colored(
-                    "\nPods Recovered || Recovered Value || Time of Previous 0 || Time Recovered", "green"))
-                for pod in pods_recovered:
-                    print(
-                        f'{pod["pod"]} || {round(pod["val"],3)} || {pod["start"]} || {pod["end"]}')
+            self._print_pod_losses(graph_title, pods_dropped, pods_recovered)
 
         return {'dropped': pods_dropped, 'recovered': pods_recovered}
 
@@ -406,13 +454,13 @@ class Graphs():
     # the returned dictionary (graphs_losses_dict) is in the form
     # graphs_losses = {
     #     graph_title_1: {
-    #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, ...],
+    #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev_val':float}, ...],
     #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, ...]
     #     },
     #     graph_title_2: {...},
     #     ...
     # }
-    def check_for_losses(self, graphs_dict=None, print_info=False):
+    def check_for_losses(self, graphs_dict=None, drop_threshold=0, print_info=False):
         # generate graphs_dict if it isn't passed in
         if graphs_dict is None:
             graphs_dict = self.get_graphs_dict()
@@ -432,7 +480,7 @@ class Graphs():
             if graph is None:
                 continue
             graph_loss_data = self._check_graph_loss(
-                graph_title, graph, print_info=print_info)
+                graph_title, graph, drop_threshold=drop_threshold, print_info=print_info)
             graphs_losses_dict[graph_title] = graph_loss_data
 
         return graphs_losses_dict
@@ -442,7 +490,7 @@ class Graphs():
     # the returned dictionary (requiered_graph_dict) is in the form
         # graphs_losses = {
         #     graph_title_1: {
-        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev val':float}, ...],
+        #         'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev_val':float}, ...],
         #         'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, ...]
         #     },
         #     graph_title_2: {...},
