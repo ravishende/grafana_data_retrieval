@@ -90,7 +90,9 @@ graphs_dict_by_pod = graphs_class.get_graphs_from_queries(
     graph_queries_by_pod, sum_by='pod')
 
 # since the Panel Title table has two different sum_by's, it has to be combined from two tables
-table_final = pd.merge(table_2, table_1, on='Pod', how='outer')
+table_final = None
+if not table_2.empty and not table_1.empty:
+    table_final = pd.merge(table_2, table_1, on='Pod', how='outer')
 table_dict = {"Panel Title": table_final}
 
 # display Current GPU Usage cell
