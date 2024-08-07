@@ -212,7 +212,7 @@ def insert_rand_refresh_col(df, refresh_title, method=0):
     elif method == 2:
         # generate random values between 45sec and the full duration
         df[refresh_title] = duration_seconds.apply(
-            lambda time: random.randint(45, time))
+            lambda time: random.randint(45, time) if time > 45 else time)
     else:
         raise ValueError("method must be: 0, 1, or 2")
 
@@ -270,7 +270,7 @@ def insert_column(df, metric, insert_col, duration_col, n_rows):
 #   - query_metrics_list:   list of all metrics to query for, in same order as col_names_list
 #   - col_names_list:       list of all column names for each metric queried
 #   - duration_col:         name of the duration column to get the durations from
-#   - n_rows:               number of ro=ws to query for
+#   - n_rows:               number of rows to query for
 def query_and_insert_columns(df, query_metrics_list, col_names_list, duration_col, n_rows):
     # handle invalid user inputs
     if len(query_metrics_list) != len(col_names_list):
