@@ -120,14 +120,19 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
     if requery is None:
         # prompt if the user would like to requery the graphs
         num_potential_drops = 0
-        for graph in graphs_losses_dict.values():
-            if graph is None:
+        num_potential_recoveries = 0
+        for losses_info_dict in graphs_losses_dict.values():
+            if losses_info_dict is None:
                 continue
-            # divide by two because each potential drop has two datapoints: with data, without data
-            num_potential_drops += len(graph) // 2
-        print(f"\n\nThere were {num_potential_drops} potential drops.\n")
+            num_potential_drops += len(losses_info_dict['dropped'])
+            num_potential_recoveries += len(losses_info_dict['recovered'])
+        time_warning = ""
+        if (num_potential_drops + num_potential_recoveries) > 100:
+            time_warning = "Note: this may take some time."
+        print(
+            f"\n\nThere were {num_potential_drops} potential drops and {num_potential_recoveries} recoveries.\n")
         user_response = input(
-            "Would you like to requery the graphs for zoomed in views of the pod drops and recoveries?\nThis can help determine if data was truly dropped or if the graph just went to zero.\n(y/n)\n")
+            f'{colored("Would you like to requery the graphs for zoomed in views of the pod drops and recoveries?", "green")}\nThis can help determine if data was truly dropped or if the graph just went to zero.\n{time_warning}\n(y/n)\n')
         if user_response in ['y', 'yes', 'Y', 'Yes']:
             requery = True
         else:
