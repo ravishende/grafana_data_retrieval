@@ -11,10 +11,14 @@ class Tables():
     def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
         self.namespace = namespace
         self.duration = duration
-        self.cpu_quota = pd.DataFrame(columns=["Node", "Pod", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"])
-        self.mem_quota = pd.DataFrame(columns=["Node", "Pod", "Memory Usage", "Memory Requests",  "Memory Requests %",  "Memory Limits", "Memory Limits %", "Memory Usage (RSS)", "Memory Usage (Cache)"])
-        self.network_usage = pd.DataFrame(columns=["Node", "Pod", "Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets", "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"])
-        self.storage_io = pd.DataFrame(columns=["Node", "Pod", "IOPS(Reads)", "IOPS(Writes)", "IOPS(Reads + Writes)", "Throughput(Read)", "Throughput(Write)", "Throughput(Read + Write)"])
+        self.cpu_quota = pd.DataFrame(columns=[
+                                      "Node", "Pod", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"])
+        self.mem_quota = pd.DataFrame(columns=["Node", "Pod", "Memory Usage", "Memory Requests",  "Memory Requests %",
+                                      "Memory Limits", "Memory Limits %", "Memory Usage (RSS)", "Memory Usage (Cache)"])
+        self.network_usage = pd.DataFrame(columns=["Node", "Pod", "Current Receive Bandwidth", "Current Transmit Bandwidth", "Rate of Received Packets",
+                                          "Rate of Transmitted Packets", "Rate of Received Packets Dropped", "Rate of Transmitted Packets Dropped"])
+        self.storage_io = pd.DataFrame(columns=["Node", "Pod", "IOPS(Reads)", "IOPS(Writes)",
+                                       "IOPS(Reads + Writes)", "Throughput(Read)", "Throughput(Write)", "Throughput(Read + Write)"])
         self.queries = {
             # CPU Quota
             'CPU Usage': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster="", namespace="' + self.namespace + '"})',
@@ -35,7 +39,7 @@ class Tables():
             'Rate of Transmitted Packets Dropped':  'sum by(node, pod) (irate(container_network_transmit_packets_dropped_total{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", namespace="' + self.namespace + '"}[' + self.duration + ']))'
         }
         self.partial_queries = {
-            # Current Storage IO  
+            # Current Storage IO
             'IOPS(Reads)': 'sum by(node, pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'IOPS(Writes)': 'sum by(node, pod) (rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'Throughput(Read)': 'sum by(node, pod) (rate(container_fs_reads_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
@@ -66,29 +70,28 @@ class Tables():
         # check if they passed in a dict of queries.
         if queries is None:
             queries = self.queries
-        
+
         # update the columns of the database with the data from querying
         for col_title in tqdm(table_df.columns):
             # get the corresponding query for each column
             query = queries.get(col_title)
             if query is None:
                 continue
-            
+
             # update the table with the new column information
             result_list = query_data(query)
             new_df = self._generate_df(col_title, result_list)
-            
+
             # if table_df is not empty
             if len(table_df.index) > 0:
                 # add column to the rightmost end of the dataframe
                 final_col = new_df.columns[-1]
                 table_df[final_col] = new_df[final_col]
-            else: # table_df is empty. 
+            else:  # table_df is empty.
                 # set table_df equal to the new df to fill in node and pod too
                 for column in new_df.columns:
                     table_df[column] = new_df[column]
         return table_df
-    
 
     def _generate_table_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=["node", "pod"]):
         # query for data
@@ -98,11 +101,11 @@ class Tables():
 
         # prepare columns for table. columns will be appended to one pod at a time
         values_column = []
-        
+
         # initialize sum_by columns to eventually be put into the table
-        if sum_by is not None: # if sum_by is None, don't add a sum_by column
-            sum_by_columns = {metric:[] for metric in sum_by}
-        
+        if sum_by is not None:  # if sum_by is None, don't add a sum_by column
+            sum_by_columns = {metric: [] for metric in sum_by}
+
         # loop through the data for each pod. The data has: node, pod, values, timestamps
         for datapoint in result_list:
             # prepare data to be extracted
@@ -111,7 +114,7 @@ class Tables():
             # fill in lists
             time_value_pair = datapoint['value']
             values_list.append(float(time_value_pair[1]))
-            
+
             # add pod's lists to the table's columns
             values_column.extend(values_list)
             # add sum_by column (e.g. pod name)
@@ -119,7 +122,7 @@ class Tables():
                 for item in sum_by:
                     item_list = [datapoint['metric'][item]]*len(values_list)
                     sum_by_columns[item].extend(item_list)
-           
+
         # create and populate table dataframe
         table_df = pd.DataFrame()
         # add in sum_by columns
@@ -131,8 +134,6 @@ class Tables():
         table_df[query_title] = values_column
 
         return table_df
-
-
 
     def _calc_percent(self, numerator_col, divisor_col):
         # divide the two columns, then multiply by 100 to get the percentage
@@ -146,13 +147,16 @@ class Tables():
             return self.cpu_quota
 
         # if not, fill in the table then return it
-        self.cpu_quota = self._fill_df_by_queries(table_df=self.cpu_quota, queries=queries)
+        self.cpu_quota = self._fill_df_by_queries(
+            table_df=self.cpu_quota, queries=queries)
         # calculate each percent column by dividing the two columns
         # responsible for it then multiplying by 100
         self.cpu_quota['CPU Requests %'] = \
-            self._calc_percent(self.cpu_quota['CPU Usage'], self.cpu_quota['CPU Requests'])
+            self._calc_percent(
+                self.cpu_quota['CPU Usage'], self.cpu_quota['CPU Requests'])
         self.cpu_quota['CPU Limits %'] = \
-            self._calc_percent(self.cpu_quota['CPU Usage'], self.cpu_quota['CPU Limits'])
+            self._calc_percent(
+                self.cpu_quota['CPU Usage'], self.cpu_quota['CPU Limits'])
         return self.cpu_quota
 
     # get the mem_quota dataframe. If it is empty, generate it
@@ -162,13 +166,16 @@ class Tables():
             return self.mem_quota
 
         # if not, fill in the table then return it
-        self.mem_quota = self._fill_df_by_queries(table_df=self.mem_quota, queries=queries)
+        self.mem_quota = self._fill_df_by_queries(
+            table_df=self.mem_quota, queries=queries)
         # calculate each percent column by dividing the two columns
         # responsible for it
         self.mem_quota['Memory Requests %'] = \
-            self._calc_percent(self.mem_quota['Memory Usage'], self.mem_quota['Memory Requests'])
+            self._calc_percent(
+                self.mem_quota['Memory Usage'], self.mem_quota['Memory Requests'])
         self.mem_quota['Memory Limits %'] = \
-            self._calc_percent(self.mem_quota['Memory Usage'], self.mem_quota['Memory Limits'])
+            self._calc_percent(
+                self.mem_quota['Memory Usage'], self.mem_quota['Memory Limits'])
         return self.mem_quota
 
     # get the network_usage dataframe. If it is empty, generate it
@@ -178,7 +185,8 @@ class Tables():
             return self.network_usage
 
         # if not, fill in the table then return it
-        self.network_usage = self._fill_df_by_queries(table_df=self.network_usage, queries=queries)
+        self.network_usage = self._fill_df_by_queries(
+            table_df=self.network_usage, queries=queries)
         return self.network_usage
 
     # get the storage_io dataframe. If it is empty, generate it
@@ -191,14 +199,16 @@ class Tables():
             partial_queries = self.partial_queries
 
         # if not, fill in the table then return it
-        self.storage_io = self._fill_df_by_queries(table_df=self.storage_io, queries=partial_queries)
+        self.storage_io = self._fill_df_by_queries(
+            table_df=self.storage_io, queries=partial_queries)
         # calculate each sum column by adding the two columns responsible for it
         self.storage_io['IOPS(Reads + Writes)'] = \
-            self.storage_io['IOPS(Reads)'].astype(float) + self.storage_io['IOPS(Writes)'].astype(float)
+            self.storage_io['IOPS(Reads)'].astype(
+                float) + self.storage_io['IOPS(Writes)'].astype(float)
         self.storage_io['Throughput(Read + Write)'] = \
-            self.storage_io['Throughput(Read)'].astype(float) + self.storage_io['Throughput(Write)'].astype(float)
+            self.storage_io['Throughput(Read)'].astype(
+                float) + self.storage_io['Throughput(Write)'].astype(float)
         return self.storage_io
-
 
     # Given a dictionary of queries, generate a table based on those queries
     # Note: if the queries do not start with "sum by(node, pod)", then you must set sum_by
@@ -206,6 +216,7 @@ class Tables():
     #        If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of a table_name: table_df if table_name is specified, otherwise returns
     # a dataframe that is the table
+
     def get_table_from_queries(self, queries_dict, sum_by=["node", "pod"], table_name=None):
         # handle if sum_by is a single input (put into list format)
         if isinstance(sum_by, str):
@@ -214,31 +225,32 @@ class Tables():
         if sum_by is not None:
             for i in range(len(sum_by)):
                 sum_by[i] = sum_by[i][0].lower() + sum_by[i][1:]
-        
+
         # generate tables
         table_df = pd.DataFrame()
         for title, query in tqdm(queries_dict.items()):
-            single_query_table = self._generate_table_df(title, query, sum_by=sum_by)
+            single_query_table = self._generate_table_df(
+                title, query, sum_by=sum_by)
             # add column to table
             if single_query_table is not None:
                 # initialize table if it isn't already
                 if len(table_df) == 0:
                     table_df = single_query_table
-                else: 
+                else:
                     table_df[title] = single_query_table[title]
             else:
                 table_df[title] = None
-        
+
         # if table_name is specified, return the table_df in a dict of table_name:table_df
         if table_name is not None:
-            return {table_name:table_df}
+            return {table_name: table_df}
         # otherwise, return the table_df
         return table_df
 
-
     # get a dictionary of all the tables
+
     def get_tables_dict(self, only_include_worker_pods=False, queries=None, partial_queries=None):
-        # Note: queries and partial_queries can be passed in as None and will be updated in 
+        # Note: queries and partial_queries can be passed in as None and will be updated in
         # _fill_df_by_queries() for the first 3 and _get_storage_io() for 'Current Storage IO'
 
         tables_dict = {
@@ -255,9 +267,10 @@ class Tables():
 
         return tables_dict
 
-    # combines all table dataframes into one large dataframe. Each table is represented as a few columns.
+    # combines all table dataframes into one large dataframe.
+    # Each table is represented as a few columns.
     # this works because all tables are queried for the same time frame and they have the same pods
-    def get_tables_as_one_df(self, tables_dict=None, only_include_worker_pods=False, queries=None, partial_queries=None, display_time_as_datetime=True, show_runtimes=False):
+    def get_tables_as_one_df(self, tables_dict=None, only_include_worker_pods=False, queries=None, partial_queries=None):
         # initialize total df
         total_df = pd.DataFrame(columns=['Node', 'Pod'])
 

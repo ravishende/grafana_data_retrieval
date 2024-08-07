@@ -9,7 +9,6 @@ from inputs import *
 from termcolor import colored
 from tqdm import tqdm
 import time
-import re
 
 
 class Graphs():
