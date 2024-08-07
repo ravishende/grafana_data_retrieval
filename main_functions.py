@@ -11,17 +11,23 @@ header_class = Header()
 tables_class = Tables()
 graphs_class = Graphs()
 
+
 def get_header_data():
     return header_class.get_header_dict()
 
-def get_tables_data(only_include_worker_pods=True, display_time_as_datetime=False):
+
+def get_tables_data(only_include_worker_pods=True):
     return tables_class.get_tables_dict(
         only_include_worker_pods=only_include_worker_pods,
-        display_time_as_datetime=display_time_as_datetime
     )
 
-def get_graphs_data():
-    return graphs_class.get_graphs_dict()
+
+def get_graphs_data(get_graphs_as_one_df=False, only_include_worker_pods=False, display_time_as_datetime=True, show_runtimes=False):
+    graphs_dict = graphs_class.get_graphs_dict(only_include_worker_pods=only_include_worker_pods,
+                                               display_time_as_datetime=display_time_as_datetime, show_runtimes=show_runtimes)
+    if get_graphs_as_one_df:
+        return graphs_class.get_graphs_as_one_df(graphs_dict=graphs_dict)
+    return graphs_dict
 
 
 # returns three dicts: one containing all header data,
@@ -92,7 +98,6 @@ def print_all_data(data_dict=None):
         print(graphs)
 
 
-
 # get information on dropped/recovered pods and requery if requested. Then return a dict of 'losses' (dropped/recovered pods) and 'requeried' graphs
 def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=False, display_time_as_datetime=False):
     # check for if graphs was input as single dataframe instead of graph
@@ -105,7 +110,8 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
         return {"Losses": None, "requeried": None}
 
     # get losses
-    graphs_losses_dict = graphs_class.check_for_losses(graphs, print_info=print_info)
+    graphs_losses_dict = graphs_class.check_for_losses(
+        graphs, print_info=print_info)
     if all(value is None for value in graphs_losses_dict.values()):
         print(colored("No pods were dropped, so no need for requerying.", "green"), "\n\n")
         return {"Losses": None, "requeried": None}
@@ -113,7 +119,15 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
     # prompt the user on whether to requery or not
     if requery is None:
         # prompt if the user would like to requery the graphs
-        user_response = input("\n\nWould you like to requery the graphs for zoomed in views of the pod drops and recoveries?\nThis can help determine if data was truly dropped or if the graph just went to zero.\n(y/n)\n")
+        num_potential_drops = 0
+        for graph in graphs_losses_dict.values():
+            if graph is None:
+                continue
+            # divide by two because each potential drop has two datapoints: with data, without data
+            num_potential_drops += len(graph) // 2
+        print(f"\n\nThere were {num_potential_drops} potential drops.\n")
+        user_response = input(
+            "Would you like to requery the graphs for zoomed in views of the pod drops and recoveries?\nThis can help determine if data was truly dropped or if the graph just went to zero.\n(y/n)\n")
         if user_response in ['y', 'yes', 'Y', 'Yes']:
             requery = True
         else:
@@ -122,8 +136,9 @@ def check_graphs_losses(graphs, print_info=True, requery=None, show_runtimes=Fal
     if requery is False:
         return {"losses": graphs_losses_dict, "requeried": None}
 
-    # requery is True
-    requeried_graphs_dict = graphs_class.requery_graphs(graphs_losses_dict, show_runtimes=show_runtimes)
+    # requery graphs
+    requeried_graphs_dict = graphs_class.requery_graphs(
+        graphs_losses_dict, show_runtimes=show_runtimes)
     print_heading('Requeried Graphs')
     # loop through requeried_graphs_dict and print all requeried graphs
     for graph_title, loss_dict in requeried_graphs_dict.items():
