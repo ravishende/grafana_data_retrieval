@@ -20,7 +20,7 @@ df = pd.read_csv(read_file)
 unnamed_cols = df.columns.str.match('Unnamed')
 runs_list_df = df.loc[:, ~unnamed_cols]
 
-if not ('start' in df.columns and 'stop' in df.columns):
+if not 'start' in df.columns or not 'stop' in df.columns:
     raise ValueError(
         "dataframe must have a 'start' column and a 'stop' columnn")
 
@@ -29,8 +29,9 @@ num_partial_duration_cols = input("How many duration columns should there be?")
 try:
     num_partial_duration_cols = int(num_partial_duration_cols)
 except:
-    print("Input must be an int.")
+    raise ValueError("Input must be an int.")
 
 df = preprocess_df(df, num_partial_duration_cols)
 df = query_df(df)
 df = sum_df(df)
+print("Finalized dataframe:\n", df, sep="")
