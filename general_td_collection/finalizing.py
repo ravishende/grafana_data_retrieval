@@ -1,4 +1,3 @@
-from multiprocessing.sharedctypes import Value
 import pandas as pd
 
 
@@ -14,6 +13,8 @@ class Finalizer():
         self.gaph_columns = graph_columns
         self.all_graph_metrics = ['min', 'max', 'avg',
                                   'std', 'var', 'med', 'q1', 'q3', 'iqr']
+
+        self._read_file = "csvs/queried.csv"
 
     def get_graph_columns(self):
         # TODO: save graph_columns in Query_handler, then read it in here
@@ -119,7 +120,6 @@ class Finalizer():
             if column not in self.graph_columns:
                 df[column] = df[column].apply(self._sum_result_list)
 
-        # TODO: handle graph columns
         df = self._insert_graph_metric_columns(
             graph_metrics_dict, graph_columns)
         df = self.fil_graph_metric_columns(graph_columns)
