@@ -1,8 +1,7 @@
 # autopep8: off
 from datetime import timedelta
 import pandas as pd
-import sys
-import os
+import warnings
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
@@ -41,8 +40,16 @@ class Query_handler():
         self.filter_str = self.init_filter_str()
         return
 
-    # TODO: GET BETTER NAME THAN thing AND thing_name. THEN RENAME FUNCTION
-    def _get_component_filter_str(self, component, component_name, component_regex):
+    def _get_component_filter_str(self, component, component_name=None, component_regex=None):
+        if component_name is not None and component_regex is not None:
+            raise ValueError(
+                "at most one of component_name or component_regex should be defined.")
+        # give a warning if it doesn't seem like the filter str is being used correctly
+        known_k8s_components = ['node', 'pod', 'namespace', 'cluster']
+        if component not in known_k8s_components:
+            warnings.warn(
+                f"Unknown component '{component}'. Known components are: {known_k8s_components}")
+        # give the string depending on if it's a regex expression or not
         if component_name:
             return f'{component}="{component_name}'
         if component_regex:
@@ -50,6 +57,7 @@ class Query_handler():
         # if neither are defined, query for it not being empty
         return f'{component}!=""'
 
+    # get filter str using passed in values during init
     def init_filter_str(self):
         node_filter = self._get_component_filter_str(
             "node", self.node, self.node_regex)
