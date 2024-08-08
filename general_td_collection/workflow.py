@@ -1,8 +1,8 @@
 import pandas as pd
 import shutil
 from preprocessing import preprocess_df
-from querying import query_df
-from finalizing import sum_df
+from querying import Query_handler
+from finalizing import Finalizer
 
 
 # display settings
@@ -31,7 +31,10 @@ try:
 except:
     raise ValueError("Input must be an int.")
 
+query_handler = Query_handler()
+finalizer = Finalizer()
+
 df = preprocess_df(df, num_partial_duration_cols)
-df = query_df(df)
-df = sum_df(df)
+df = query_handler.query_df(df)
+df = finalizer.sum_df(df)
 print("Finalized dataframe:\n", df, sep="")
