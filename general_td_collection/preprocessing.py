@@ -1,4 +1,5 @@
 # autopep8: off
+import pandas as pd
 import random
 import sys
 import os
@@ -12,7 +13,7 @@ from helpers.time_functions import datetime_ify
 
 
 # generate random values between run_start and some end time, put into duration1
-def insert_rand_refresh_col(df, refresh_title, method=0):
+def insert_rand_refresh_col(df: pd.DataFrame, refresh_title: str, method: int = 0) -> pd.DataFrame:
     duration_seconds = df['runtime']
 
     if method == 0:
@@ -32,7 +33,7 @@ def insert_rand_refresh_col(df, refresh_title, method=0):
     return df
 
 
-def preprocess_df(df, num_refresh_cols=0):
+def preprocess_df(df: pd.DataFrame, num_refresh_cols: int = 0) -> pd.DataFrame:
     # deal with times and create runtime column
     df['start'] = df['start'].apply(datetime_ify)
     df['stop'] = df['stop'].apply(datetime_ify)
