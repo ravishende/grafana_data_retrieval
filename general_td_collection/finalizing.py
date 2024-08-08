@@ -43,7 +43,7 @@ class Finalizer():
         title = title.replace(" ", "_")
         return title
 
-    def _get_col_name_for_graph(self, graph_title, metric):
+    def _get_metric_col_name(self, graph_title, metric):
         if metric not in self.graph_metrics_dict.keys():
             raise ValueError(
                 f"metric {metric} not in acceptable metrics: {self.graph_metrics_dict.keys()}")
@@ -51,36 +51,33 @@ class Finalizer():
         col_name = f"{metric}_{cleaned_title}"
         return col_name
 
-    # takes in a pandas series and metric
-    # returns the metric taken of the series
-    def _calculate_metric_row(self, graph_col_series, metric):
+    # takes in a list containing graph data and metric
+    # returns the metric taken of the series e.g. if metric is "std", takes the standard deviation
+    def summarize_graph_data(self, graph_data_list, metric):
+        graph_data = pd.Series(graph_data_list)
         ['min', 'max', 'avg', 'std', 'var', 'med', 'q1', 'q3', 'iqr']
         match metric:
             case "min":
-                return graph_col_series.min()
+                return graph_data.min()
             case "max":
-                return graph_col_series.max()
+                return graph_data.max()
             case "avg":
-                return graph_col_series.avg()
+                return graph_data.avg()
             case "std":
-                return graph_col_series.std()
+                return graph_data.std()
             case "var":
-                return graph_col_series.var()
+                return graph_data.var()
             case "med":
-                return graph_col_series.quantile(q=0.5)
+                return graph_data.quantile(q=0.5)
             case "q1":
-                return graph_col_series.quantile(q=0.25)
+                return graph_data.quantile(q=0.25)
             case "q3":
-                return graph_col_series.quantile(q=0.75)
+                return graph_data.quantile(q=0.75)
             case "iqr":
-                return graph_col_series.quantile(q=0.75) - graph_col_series.quantile(q=0.25)
+                return graph_data.quantile(q=0.75) - graph_data.quantile(q=0.25)
             case _:
                 raise ValueError(
                     f"metric {metric} not in known metrics: {self.all_graph_metrics}")
-
-    def _calculate_metric_col(self, df):
-        # TODO: apply self._calculate_metric_row - look at how it is done in llm_data_collection
-        return
 
     def _insert_graph_metric_columns(self, df, graph_metrics_dict=None, graph_columns=None):
         # handle user input
@@ -95,16 +92,17 @@ class Finalizer():
             graph_columns = self.graph_columns
         else:
             self._check_graph_columns(graph_columns)
-
+        # calculate and insert metric columns
         graph_metric_cols_dict = {title: [] for title in graph_columns}
         for graph_title in graph_columns:
             for metric, status in graph_metrics_dict.items():
                 if status == False:
                     continue
-                col_name = self._get_col_name_for_graph(graph_title, metric)
-                graph_metric_cols_dict[graph_title].append(col_name)
-                df[col_name] = self._calculate_metric_col(
-                    df[graph_title], metric)
+                metric_col_name = self._get_metric_col_name(
+                    graph_title, metric)
+                graph_metric_cols_dict[graph_title].append(metric_col_name)
+                df[metric_col_name] = df[graph_title].apply(
+                    self.summarize_graph_data, args=(metric))
 
         self._graph_metric_cols_dict = graph_metric_cols_dict
         return df
