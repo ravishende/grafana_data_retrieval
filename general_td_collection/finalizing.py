@@ -22,6 +22,7 @@ class Finalizer():
         graph_columns = []
         return graph_columns
 
+    # given a list of graph columns (strings), check that it is the right type
     def _check_graph_columns(self, graph_columns: list[str]) -> None:
         if isinstance(graph_columns, str):
             # if there's just one passed in column, put it in a list still
@@ -30,6 +31,7 @@ class Finalizer():
             raise ValueError(
                 f"graph_columns must be a str or list but was {type(graph_columns)}.")
 
+    # given a dict of metrics and statuses (booleans), check that all the keys are recognized and it is of the right type.
     def _check_graph_metrics_dict(self, graph_metrics_dict: dict[str, bool]) -> None:
         if graph_metrics_dict is not None:
             if not isinstance(graph_metrics_dict, dict):
@@ -40,11 +42,13 @@ class Finalizer():
                     raise ValueError(
                         f"key {key} not in acceptable metrics: {self.all_graph_metrics}.")
 
+    # given a title that may have capitals and spaces, return a lowercase version, with all spaces replaced with underscores
     def _title_to_col_name(self, title: str) -> str:
         title = title.lower()
         title = title.replace(" ", "_")
         return title
 
+    # given a title of a graph and a metric, return a title of metric_graph_title, with everything lowercase and no spaces (spaces replaced with underscores)
     def _get_metric_col_name(self, graph_title: str, metric: str) -> str:
         if metric not in self.graph_metrics_dict.keys():
             raise ValueError(
@@ -69,7 +73,7 @@ class Finalizer():
                 return graph_data.std()
             case "var":
                 return graph_data.var()
-            case "med":
+            case "med":  # aka q2
                 return graph_data.quantile(q=0.5)
             case "q1":
                 return graph_data.quantile(q=0.25)
@@ -109,6 +113,7 @@ class Finalizer():
         self._graph_metric_cols_dict = graph_metric_cols_dict
         return df
 
+    # given a result list from a query, sum it to get the result
     def _sum_result_list(self, result_list: list[dict]) -> float:
         total = 0
         for metric_value_dict in result_list:
