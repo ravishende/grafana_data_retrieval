@@ -1,13 +1,16 @@
 from termcolor import colored
+import pandas as pd
+
 
 # add enough padding to a string to center it within its border
-def pad_str(string, border_len):
+def pad_str(string: str, border_len: int) -> str:
     padding_len = (border_len - len(string)) // 2
     padded_str = " "*padding_len + string
     return padded_str
 
+
 # Printing Functions
-def print_heading(heading):
+def print_heading(heading: str) -> None:
     border_len = 100
     padded_heading = pad_str(heading, border_len)
     print("\n\n\n\n" + "*"*border_len)
@@ -15,7 +18,7 @@ def print_heading(heading):
     print("*" * border_len)
 
 
-def print_title(title):
+def print_title(title: str) -> None:
     border_len = 75
     padded_title = pad_str(title, border_len)
     print("\n\n" + "-" * border_len)
@@ -23,7 +26,7 @@ def print_title(title):
     print("-" * border_len, "\n")
 
 
-def print_sub_title(sub_title):
+def print_sub_title(sub_title: str) -> None:
     border_len = 30
     paded_subtitle = pad_str(sub_title, border_len)
     print("\n\n" + '=' * border_len)
@@ -33,7 +36,7 @@ def print_sub_title(sub_title):
 
 # for a given dictionary in the form {titles:dataframes}
 # print the title and dataframe of each item in the dict
-def print_dataframe_dict(dictionary):
+def print_dataframe_dict(dictionary: dict[str, pd.DataFrame]) -> None:
     for title, dataframe in dictionary.items():
         print_title(title)
         # if the dataframe is empty, print "No Data"
