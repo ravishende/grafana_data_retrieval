@@ -2,7 +2,7 @@ import pandas as pd
 
 
 class Finalizer():
-    def __init__(self, graph_metrics_dict=None, graph_columns=None):
+    def __init__(self, graph_metrics_dict: dict[str, bool] = None, graph_columns: list[str] = None) -> None:
         if graph_columns is None:
             graph_columns = self.get_graph_columns()
 
@@ -16,12 +16,13 @@ class Finalizer():
 
         self._read_file = "csvs/queried.csv"
 
-    def get_graph_columns(self):
+    def get_graph_columns(self) -> list[str]:
         # TODO: save graph_columns in Query_handler, then read it in here
+        # idea: save the graph columns with a prepended graph_ to the title, and just use that to find them to avoid saving them in a file
         graph_columns = []
         return graph_columns
 
-    def _check_graph_columns(self, graph_columns):
+    def _check_graph_columns(self, graph_columns: list[str]) -> None:
         if isinstance(graph_columns, str):
             # if there's just one passed in column, put it in a list still
             graph_columns = [graph_columns]
@@ -29,7 +30,7 @@ class Finalizer():
             raise ValueError(
                 f"graph_columns must be a str or list but was {type(graph_columns)}.")
 
-    def _check_graph_metrics_dict(self, graph_metrics_dict):
+    def _check_graph_metrics_dict(self, graph_metrics_dict: dict[str, bool]) -> None:
         if graph_metrics_dict is not None:
             if not isinstance(graph_metrics_dict, dict):
                 raise ValueError(
@@ -39,12 +40,12 @@ class Finalizer():
                     raise ValueError(
                         f"key {key} not in acceptable metrics: {self.all_graph_metrics}.")
 
-    def _title_to_col_name(self, title):
+    def _title_to_col_name(self, title: str) -> str:
         title = title.lower()
         title = title.replace(" ", "_")
         return title
 
-    def _get_metric_col_name(self, graph_title, metric):
+    def _get_metric_col_name(self, graph_title: str, metric: str) -> str:
         if metric not in self.graph_metrics_dict.keys():
             raise ValueError(
                 f"metric {metric} not in acceptable metrics: {self.graph_metrics_dict.keys()}")
@@ -54,7 +55,7 @@ class Finalizer():
 
     # takes in a list containing graph data and metric
     # returns the metric taken of the series e.g. if metric is "std", takes the standard deviation
-    def summarize_graph_data(self, graph_data_list, metric):
+    def summarize_graph_data(self, graph_data_list: list, metric: str) -> float:
         graph_data = pd.Series(graph_data_list)
         ['min', 'max', 'avg', 'std', 'var', 'med', 'q1', 'q3', 'iqr']
         match metric:
@@ -80,7 +81,7 @@ class Finalizer():
                 raise ValueError(
                     f"metric {metric} not in known metrics: {self.all_graph_metrics}")
 
-    def _insert_graph_metric_columns(self, df, graph_metrics_dict=None, graph_columns=None):
+    def _insert_graph_metric_columns(self, df: pd.DataFrame, graph_metrics_dict: dict[str, bool] = None, graph_columns: list[str] = None) -> pd.DataFrame:
         # handle user input
         if not isinstance(df, pd.DataFrame):
             raise ValueError(
@@ -108,14 +109,14 @@ class Finalizer():
         self._graph_metric_cols_dict = graph_metric_cols_dict
         return df
 
-    def _sum_result_list(self, result_list):
+    def _sum_result_list(self, result_list: list[dict]) -> float:
         total = 0
         for metric_value_dict in result_list:
             for time_value_pair in metric_value_dict['values']:
                 total += time_value_pair[1]
         return total
 
-    def sum_df(self, df, graph_metrics_dict=None, graph_columns=None):
+    def sum_df(self, df, graph_metrics_dict: dict[str, bool] = None, graph_columns: list[str] = None) -> pd.DataFrame:
         for column in df.columns:
             if column not in self.graph_columns:
                 df[column] = df[column].apply(self._sum_result_list)
