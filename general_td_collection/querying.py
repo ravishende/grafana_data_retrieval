@@ -15,8 +15,7 @@ from helpers.time_functions import calculate_offset, delta_to_time_str, datetime
 
 
 class Query_handler():
-    def __init__(self, read_file="csvs/run_inputs.csv", node=None, pod=None, node_regex=None, pod_regex=None, namespace=None, namespace_regex=None, duration='1h'):
-        # passed in parameters to filter queries
+    def __init__(self, read_file="csvs/run_inputs.csv", node=None, pod=None, node_regex=None, pod_regex=None, namespace=None, namespace_regex=None, duration='5m'):
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -25,7 +24,7 @@ class Query_handler():
         if namespace and namespace_regex:
             raise ValueError(
                 "At most one of namespace or namespace_regex can be defined")
-
+        # passed in parameters to filter queries
         self.node = node
         self.pod = pod
         self.namespace = namespace
@@ -58,17 +57,27 @@ class Query_handler():
             return f'{component}="{component_name}'
         if component_regex:
             return f'{component}=~"{component_regex}"'
-        # if neither are defined, query for it not being empty
-        return f'{component}!=""'
+        # neither are defined
+        return ""
 
     # get filter str using passed in values during init
     def init_filter_str(self) -> str:
+        # get individual filters
         node_filter = self._get_component_filter_str(
             "node", self.node, self.node_regex)
         pod_filter = self._get_component_filter_str(
             "pod", self.pod, self.pod_regex)
         namespace_filter = self._get_component_filter_str(
             "namespace", self.namespace, self.namespace_regex)
+
+        # assemble filter str
+        filters = [node_filter, pod_filter, namespace_filter]
+        filter_str = ""
+        for filter in filters:
+            if filter == "":
+                continue
+            # in PromQL, it still works if the filter string ends in a comma
+            filter_str += filter + ', '
         return f"{node_filter}, {pod_filter}, {namespace_filter}"
 
     def get_gpu_queries(self, start, duration_seconds: int | float) -> tuple[dict, list]:
@@ -78,7 +87,7 @@ class Query_handler():
         duration = delta_to_time_str(timedelta(seconds=duration_seconds))
         # graph queries
         graph_queries_no_sum_by = {
-            # total gpu usage might not be a graph query
+            # total gpu usage = gpu_utilization% by pod but averaging out all the pods
             'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization{' + self.filter_str + '}[' + duration + '] offset ' + offset + ')',
             'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self.filter_str + '} offset ' + offset + ')'
         }
@@ -172,4 +181,5 @@ class Query_handler():
         # query in batches
         print(f"Querying in batches of {batch_size} rows...")
         # TODO: add logic for querying
+        #   TODO: logic of graph querying vs normal querying
         return df
