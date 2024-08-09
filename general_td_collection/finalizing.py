@@ -10,16 +10,16 @@ class Finalizer():
         self._check_graph_columns(graph_columns)
         self._graph_metric_cols_dict = {}
         self.graph_metrics_dict = graph_metrics_dict
-        self.gaph_columns = graph_columns
+        self.graph_columns = graph_columns
         self.all_graph_metrics = ['min', 'max', 'avg',
                                   'std', 'var', 'med', 'q1', 'q3', 'iqr']
 
         self._read_file = "csvs/queried.csv"
 
-    def get_graph_columns(self) -> list[str]:
-        # TODO: save graph_columns in Query_handler, then read it in here
-        # idea: save the graph columns with a prepended graph_ to the title, and just use that to find them to avoid saving them in a file
-        graph_columns = []
+    def get_graph_columns(self, df: pd.DataFrame) -> list[str]:
+        prefix = "graph_"
+        graph_columns = [
+            col for col in df.columns if col[:len(prefix)] == prefix]
         return graph_columns
 
     # given a list of graph columns (strings), check that it is the right type
@@ -57,10 +57,12 @@ class Finalizer():
         col_name = f"{metric}_{cleaned_title}"
         return col_name
 
-    # takes in a list containing graph data and metric
+    # takes in a list containing graph data (result list from a query) and metric
     # returns the metric taken of the series e.g. if metric is "std", takes the standard deviation
     def summarize_graph_data(self, graph_data_list: list, metric: str) -> float:
-        graph_data = pd.Series(graph_data_list)
+        graph_values = [float(datapoint['value'][0])
+                        for datapoint in graph_data_list]
+        graph_data = pd.Series(graph_values)
         ['min', 'max', 'avg', 'std', 'var', 'med', 'q1', 'q3', 'iqr']
         match metric:
             case "min":
@@ -85,7 +87,8 @@ class Finalizer():
                 raise ValueError(
                     f"metric {metric} not in known metrics: {self.all_graph_metrics}")
 
-    def _insert_graph_metric_columns(self, df: pd.DataFrame, graph_metrics_dict: dict[str, bool] = None, graph_columns: list[str] = None) -> pd.DataFrame:
+    # given a dataframe with some columns starting with '_graph', return a new df with more columns that summarize those graph columns
+    def _insert_graph_metric_columns(self, df: pd.DataFrame, graph_metrics_dict: dict[str, bool] = None) -> pd.DataFrame:
         # handle user input
         if not isinstance(df, pd.DataFrame):
             raise ValueError(
@@ -94,13 +97,10 @@ class Finalizer():
             graph_metrics_dict = self.graph_metrics_dict
         else:
             self._check_graph_metrics_dict(graph_metrics_dict)
-        if graph_columns is None:
-            graph_columns = self.graph_columns
-        else:
-            self._check_graph_columns(graph_columns)
+
         # calculate and insert metric columns
-        graph_metric_cols_dict = {title: [] for title in graph_columns}
-        for graph_title in graph_columns:
+        graph_metric_cols_dict = {title: [] for title in self.graph_columns}
+        for graph_title in self.graph_columns:
             for metric, status in graph_metrics_dict.items():
                 if status == False:
                     continue
@@ -121,12 +121,14 @@ class Finalizer():
                 total += time_value_pair[1]
         return total
 
-    def sum_df(self, df, graph_metrics_dict: dict[str, bool] = None, graph_columns: list[str] = None) -> pd.DataFrame:
+    def sum_df(self, df, graph_metrics_dict: dict[str, bool] = None) -> pd.DataFrame:
         for column in df.columns:
             if column not in self.graph_columns:
                 df[column] = df[column].apply(self._sum_result_list)
 
+        # since each cell in a graph_column contains many datapoints,
+        # insert metric columns to summarize them, then drop the original graph columns
         df = self._insert_graph_metric_columns(
-            graph_metrics_dict, graph_columns)
-        df = self.fil_graph_metric_columns(graph_columns)
+            graph_metrics_dict, self.graph_columns)
+        df = df.drop(columns=self.graph_columns)
         return df
