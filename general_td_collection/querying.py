@@ -32,7 +32,7 @@ class Query_handler():
         self.node_regex = node_regex
         self.pod_regex = pod_regex
         self.namespace_regex = namespace_regex
-        self.filter_str = self._init_filter_str()
+        self.filter_str = self.init_filter_str()
 
         self.duration = duration
         # csv files
@@ -63,15 +63,15 @@ class Query_handler():
         # neither are defined
         return ""
 
-    # get filter str using passed in values during init
-    def _init_filter_str(self) -> str:
+    # update the filter string used for querying based on passed in filter parameters
+    def update_filter_str(self, node=None, node_regex=None, pod=None, pod_regex=None, namespace=None, namespace_regex=None) -> str:
         # get individual filters
         node_filter = self._get_component_filter_str(
-            "node", self.node, self.node_regex)
+            "node", node, node_regex)
         pod_filter = self._get_component_filter_str(
-            "pod", self.pod, self.pod_regex)
+            "pod", pod, pod_regex)
         namespace_filter = self._get_component_filter_str(
-            "namespace", self.namespace, self.namespace_regex)
+            "namespace", namespace, namespace_regex)
 
         # assemble filter str
         filters = [node_filter, pod_filter, namespace_filter]
@@ -81,7 +81,12 @@ class Query_handler():
                 continue
             # in PromQL, it still works if the filter string ends in a comma
             filter_str += filter + ', '
-        return f"{node_filter}, {pod_filter}, {namespace_filter}"
+        self.filter_str = filter_str
+        return filter_str
+
+    # initialize the filter string with the class's filters
+    def init_filter_str(self):
+        return self.update_filter_str(self.node, self.node_regex, self.pod, self.pod_regex, self.namespace, self.namespace_regex)
 
     def get_gpu_queries(self, start, duration_seconds: int | float) -> tuple[dict, list]:
         # graph queries
