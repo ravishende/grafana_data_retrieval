@@ -216,7 +216,6 @@ class Tables():
     #        If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of a table_name: table_df if table_name is specified, otherwise returns
     # a dataframe that is the table
-
     def get_table_from_queries(self, queries_dict, sum_by=["node", "pod"], table_name=None):
         # handle if sum_by is a single input (put into list format)
         if isinstance(sum_by, str):
@@ -248,11 +247,9 @@ class Tables():
         return table_df
 
     # get a dictionary of all the tables
-
     def get_tables_dict(self, only_include_worker_pods=False, queries=None, partial_queries=None):
         # Note: queries and partial_queries can be passed in as None and will be updated in
         # _fill_df_by_queries() for the first 3 and _get_storage_io() for 'Current Storage IO'
-
         tables_dict = {
             'CPU Quota': self._get_cpu_quota(queries=queries),
             'Memory Quota': self._get_mem_quota(queries=queries),
