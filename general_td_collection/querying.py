@@ -84,12 +84,8 @@ class Query_handler():
         return f"{node_filter}, {pod_filter}, {namespace_filter}"
 
     def get_gpu_queries(self, start, duration_seconds: int | float) -> tuple[dict, list]:
-        start = datetime_ify(start)
-        duration_seconds = int(duration_seconds)
-        offset = calculate_offset(start, duration_seconds)
-        duration = delta_to_time_str(timedelta(seconds=duration_seconds))
         # graph queries
-        graph_queries_no_sum_by = {
+        queries = {
             # total gpu usage = gpu_utilization% by pod but averaging out all the pods
             'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization{' + self.filter_str + '}',
             'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self.filter_str + '})'
@@ -187,18 +183,21 @@ class Query_handler():
 
     def query_df(self, df: pd.DataFrame = None, batch_size: int = 5, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
         # handle user input
-        if not (gpu_queries and gpu_compute_resource_queries and rgw_queries and cpu_compute_resource_queries):
+        if not (gpu_queries or gpu_compute_resource_queries or rgw_queries or cpu_compute_resource_queries):
             raise ValueError("No queries specified -> nothing to query")
         if df is None:
             try:
                 pd.read_csv(self._read_file)
             except:
                 raise ValueError(
-                    f"no df passed in, and default read file ({self._read_file}) cannot be read.")
+                    f"No df passed in, and default read file ({self._read_file}) cannot be read.")
 
-        queries_by_type = self._get_queries()
+        queries_by_type = self._get_queries(
+            gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries, cpu_compute_resource_queries=cpu_compute_resource_queries
+        )
         # TODO: query in batches
         print(f"Querying in batches of {batch_size} rows...")
+
         # query graphs
         graphs_class = Graphs()
         graph_queries = queries_by_type['graph']
@@ -206,4 +205,5 @@ class Query_handler():
                       args=(graphs_class, graph_queries))
         df.to_csv("csvs/graphs_queried.csv")
         # TODO: query normal rows (maybe with table.py?)
+        # IDEA: instead of querying and then summing, try wrapping queries in sum() blocks?
         return df
