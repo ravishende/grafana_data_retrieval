@@ -6,8 +6,8 @@ class Finalizer():
     def __init__(self, graph_metrics: list[str] | str = [], graph_columns: list[str] | str = None) -> None:
         if graph_columns is not None:
             self._check_graph_columns(graph_columns)
-
-        self._check_graph_metrics(graph_metrics)
+        if graph_metrics != []:
+            self._check_graph_metrics(graph_metrics)
         self.graph_metrics = graph_metrics
         self.graph_columns = graph_columns
         self.all_graph_metrics = ["min", "max", "mean", "median",
@@ -32,7 +32,7 @@ class Finalizer():
 
     # given a dict of metrics and statuses (booleans), check that all the keys are recognized and it is of the right type.
     def _check_graph_metrics(self, graph_metrics: list[str]) -> None:
-        if graph_metrics is not None:
+        if graph_metrics != []:
             if not isinstance(graph_metrics, list) and not isinstance(graph_metrics, str):
                 raise ValueError(
                     f"graph_query_metrics must be a string or list of strings, with the following possible elements: {self.all_graph_metrics}")
