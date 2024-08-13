@@ -36,8 +36,8 @@ def insert_rand_refresh_col(df: pd.DataFrame, refresh_title: str, method: int = 
 def preprocess_df(df: pd.DataFrame, num_refresh_cols: int = 0) -> pd.DataFrame:
     # deal with times and create runtime column
     df['start'] = df['start'].apply(datetime_ify)
-    df['stop'] = df['stop'].apply(datetime_ify)
-    df['runtime'] = (df['stop'] - df['start']).dt.total_seconds()
+    df['end'] = df['end'].apply(datetime_ify)
+    df['runtime'] = (df['end'] - df['start']).dt.total_seconds()
     df['runtime'] = df['runtime'].round()
 
     for i in range(num_refresh_cols):
