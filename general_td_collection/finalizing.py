@@ -121,21 +121,25 @@ class Finalizer():
     def _sum_result_list(self, result_list: list[dict]) -> float:
         total = 0
         for metric_value_dict in result_list:
-            # TODO: check if the key is 'values' or 'value'
-            for time_value_pair in metric_value_dict['values']:
-                total += time_value_pair[1]
+            time_value_pair = metric_value_dict['value']
+            total += float(time_value_pair[1])
         return total
 
     def sum_df(self, df, graph_metrics: list[str] = None) -> pd.DataFrame:
+        if not isinstance(df, pd.DataFrame):
+            raise ValueError(
+                f"Expected df to be a pandas DataFrame but was type {type(df)}")
         self.graph_columns = self.get_graph_columns(df)
         # TODO: un-hardcode this by prepending queried_ to non graph, queried columns in querying.py
         non_sum_cols = self.graph_columns + ['start', 'end', 'runtime', 'model', 'num_questions',
                                              'question_method', 'pdf_pages', 'pdf_load_time']
         sum_columns = [col for col in df.columns if col not in non_sum_cols]
-        for column in sum_columns:
-            if column not in self.graph_columns:
-                df[column] = df[column].apply(self._sum_result_list)
-
+        for col_name in sum_columns:
+            prefix = "queried_"
+            summed_col = col_name[len(prefix):]
+            df[summed_col] = df[col_name].apply(self._sum_result_list)
+        # drop queried columns
+        df = df.drop(columns=sum_columns)
         # since each cell in a graph_column contains many datapoints,
         # insert metric columns to summarize them, then drop the original graph columns
         df = self._insert_graph_metric_columns(

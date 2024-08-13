@@ -1,5 +1,6 @@
 # autopep8: off
-from datetime import timedelta
+from datetime import datetime, timedelta
+from lib2to3 import refactor
 import pandas as pd
 import warnings
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
@@ -11,6 +12,7 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 from helpers.time_functions import calculate_offset, delta_to_time_str, datetime_ify
+from helpers.querying import query_data
 from graphs import Graphs
 # autopep8: on
 
@@ -127,9 +129,10 @@ class Query_handler():
         return queries
 
     # queries from ../training_data_handling/work_flow.py
-    def get_cpu_compute_resource_queries(self, start, duration_seconds: int | float) -> dict[str, str]:
+    def get_cpu_compute_resource_queries(self, start, end) -> dict[str, str]:
         start = datetime_ify(start)
-        duration_seconds = int(duration_seconds)
+        end = datetime_ify(end)
+        duration_seconds = int((end-start).total_seconds())
         offset = calculate_offset(start, duration_seconds)
         static_offset = calculate_offset(start, 10)
         duration = delta_to_time_str(timedelta(seconds=duration_seconds))
@@ -177,6 +180,23 @@ class Query_handler():
 
         return {'graph': graph_queries, 'non_graph': non_graph_queries}
 
+    '''
+    def _get_query_through_time(query, offset, duration_str):
+        end_filter_str_indices = [
+            match.start() for match in re.finditer('}', query)]
+        updated_query = ""
+        for i in range(len(end_filter_str_indices)):
+            start_splice = end_filter_str_indices[i] + 1
+            end_splice = 0
+            if i < len(end_filter_str_indices) - 1:
+                end_splice = end_filter_str_indices[i+1]
+            else:
+                end_splice = len(end_filter_str_indices)
+
+            splice = query[start_splice:end_splice]
+        return updated_query
+    '''
+
     # given a row of a dataframe, a graphs class instantiation, and a dict of queries for graphs,
     # return a queried version of that row,
     # with the new columns being the graph titles prepended with 'graph_'
@@ -189,13 +209,20 @@ class Query_handler():
             row[new_title] = data
         return row
 
-    def _query_row_for_non_graphs(self, row: pd.Series, queries: dict[str, str]):
-        # TODO: figure out how to get data_dict
+    # TODO: refactor this to not pass a function in
+    def _query_row_for_non_graphs(self, row: pd.Series, query_retrieval_funcs_list: list):
+        if len(query_retrieval_funcs_list) == 0:
+            return row
         data_dict = {}
-        for title, data in data_dict.itmes():
+        for query_retrieval_func in query_retrieval_funcs_list:
+            queries = query_retrieval_func(row['start'], row['end'])
+            data_dict.update({title: query_data(query)
+                              for title, query in queries.items()})
+        # prepend a string for finalizing.py to know that the column needs to be summed
+        for title, data in data_dict.items():
             new_title = "queried_" + title
             row[new_title] = data
-        return
+        return row
 
     def query_df(self, df: pd.DataFrame = None, batch_size: int = 5, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
         # handle user input
@@ -209,20 +236,26 @@ class Query_handler():
                     f"No df passed in, and default read file ({self._read_file}) cannot be read.")
 
         queries_by_type = self._get_queries(
-            gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries, cpu_compute_resource_queries=cpu_compute_resource_queries
+            gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries,
+            # cpu_compute_resource_queries=cpu_compute_resource_queries
         )
         # TODO: query in batches
         # print(f"Querying in batches of {batch_size} rows...")
-
         # query graphs
         graphs_class = Graphs()
         graph_queries = queries_by_type['graph']
-        non_graph_queries = queries_by_type['non_graph']
+        # TODO: refactor to actually use non_graph_queries
+        non_graph_query_functions = queries_by_type['non_graph']
         df = df.apply(self._query_row_for_graphs,
                       args=(graphs_class, graph_queries), axis=1)
-        # TODO: query normal rows (maybe with table.py?)
-        # IDEA: instead of querying and then summing, try wrapping queries in sum() blocks?
-        df = df.apply(self._query_row_for_non_graphs,
-                      args=(non_graph_queries), axis=1)
-        df = df.to_csv(self._write_file)
+
+        # TODO: refactor to not pass in a function
+        non_graph_query_functions = []
+        if cpu_compute_resource_queries:
+            non_graph_query_functions.append(
+                self.get_cpu_compute_resource_queries)
+
+        df = df.apply(lambda row: self._query_row_for_non_graphs(
+            row, non_graph_query_functions), axis=1)
+        df.to_csv(self._write_file)
         return df
