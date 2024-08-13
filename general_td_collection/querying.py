@@ -114,7 +114,7 @@ class Query_handler():
         return queries
 
     def get_rgw_queries(self) -> dict[str, str]:
-        # TODO: since these don't have node, filter_str makes it have no data
+        # TODO: since these don't have node, filter_str can sometimes make it have no data
         # graph queries
         queries = {
             'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self.filter_str + '})',
