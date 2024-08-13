@@ -1,6 +1,5 @@
 # autopep8: off
 from datetime import datetime, timedelta
-from lib2to3 import refactor
 import pandas as pd
 import warnings
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
@@ -56,7 +55,7 @@ class Query_handler():
                 "at most one of component_name or component_regex should be defined.")
         # give a warning if it doesn't seem like the filter str is being used correctly
         known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job', 'instance',
-                                'container', 'Hostname', 'UUID', 'device', 'endpoint', 'service']
+                                'instance_id', 'container', 'Hostname', 'UUID', 'device', 'endpoint', 'service', 'prometheus', 'service']
         if component not in known_k8s_components:
             warnings.warn(
                 f"Unknown component '{component}'. Known components are: {known_k8s_components}")
@@ -115,15 +114,15 @@ class Query_handler():
         return queries
 
     def get_rgw_queries(self) -> dict[str, str]:
-        # TODO: since these are by instance and don't have pod, node, namespace: filter_str makes it have no data
+        # TODO: since these don't have node, filter_str makes it have no data
         # graph queries
         queries = {
             'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self.filter_str + '})',
-            # 'rgw_cache_hit': 'sum by(instance) (irate(ceph_rgw_cache_hit{' + self.filter_str + '}))',
-            # 'rgw_cache_miss': 'sum by(instance) (irate(ceph_rgw_cache_miss{' + self.filter_str + '}))',
-            # 'rgw_gets': 'sum by(instance) (irate(ceph_rgw_get{' + self.filter_str + '}))',
-            # 'rgw_puts': 'sum by(instance) (irate(ceph_rgw_put{' + self.filter_str + '}))',
-            # 'rgw_failed_req': 'sum by(instance) (irate(ceph_rgw_failed_req{' + self.filter_str + '}))'
+            'rgw_cache_hit': 'sum by(instance) (ceph_rgw_cache_hit{' + self.filter_str + '})',
+            'rgw_cache_miss': 'sum by(instance) (ceph_rgw_cache_miss{' + self.filter_str + '})',
+            'rgw_gets': 'sum by(instance) (ceph_rgw_get{' + self.filter_str + '})',
+            'rgw_puts': 'sum by(instance) (ceph_rgw_put{' + self.filter_str + '})',
+            'rgw_failed_req': 'sum by(instance) (ceph_rgw_failed_req{' + self.filter_str + '})'
         }
 
         return queries
