@@ -18,23 +18,30 @@ read_file = "csvs/read.csv"
 # get the df & make sure there's no unnamed column from if csv was saved with/without an index col
 df = pd.read_csv(read_file)
 unnamed_cols = df.columns.str.match('Unnamed')
-runs_list_df = df.loc[:, ~unnamed_cols]
+df = df.loc[:, ~unnamed_cols]
 
-if not 'start' in df.columns or not 'stop' in df.columns:
+if not 'start' in df.columns or not 'end' in df.columns:
     raise ValueError(
-        "dataframe must have a 'start' column and a 'stop' columnn")
+        "dataframe must have a 'start' column and an 'end' columnn")
 
 
-num_partial_duration_cols = input("How many duration columns should there be?")
+num_partial_duration_cols = input(
+    "How many duration columns should there be?\n")
 try:
     num_partial_duration_cols = int(num_partial_duration_cols)
 except:
     raise ValueError("Input must be an int.")
 
-query_handler = Query_handler()
+pod_prefix = 'fc-worker-1-'
+pod_regex_str = f'^{pod_prefix}.*'
+query_handler = Query_handler(pod_regex=pod_regex_str)
 finalizer = Finalizer()
 
+df = df.iloc[len(df)-3:]
+print("\n\n\nStarting df:\n", df, "\n\n\n\n")
 df = preprocess_df(df, num_partial_duration_cols)
-df = query_handler.query_df(df)
-df = finalizer.sum_df(df)
+df = query_handler.query_df(df, gpu_queries=True, gpu_compute_resource_queries=True,
+                            rgw_queries=False, cpu_compute_resource_queries=False)
+df = finalizer.sum_df(
+    df, graph_metrics=['min', 'max', 'mean', 'median', 'increase'])
 print("Finalized dataframe:\n", df, sep="")
