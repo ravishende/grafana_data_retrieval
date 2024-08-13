@@ -16,7 +16,9 @@ from graphs import Graphs
 
 
 class Query_handler():
-    def __init__(self, read_file="csvs/run_inputs.csv", node=None, pod=None, node_regex=None, pod_regex=None, namespace=None, namespace_regex=None, duration='5m'):
+    def __init__(self, read_file: str = "csvs/run_inputs.csv", node: str | None = None,
+                 pod: str | None = None, node_regex: str | None = None, pod_regex: str | None = None,
+                 namespace: str | None = None, namespace_regex: str | None = None, duration: str = '5m'):
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -88,11 +90,11 @@ class Query_handler():
     def init_filter_str(self):
         return self.update_filter_str(self.node, self.node_regex, self.pod, self.pod_regex, self.namespace, self.namespace_regex)
 
-    def get_gpu_queries(self, start, duration_seconds: int | float) -> tuple[dict, list]:
+    def get_gpu_queries(self) -> dict[str:str]:
         # graph queries
         queries = {
             # total gpu usage = gpu_utilization% by pod but averaging out all the pods
-            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization{' + self.filter_str + '}',
+            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization' + self.filter_str,
             'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self.filter_str + '})'
         }
         queries = {}
@@ -112,7 +114,7 @@ class Query_handler():
     def get_rgw_queries(self) -> dict[str, str]:
         # graph queries
         queries = {
-            'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self.filter_str + '}',
+            'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self.filter_str + '})',
             'rgw_cache_hit': 'sum by(instance) (irate(ceph_rgw_cache_hit{' + self.filter_str + '}))',
             'rgw_cache_miss': 'sum by(instance) (irate(ceph_rgw_cache_miss{' + self.filter_str + '}))',
             'rgw_gets': 'sum by(instance) (irate(ceph_rgw_get{' + self.filter_str + '}))',
@@ -162,16 +164,17 @@ class Query_handler():
         # therefore, we should just sum everything, keeping sum_by as None.
         if gpu_queries:
             new_queries = self.get_gpu_queries()
-            graph_queries.update(new_queries['graph'])
+            graph_queries.update(new_queries)
         if gpu_compute_resource_queries:
             new_queries = self.get_gpu_compute_resource_queries()
-            graph_queries.update(new_queries['graph'])
-        if cpu_compute_resource_queries:
-            new_queries = self.get_cpu_compute_resource_queries()
-            graph_queries.update(new_queries['graph'])
+            graph_queries.update(new_queries)
         if rgw_queries:
             new_queries = self.get_rgw_queries()
-            graph_queries.update(new_queries['graph'])
+            graph_queries.update(new_queries)
+
+        if cpu_compute_resource_queries:
+            new_queries = self.get_cpu_compute_resource_queries()
+            non_graph_queries.update(new_queries)
 
         return {'graph': graph_queries, 'non_graph': non_graph_queries}
 
@@ -181,9 +184,10 @@ class Query_handler():
     def _query_row_for_graphs(self, row: pd.Series, graphs_class: Graphs, graph_queries: dict[str, str]) -> pd.Series:
         # sum by none since we're eventually getting it all down to one data point --> no need to split it further
         graphs_dict = graphs_class.get_graphs_from_queries(
-            queries_dict=graph_queries, sum_by=None, start=row['start'], end=row['stop'])
+            queries_dict=graph_queries, sum_by=None, start=row['start'], end=row['end'])
         for title, data in graphs_dict.items():
-            row[title] = data
+            new_title = "graph_" + title
+            row[new_title] = data
         return row
 
     def query_df(self, df: pd.DataFrame = None, batch_size: int = 5, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
@@ -201,13 +205,13 @@ class Query_handler():
             gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries, cpu_compute_resource_queries=cpu_compute_resource_queries
         )
         # TODO: query in batches
-        print(f"Querying in batches of {batch_size} rows...")
+        # print(f"Querying in batches of {batch_size} rows...")
 
         # query graphs
         graphs_class = Graphs()
         graph_queries = queries_by_type['graph']
         df = df.apply(self._query_row_for_graphs,
-                      args=(graphs_class, graph_queries))
+                      args=(graphs_class, graph_queries), axis=1)
         df.to_csv("csvs/graphs_queried.csv")
         # TODO: query normal rows (maybe with table.py?)
         # IDEA: instead of querying and then summing, try wrapping queries in sum() blocks?
