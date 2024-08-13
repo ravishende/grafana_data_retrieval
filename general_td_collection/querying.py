@@ -22,7 +22,7 @@ class Query_handler():
                  write_file: str = "csvs/queried.csv", node: str | None = None,
                  node_regex: str | None = None, pod: str | None = None,
                  pod_regex: str | None = None, namespace: str | None = None,
-                 namespace_regex: str | None = None, duration: str = '5m'):
+                 namespace_regex: str | None = None):
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -40,7 +40,6 @@ class Query_handler():
         self.namespace_regex = namespace_regex
         self.filter_str = self.init_filter_str()
 
-        self.duration = duration
         # csv files
         self._read_file = read_file
         self._write_file = write_file
@@ -56,14 +55,14 @@ class Query_handler():
             raise ValueError(
                 "at most one of component_name or component_regex should be defined.")
         # give a warning if it doesn't seem like the filter str is being used correctly
-        known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job',
+        known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job', 'instance',
                                 'container', 'Hostname', 'UUID', 'device', 'endpoint', 'service']
         if component not in known_k8s_components:
             warnings.warn(
                 f"Unknown component '{component}'. Known components are: {known_k8s_components}")
         # give the string depending on if it's a regex expression or not
         if component_name:
-            return f'{component}="{component_name}'
+            return f'{component}="{component_name}"'
         if component_regex:
             return f'{component}=~"{component_regex}"'
         # neither are defined
@@ -116,14 +115,15 @@ class Query_handler():
         return queries
 
     def get_rgw_queries(self) -> dict[str, str]:
+        # TODO: since these are by instance and don't have pod, node, namespace: filter_str makes it have no data
         # graph queries
         queries = {
             'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self.filter_str + '})',
-            'rgw_cache_hit': 'sum by(instance) (irate(ceph_rgw_cache_hit{' + self.filter_str + '}))',
-            'rgw_cache_miss': 'sum by(instance) (irate(ceph_rgw_cache_miss{' + self.filter_str + '}))',
-            'rgw_gets': 'sum by(instance) (irate(ceph_rgw_get{' + self.filter_str + '}))',
-            'rgw_puts': 'sum by(instance) (irate(ceph_rgw_put{' + self.filter_str + '}))',
-            'rgw_failed_req': 'sum by(instance) (irate(ceph_rgw_failed_req{' + self.filter_str + '}))'
+            # 'rgw_cache_hit': 'sum by(instance) (irate(ceph_rgw_cache_hit{' + self.filter_str + '}))',
+            # 'rgw_cache_miss': 'sum by(instance) (irate(ceph_rgw_cache_miss{' + self.filter_str + '}))',
+            # 'rgw_gets': 'sum by(instance) (irate(ceph_rgw_get{' + self.filter_str + '}))',
+            # 'rgw_puts': 'sum by(instance) (irate(ceph_rgw_put{' + self.filter_str + '}))',
+            # 'rgw_failed_req': 'sum by(instance) (irate(ceph_rgw_failed_req{' + self.filter_str + '}))'
         }
 
         return queries
@@ -137,6 +137,7 @@ class Query_handler():
         static_offset = calculate_offset(start, 10)
         duration = delta_to_time_str(timedelta(seconds=duration_seconds))
 
+        # TODO: test if removing the by (pod) makes a difference - I don't think it should
         # all resources and the heart of their queries
         queries = {
             # static metrics
