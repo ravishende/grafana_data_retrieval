@@ -224,7 +224,7 @@ class Query_handler():
             row[new_title] = data
         return row
 
-    def query_df(self, df: pd.DataFrame = None, batch_size: int = 5, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
+    def query_df(self, df: pd.DataFrame = None, batch_size: int = 5, rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
         # handle user input
         if not (gpu_queries or gpu_compute_resource_queries or rgw_queries or cpu_compute_resource_queries):
             raise ValueError("No queries specified -> nothing to query")

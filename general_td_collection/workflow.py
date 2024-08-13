@@ -1,9 +1,10 @@
+# autopep8: off
 import pandas as pd
 import shutil
 from preprocessing import preprocess_df
 from querying import Query_handler
 from finalizing import Finalizer
-
+# autopep8: on
 
 # display settings
 pd.set_option("display.max_columns", None)
@@ -35,13 +36,19 @@ except:
 pod_prefix = 'fc-worker-1-'
 pod_regex_str = f'^{pod_prefix}.*'
 query_handler = Query_handler(pod_regex=pod_regex_str)
+# query_handler = Query_handler(namespace="rook")
 finalizer = Finalizer()
 
 df = df.iloc[len(df)-3:]
 print("\n\n\nStarting df:\n", df, "\n\n\n\n")
 df = preprocess_df(df, num_partial_duration_cols)
-df = query_handler.query_df(df, gpu_queries=True, gpu_compute_resource_queries=True,
-                            rgw_queries=False, cpu_compute_resource_queries=False)
+print("Querying...")
+df = query_handler.query_df(df,
+                            rgw_queries=False,
+                            gpu_queries=True,
+                            gpu_compute_resource_queries=True,
+                            cpu_compute_resource_queries=True)
+print("summing...")
 df = finalizer.sum_df(
     df, graph_metrics=['min', 'max', 'mean', 'median', 'increase'])
 print("Finalized dataframe:\n", df, sep="")
