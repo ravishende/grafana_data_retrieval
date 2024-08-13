@@ -16,9 +16,11 @@ from graphs import Graphs
 
 
 class Query_handler():
-    def __init__(self, read_file: str = "csvs/run_inputs.csv", node: str | None = None,
-                 pod: str | None = None, node_regex: str | None = None, pod_regex: str | None = None,
-                 namespace: str | None = None, namespace_regex: str | None = None, duration: str = '5m'):
+    def __init__(self, read_file: str = "csvs/run_inputs.csv",
+                 write_file: str = "csvs/queried.csv", node: str | None = None,
+                 node_regex: str | None = None, pod: str | None = None,
+                 pod_regex: str | None = None, namespace: str | None = None,
+                 namespace_regex: str | None = None, duration: str = '5m'):
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -39,8 +41,8 @@ class Query_handler():
         self.duration = duration
         # csv files
         self._read_file = read_file
-        self._progress_file = "csvs/query_progress.csv"
-        self._save_file = "csvs/queried.csv"
+        self._write_file = write_file
+        self._progress_file = "csvs/_query_progress.csv"
         return
 
     # given a kubernetes component ('node', 'pod', 'namespace', etc.) and the name (optional)
@@ -159,9 +161,6 @@ class Query_handler():
         graph_queries = {}
         non_graph_queries = {}
 
-        # TODO: figure out how to deal with sum_by
-        # idea: sum_by never matters because we always want one datapoint for each cell
-        # therefore, we should just sum everything, keeping sum_by as None.
         if gpu_queries:
             new_queries = self.get_gpu_queries()
             graph_queries.update(new_queries)
@@ -190,6 +189,14 @@ class Query_handler():
             row[new_title] = data
         return row
 
+    def _query_row_for_non_graphs(self, row: pd.Series, queries: dict[str, str]):
+        # TODO: figure out how to get data_dict
+        data_dict = {}
+        for title, data in data_dict.itmes():
+            new_title = "queried_" + title
+            row[new_title] = data
+        return
+
     def query_df(self, df: pd.DataFrame = None, batch_size: int = 5, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
         # handle user input
         if not (gpu_queries or gpu_compute_resource_queries or rgw_queries or cpu_compute_resource_queries):
@@ -210,9 +217,12 @@ class Query_handler():
         # query graphs
         graphs_class = Graphs()
         graph_queries = queries_by_type['graph']
+        non_graph_queries = queries_by_type['non_graph']
         df = df.apply(self._query_row_for_graphs,
                       args=(graphs_class, graph_queries), axis=1)
-        df.to_csv("csvs/graphs_queried.csv")
         # TODO: query normal rows (maybe with table.py?)
         # IDEA: instead of querying and then summing, try wrapping queries in sum() blocks?
+        df = df.apply(self._query_row_for_non_graphs,
+                      args=(non_graph_queries), axis=1)
+        df = df.to_csv(self._write_file)
         return df
