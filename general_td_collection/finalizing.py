@@ -4,11 +4,10 @@ import warnings
 
 class Finalizer():
     def __init__(self, graph_metrics: list[str] | str = [], graph_columns: list[str] | str = None) -> None:
-        if graph_columns is None:
-            graph_columns = self.get_graph_columns()
+        if graph_columns is not None:
+            self._check_graph_columns(graph_columns)
 
         self._check_graph_metrics(graph_metrics)
-        self._check_graph_columns(graph_columns)
         self.graph_metrics = graph_metrics
         self.graph_columns = graph_columns
         self.all_graph_metrics = ["min", "max", "mean", "median",
@@ -43,7 +42,7 @@ class Finalizer():
             for metric in graph_metrics:
                 if metric not in self.all_graph_metrics:
                     raise ValueError(
-                        f"metric {metric} not in acceptable metrics: {self.all_graph_metrics}.")
+                        f"metric '{metric}' not in acceptable metrics: {self.all_graph_metrics}.")
 
     # given a title that may have capitals and spaces, return a lowercase version, with all spaces replaced with underscores
     def _title_to_col_name(self, title: str) -> str:
@@ -53,19 +52,23 @@ class Finalizer():
 
     # given a title of a graph and a metric, return a title of metric_graph_title, with everything lowercase and no spaces (spaces replaced with underscores)
     def _get_metric_col_name(self, graph_title: str, metric: str) -> str:
-        if metric not in self.graph_metrics:
+        if metric not in self.all_graph_metrics:
             raise ValueError(
                 f"metric {metric} not in acceptable metrics: {self.graph_metrics}")
-        cleaned_title = self._title_to_col_name(graph_title)
+        prefix = "graph_"
+        no_prefix_title = graph_title[len(prefix):]
+        cleaned_title = self._title_to_col_name(no_prefix_title)
         col_name = f"{metric}_{cleaned_title}"
         return col_name
 
     # takes in a list containing graph data (result list from a query) and a metric
     # returns the metric taken of the series, e.g. if metric is "std", takes the standard deviation
-    def _summarize_graph_data(self, graph_data_list: list, metric: str) -> float:
-        graph_values = [float(datapoint['value'][0])
-                        for datapoint in graph_data_list]
-        graph_data = pd.Series(graph_values)
+    def _summarize_graph_data(self, graph_data_df: pd.DataFrame, metric: str) -> float:
+        if graph_data_df is None:
+            return None
+        queried_col = [
+            col for col in graph_data_df.columns if col != 'Time'][0]
+        graph_data = graph_data_df[queried_col].astype(float)
         # NOTE: if anything gets updated here, self.all_graph_metrics must also be updated
         match metric:
             case "min":
@@ -89,7 +92,7 @@ class Finalizer():
             case "iqr":
                 return graph_data.quantile(q=0.75) - graph_data.quantile(q=0.25)
             case "increase":
-                return graph_data.iloc[len(graph_data)] - graph_data.iloc[0]
+                return graph_data.iloc[len(graph_data) - 1] - graph_data.iloc[0]
             case _:
                 raise ValueError(
                     f"metric {metric} not in known metrics: {self.all_graph_metrics}")
@@ -111,7 +114,7 @@ class Finalizer():
                 metric_col_name = self._get_metric_col_name(
                     graph_title, metric)
                 df[metric_col_name] = df[graph_title].apply(
-                    self._summarize_graph_data, args=(metric))
+                    lambda cell: self._summarize_graph_data(cell, metric))
         return df
 
     # given a result list from a query, sum it to get the result
@@ -125,13 +128,17 @@ class Finalizer():
 
     def sum_df(self, df, graph_metrics: list[str] = None) -> pd.DataFrame:
         self.graph_columns = self.get_graph_columns(df)
-        for column in df.columns:
+        # TODO: un-hardcode this by prepending queried_ to non graph, queried columns in querying.py
+        non_sum_cols = self.graph_columns + ['start', 'end', 'runtime', 'model', 'num_questions',
+                                             'question_method', 'pdf_pages', 'pdf_load_time']
+        sum_columns = [col for col in df.columns if col not in non_sum_cols]
+        for column in sum_columns:
             if column not in self.graph_columns:
                 df[column] = df[column].apply(self._sum_result_list)
 
         # since each cell in a graph_column contains many datapoints,
         # insert metric columns to summarize them, then drop the original graph columns
         df = self._insert_graph_metric_columns(
-            graph_metrics, self.graph_columns)
+            df, graph_metrics)
         df = df.drop(columns=self.graph_columns)
         return df
