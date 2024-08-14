@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 import pandas as pd
 import warnings
+import tqdm
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
@@ -206,6 +207,8 @@ class Query_handler():
             queries_dict=graph_queries, sum_by=None, start=row['start'], end=row['end'])
         for title, data in graphs_dict.items():
             new_title = "graph_" + title
+            if data is not None:
+                data = data[title].astype(float).to_list()
             row[new_title] = data
         return row
 
@@ -239,23 +242,46 @@ class Query_handler():
             gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries,
             # cpu_compute_resource_queries=cpu_compute_resource_queries
         )
-        # TODO: query in batches
-        # print(f"Querying in batches of {batch_size} rows...")
-        # query graphs
-        graphs_class = Graphs()
+        # set up dataframes - progress df and what's left to query
+        queried_df = pd.DataFrame()
+        df_to_query = pd.DataFrame()
+        if os.path.exists(self._progress_file):
+            try:
+                queried_df = pd.read_csv(self._progress_file, index_col=0)
+            except:
+                pass
+
+        if len(queried_df) > 0:
+            queried_df = queried_df.reset_index(drop=True)
+            df_to_query = df.iloc[len(queried_df):].reset_index(drop=True)
+        else:
+            df_to_query = df.reset_index(drop=True)
+
+        # get queries
         graph_queries = queries_by_type['graph']
         # TODO: refactor to actually use non_graph_queries
         non_graph_query_functions = queries_by_type['non_graph']
-        df = df.apply(self._query_row_for_graphs,
-                      args=(graphs_class, graph_queries), axis=1)
-
         # TODO: refactor to not pass in a function
         non_graph_query_functions = []
         if cpu_compute_resource_queries:
             non_graph_query_functions.append(
                 self.get_cpu_compute_resource_queries)
+        graphs_class = Graphs()
 
-        df = df.apply(lambda row: self._query_row_for_non_graphs(
-            row, non_graph_query_functions), axis=1)
-        df.to_csv(self._write_file)
-        return df
+        # query in batches
+        for batch_start in range(0, len(df_to_query), batch_size):
+            batch_end = min(batch_start+batch_size, len(df_to_query))
+            df_chunk = df_to_query.iloc[batch_start:batch_end]
+            print(f"Querying rows {batch_start} to {batch_end-1}")
+            # query graphs
+            df_chunk = df_chunk.apply(self._query_row_for_graphs,
+                                      args=(graphs_class, graph_queries), axis=1)
+            # query non graphs
+            df_chunk = df_chunk.apply(lambda row: self._query_row_for_non_graphs(
+                row, non_graph_query_functions), axis=1)
+            queried_df = pd.concat(
+                [queried_df, df_chunk]).reset_index(drop=True)
+            queried_df.to_csv(self._progress_file)
+        print(queried_df)
+        queried_df.to_csv(self._write_file)
+        return queried_df

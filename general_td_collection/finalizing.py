@@ -1,5 +1,6 @@
 import pandas as pd
 import warnings
+import ast
 
 
 class Finalizer():
@@ -63,12 +64,12 @@ class Finalizer():
 
     # takes in a list containing graph data (result list from a query) and a metric
     # returns the metric taken of the series, e.g. if metric is "std", takes the standard deviation
-    def _summarize_graph_data(self, graph_data_df: pd.DataFrame, metric: str) -> float:
-        if graph_data_df is None:
+    def _summarize_graph_data(self, graph_data_list: pd.DataFrame, metric: str) -> float:
+        if not isinstance(graph_data_list, list) and pd.isna(graph_data_list):
             return None
-        queried_col = [
-            col for col in graph_data_df.columns if col != 'Time'][0]
-        graph_data = graph_data_df[queried_col].astype(float)
+        if isinstance(graph_data_list, str):
+            graph_data_list = ast.literal_eval(graph_data_list)
+        graph_data = pd.Series(data=graph_data_list)
         # NOTE: if anything gets updated here, self.all_graph_metrics must also be updated
         match metric:
             case "min":
@@ -120,6 +121,8 @@ class Finalizer():
     # given a result list from a query, sum it to get the result
     def _sum_result_list(self, result_list: list[dict]) -> float:
         total = 0
+        if isinstance(result_list, str):
+            result_list = ast.literal_eval(result_list)
         for metric_value_dict in result_list:
             time_value_pair = metric_value_dict['value']
             total += float(time_value_pair[1])
@@ -131,12 +134,11 @@ class Finalizer():
                 f"Expected df to be a pandas DataFrame but was type {type(df)}")
         self.graph_columns = self.get_graph_columns(df)
         # TODO: un-hardcode this by prepending queried_ to non graph, queried columns in querying.py
-        non_sum_cols = self.graph_columns + ['start', 'end', 'runtime', 'model', 'num_questions',
-                                             'question_method', 'pdf_pages', 'pdf_load_time']
-        sum_columns = [col for col in df.columns if col not in non_sum_cols]
+        sum_col_prefix = "queried_"
+        sum_columns = [
+            col for col in df.columns if col[:len(sum_col_prefix)] == sum_col_prefix]
         for col_name in sum_columns:
-            prefix = "queried_"
-            summed_col = col_name[len(prefix):]
+            summed_col = col_name[len(sum_col_prefix):]
             df[summed_col] = df[col_name].apply(self._sum_result_list)
         # drop queried columns
         df = df.drop(columns=sum_columns)

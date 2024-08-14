@@ -1,6 +1,7 @@
 # autopep8: off
 import pandas as pd
 import shutil
+from setup import prompt_new_run
 from preprocessing import preprocess_df
 from querying import Query_handler
 from finalizing import Finalizer
@@ -25,13 +26,10 @@ if not 'start' in df.columns or not 'end' in df.columns:
     raise ValueError(
         "dataframe must have a 'start' column and an 'end' columnn")
 
+# TURN THIS TO FALSE IF CONTINUING TO QUERY, OTHERWISE TURN TO TRUE
+NEW_RUN = True
+prompt_new_run(NEW_RUN)
 
-num_partial_duration_cols = input(
-    "How many duration columns should there be?\n")
-try:
-    num_partial_duration_cols = int(num_partial_duration_cols)
-except:
-    raise ValueError("Input must be an int.")
 
 pod_prefix = 'fc-worker-1-'
 pod_regex_str = f'^{pod_prefix}.*'
@@ -39,16 +37,14 @@ query_handler = Query_handler(pod_regex=pod_regex_str)
 # query_handler = Query_handler(namespace="rook")
 finalizer = Finalizer()
 
-df = df.iloc[len(df)-3:]
+df = df.iloc[len(df)-14:]
 print("\n\n\nStarting df:\n", df, "\n\n\n\n")
-df = preprocess_df(df, num_partial_duration_cols)
-print("Querying...")
+df = preprocess_df(df)
 df = query_handler.query_df(df,
                             rgw_queries=False,
                             gpu_queries=True,
                             gpu_compute_resource_queries=True,
                             cpu_compute_resource_queries=True)
-print("summing...")
 df = finalizer.sum_df(
     df, graph_metrics=['min', 'max', 'mean', 'median', 'increase'])
-print("Finalized dataframe:\n", df, sep="")
+print(f"Finalized dataframe:\n{df}")
