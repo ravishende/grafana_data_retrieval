@@ -115,7 +115,6 @@ class Query_handler():
         return queries
 
     def get_rgw_queries(self) -> dict[str, str]:
-        # TODO: since these don't have node, filter_str can sometimes make it have no data
         if "node=" in self.filter_str:
             specifier = ""
             if "node=~":
