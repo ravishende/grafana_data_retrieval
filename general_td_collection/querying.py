@@ -116,6 +116,14 @@ class Query_handler():
 
     def get_rgw_queries(self) -> dict[str, str]:
         # TODO: since these don't have node, filter_str can sometimes make it have no data
+        if "node=" in self.filter_str:
+            specifier = ""
+            if "node=~":
+                specifier = "node_regex"
+            else:
+                specifier = "node"
+            warnings.warn(
+                f"'{specifier}' specified in filtering, but rgw queries don't have node data, resulting in no data returned for them.")
         # graph queries
         queries = {
             'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self.filter_str + '})',

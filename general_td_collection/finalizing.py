@@ -133,7 +133,6 @@ class Finalizer():
             raise ValueError(
                 f"Expected df to be a pandas DataFrame but was type {type(df)}")
         self.graph_columns = self.get_graph_columns(df)
-        # TODO: un-hardcode this by prepending queried_ to non graph, queried columns in querying.py
         sum_col_prefix = "queried_"
         sum_columns = [
             col for col in df.columns if col[:len(sum_col_prefix)] == sum_col_prefix]
