@@ -14,13 +14,17 @@ Other Features:
 
 1. Collect training data for bp3d (Burn Pro 3D) runs over a time period
 
-   &nbsp; &nbsp; `training_data_collection/` (specifically workflow.py)
+   &nbsp; &nbsp; `training_data_collection/` (specifically work_flow.py)
 
-2. Collect all data from tables.py for a BP3D run
+2. Collect training data for any run (BP3D or otherwise) over a period of time, with a wide variety of potential queries.
+
+   &nbsp; &nbsp; `general_td_collection/` (specifically workflow.py)
+
+3. Collect all data from tables.py for a BP3D run
 
    &nbsp; &nbsp; `table_for_run.py`
 
-3. Get analytics from other Grafana Dashboards
+4. Get analytics from other Grafana Dashboards
 
    &nbsp; &nbsp; `dashboards/`
 
