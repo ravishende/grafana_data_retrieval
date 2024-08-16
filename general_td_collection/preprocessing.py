@@ -13,6 +13,10 @@ from helpers.time_functions import datetime_ify
 
 
 def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
+    if not 'start' in df.columns or not 'end' in df.columns:
+        raise ValueError(
+            "dataframe must have a 'start' column and an 'end' columnn")
+
     # deal with times and create runtime column
     df['start'] = df['start'].apply(datetime_ify)
     df['end'] = df['end'].apply(datetime_ify)

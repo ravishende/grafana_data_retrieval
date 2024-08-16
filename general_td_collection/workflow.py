@@ -12,29 +12,30 @@ pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
-
+'''
+File purpose:
 # given a dataframe with 'start' and 'stop', and potentially other columns,
 # query it over those times with given/selected queries
+'''
+
+'''
+SETTINGS
+'''
 read_file = "csvs/read.csv"
+# Set to False if continuing to query, otherwise, set to True
+NEW_RUN = True
 
 # get the df & make sure there's no unnamed column from if csv was saved with/without an index col
 df = pd.read_csv(read_file)
 unnamed_cols = df.columns.str.match('Unnamed')
 df = df.loc[:, ~unnamed_cols]
 
-if not 'start' in df.columns or not 'end' in df.columns:
-    raise ValueError(
-        "dataframe must have a 'start' column and an 'end' columnn")
-
-# TURN THIS TO FALSE IF CONTINUING TO QUERY, OTHERWISE TURN TO TRUE
-NEW_RUN = True
 prompt_new_run(NEW_RUN)
 
 
 pod_prefix = 'fc-worker-1-'
 pod_regex_str = f'^{pod_prefix}.*'
 query_handler = Query_handler(pod_regex=pod_regex_str)
-# query_handler = Query_handler(namespace="rook")
 finalizer = Finalizer()
 
 df = df.iloc[len(df)-14:]
