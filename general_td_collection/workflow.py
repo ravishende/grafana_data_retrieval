@@ -22,6 +22,7 @@ File purpose:
 SETTINGS
 '''
 read_file = "csvs/read.csv"
+write_file = "csvs/write.csv"
 # Set to False if continuing to query, otherwise, set to True
 NEW_RUN = True
 
@@ -32,14 +33,19 @@ df = df.loc[:, ~unnamed_cols]
 
 prompt_new_run(NEW_RUN)
 
-
+# way to filter - can be pod, node, namespace, or regex of any of the three
 pod_prefix = 'fc-worker-1-'
 pod_regex_str = f'^{pod_prefix}.*'
+
+# initialize classes with desired filter and data settings
+# query_handler = Query_handler(node=" node-1-1.sdsc.optiputer.net")
 query_handler = Query_handler(pod_regex=pod_regex_str)
 finalizer = Finalizer()
 
 df = df.iloc[len(df)-14:]
 print("\n\n\nStarting df:\n", df, "\n\n\n\n")
+
+# Main workflow
 df = preprocess_df(df)
 df = query_handler.query_df(df,
                             rgw_queries=False,
@@ -48,4 +54,7 @@ df = query_handler.query_df(df,
                             cpu_compute_resource_queries=True)
 df = finalizer.sum_df(
     df, graph_metrics=['min', 'max', 'mean', 'median', 'increase'])
+
+
+df.to_csv(write_file)
 print(f"Finalized dataframe:\n{df}")
