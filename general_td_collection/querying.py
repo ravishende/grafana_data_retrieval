@@ -1,5 +1,5 @@
 # autopep8: off
-from datetime import datetime, timedelta
+from datetime import timedelta
 import pandas as pd
 import warnings
 import tqdm
@@ -187,23 +187,6 @@ class Query_handler():
             non_graph_queries.update(new_queries)
 
         return {'graph': graph_queries, 'non_graph': non_graph_queries}
-
-    '''
-    def _get_query_through_time(query, offset, duration_str):
-        end_filter_str_indices = [
-            match.start() for match in re.finditer('}', query)]
-        updated_query = ""
-        for i in range(len(end_filter_str_indices)):
-            start_splice = end_filter_str_indices[i] + 1
-            end_splice = 0
-            if i < len(end_filter_str_indices) - 1:
-                end_splice = end_filter_str_indices[i+1]
-            else:
-                end_splice = len(end_filter_str_indices)
-
-            splice = query[start_splice:end_splice]
-        return updated_query
-    '''
 
     # given a row of a dataframe, a graphs class instantiation, and a dict of queries for graphs,
     # return a queried version of that row,
