@@ -77,7 +77,8 @@ class Graphs():
 
     # returns a dataframe containing Time, node, pod, and value (value is titled something different for each graph)
     # returns none if there is no data
-    # note: sum_by is a string or list of strings that must have the same items that queries start with in their "sum by(___, ___) (...)"
+    # note: sum_by is a string or list of strings that must have the same items that queries start with in their "sum by(___, ___) (...)".
+    # If sum_by is specified, the df won't contain node or pod cols it will contain the sum_by cols
     # this is only used by get_graphs_from_queries
     def _generate_graph_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=["node", "pod"], show_runtimes=False):
         # create time filter to then generate list of all datapoints for the graph
