@@ -38,8 +38,8 @@ pod_prefix = 'fc-worker-1-'
 pod_regex_str = f'^{pod_prefix}.*'
 
 # initialize classes with desired filter and data settings
-# query_handler = Query_handler(node=" node-1-1.sdsc.optiputer.net")
-query_handler = Query_handler(pod_regex=pod_regex_str)
+query_handler = Query_handler(node="node-1-1.sdsc.optiputer.net")
+# query_handler = Query_handler(pod_regex=pod_regex_str)
 finalizer = Finalizer()
 
 df = df.iloc[len(df)-14:]
