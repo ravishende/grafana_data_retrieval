@@ -197,7 +197,7 @@ class Graphs():
     #       to be what the query has in "sum by(_____)""
     #       If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of graphs of the same names as the queries
-    def get_graphs_from_queries(self, queries_dict, sum_by=["node", "pod"], start=None, end=None, display_time_as_datetime=False):
+    def get_graphs_from_queries(self, queries_dict, sum_by=["node", "pod"], start=None, end=None, display_time_as_datetime=False, progress_bars=True):
 
         # handle if sum_by is a single input (put into list format)
         if isinstance(sum_by, str):
@@ -208,8 +208,9 @@ class Graphs():
                 sum_by[i] = sum_by[i].lower()
 
         # generate graphs
+        disable_bars = not progress_bars
         graphs_dict = {}
-        for title, query in tqdm(queries_dict.items()):
+        for title, query in tqdm(queries_dict.items(), disable=disable_bars):
             graphs_dict[title] = self._generate_graph_df(
                 title, query, start=start, end=end, sum_by=sum_by)
 
