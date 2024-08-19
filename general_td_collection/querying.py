@@ -19,10 +19,10 @@ from graphs import Graphs
 
 class Query_handler():
     def __init__(self, read_file: str = "csvs/run_inputs.csv",
-                 write_file: str = "csvs/queried.csv", node: str | None = None,
-                 node_regex: str | None = None, pod: str | None = None,
-                 pod_regex: str | None = None, namespace: str | None = None,
-                 namespace_regex: str | None = None):
+                 write_file: str = "csvs/queried.csv", graph_timestep: str = "1m",
+                 node: str | None = None, node_regex: str | None = None,
+                 pod: str | None = None, pod_regex: str | None = None,
+                 namespace: str | None = None, namespace_regex: str | None = None):
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -31,6 +31,9 @@ class Query_handler():
         if namespace and namespace_regex:
             raise ValueError(
                 "At most one of namespace or namespace_regex can be defined")
+        # changes how many datapoints are in each queried graph - tunes accuracy of graph metrics
+        self.graph_timestep = graph_timestep
+
         # passed in parameters to filter queries
         self.node = node
         self.pod = pod
@@ -256,7 +259,7 @@ class Query_handler():
         if cpu_compute_resource_queries:
             non_graph_query_functions.append(
                 self.get_cpu_compute_resource_queries)
-        graphs_class = Graphs()
+        graphs_class = Graphs(time_step=self.graph_timestep)
 
         # query in batches
         for batch_start in range(0, len(df_to_query), batch_size):
