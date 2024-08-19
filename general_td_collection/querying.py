@@ -1,8 +1,9 @@
 # autopep8: off
 from datetime import timedelta
+from termcolor import colored
+from tqdm import tqdm
 import pandas as pd
 import warnings
-import tqdm
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
@@ -22,7 +23,8 @@ class Query_handler():
                  write_file: str = "csvs/queried.csv", graph_timestep: str = "1m",
                  node: str | None = None, node_regex: str | None = None,
                  pod: str | None = None, pod_regex: str | None = None,
-                 namespace: str | None = None, namespace_regex: str | None = None):
+                 namespace: str | None = None, namespace_regex: str | None = None,
+                 verbose: bool = True):
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -47,6 +49,8 @@ class Query_handler():
         self._read_file = read_file
         self._write_file = write_file
         self._progress_file = "csvs/_query_progress.csv"
+
+        self.verbose = verbose
         return
 
     # given a kubernetes component ('node', 'pod', 'namespace', etc.) and the name (optional)
@@ -95,6 +99,10 @@ class Query_handler():
     # initialize the filter string with the class's filters
     def init_filter_str(self):
         return self.update_filter_str(self.node, self.node_regex, self.pod, self.pod_regex, self.namespace, self.namespace_regex)
+
+    def print_if_verbose(self, msg, sep=" ", end="\n"):
+        if self.verbose:
+            print(msg, sep=sep, end=end)
 
     def get_gpu_queries(self) -> dict[str:str]:
         # graph queries
@@ -210,7 +218,7 @@ class Query_handler():
         if len(query_retrieval_funcs_list) == 0:
             return row
         data_dict = {}
-        for query_retrieval_func in query_retrieval_funcs_list:
+        for query_retrieval_func in tqdm(query_retrieval_funcs_list):
             queries = query_retrieval_func(row['start'], row['end'])
             data_dict.update({title: query_data(query)
                               for title, query in queries.items()})
@@ -265,11 +273,16 @@ class Query_handler():
         for batch_start in range(0, len(df_to_query), batch_size):
             batch_end = min(batch_start+batch_size, len(df_to_query))
             df_chunk = df_to_query.iloc[batch_start:batch_end]
-            print(f"Querying rows {batch_start} to {batch_end-1}")
+            print(
+                colored(f"Querying rows {batch_start} to {batch_end-1}", "green"))
             # query graphs
+            if self.verbose and len(graph_queries) > 0:
+                print("querying graph information")
             df_chunk = df_chunk.apply(self._query_row_for_graphs,
                                       args=(graphs_class, graph_queries), axis=1)
             # query non graphs
+            if self.verbose and len(non_graph_query_functions) > 0:
+                print("querying non-graph information")
             df_chunk = df_chunk.apply(lambda row: self._query_row_for_non_graphs(
                 row, non_graph_query_functions), axis=1)
             queried_df = pd.concat(
