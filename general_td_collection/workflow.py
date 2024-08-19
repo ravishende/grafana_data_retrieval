@@ -14,8 +14,8 @@ pd.set_option('display.width', terminal_width)
 
 '''
 File purpose:
-# given a dataframe with 'start' and 'stop', and potentially other columns,
-# query it over those times with given/selected queries
+# given a dataframe with 'start' and 'end' columns (and potentially others too),
+# query it over those times with selected queries and metrics
 '''
 
 '''
@@ -26,6 +26,9 @@ write_file = "csvs/write.csv"
 # Set to False if continuing to query, otherwise, set to True
 NEW_RUN = True
 
+'''
+MAIN PROGRAM
+'''
 # get the df & make sure there's no unnamed column from if csv was saved with/without an index col
 df = pd.read_csv(read_file)
 unnamed_cols = df.columns.str.match('Unnamed')
