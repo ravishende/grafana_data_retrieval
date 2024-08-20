@@ -69,8 +69,7 @@ for i, phase in enumerate(phases):
     phase_number = i+1
     # If phase has previously been finished, move on to next stage
     if is_phase_finished(phase_number):
-        # If all phases have already been completed give a message on setting new_run to True
-        if phase_number == 4:
+        if phase_number == len(phases):
             print("Entire work flow has already been completed. Perhaps you would like a new run? If so, set new_run to be True and run again.")
             break
         print(colored(
@@ -80,11 +79,10 @@ for i, phase in enumerate(phases):
         # Run the phase and see what the resulting success flag is
         print(colored(f"\n\nBeginning Phase {phase_number}...", "magenta"))
         success = phase.run()
-        # If phase isn't successful, break
         if not success:
             print(
                 colored(f"\nProgram stop caused by phase {phase_number}\n", "magenta"))
             break
-        # Otherwise, set phase as finished and move on to the next phase
+
         set_phase_finished(phase_number)
         print(colored(f"\n\nPhase {phase_number} complete!\n", "green"))
