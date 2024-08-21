@@ -40,10 +40,10 @@ class Tables():
         }
         self.partial_queries = {
             # Current Storage IO
-            'IOPS(Reads)': 'sum by(node, pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
-            'IOPS(Writes)': 'sum by(node, pod) (rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
-            'Throughput(Read)': 'sum by(node, pod) (rate(container_fs_reads_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
-            'Throughput(Write)': 'sum by(node, pod) (rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))'
+            'IOPS(Reads)': 'sum by(node, pod) (rate(container_fs_reads_total{job="kubelet", metrics_path="/metrics/cadvisor", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
+            'IOPS(Writes)': 'sum by(node, pod) (rate(container_fs_writes_total{job="kubelet", metrics_path="/metrics/cadvisor", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
+            'Throughput(Read)': 'sum by(node, pod) (rate(container_fs_reads_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))',
+            'Throughput(Write)': 'sum by(node, pod) (rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))'
         }
 
     # return a dataframe of pods, nodes, and values for a given result_list for a
