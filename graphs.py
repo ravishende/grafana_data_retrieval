@@ -23,7 +23,7 @@ class Graphs():
 
         # dict storing titles and their queries.
         self.queries = {
-            'CPU Usage': 'sum by(node, pod) (irate(node_namespace_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}[' + self.duration + ']))',
+            'CPU Usage': 'sum by(node, pod) (irate(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'Memory Usage (w/o cache)': 'sum by(node, pod) (irate(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '", container!="", image!=""}[' + self.duration + ']))',
             'Receive Bandwidth': 'sum by(node, pod) (irate(container_network_receive_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
             'Transmit Bandwidth': 'sum by(node, pod) (irate(container_network_transmit_bytes_total{namespace="' + self.namespace + '"}[' + self.duration + ']))',
