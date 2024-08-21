@@ -371,8 +371,10 @@ class Graphs():
 
             # only check pods dropped/recovered between the same pods
             if previous_pod != current_pod:
-                previous_value = current_value
-                previous_pod = current_pod
+                continue
+
+            # pod not dropped or recovered
+            if not (previous_value == 0 and current_value != 0):
                 continue
 
             # pod dropped: was nonzero, now is zero
@@ -396,10 +398,6 @@ class Graphs():
                 else:
                     pods_dropped_indices_by_name[current_pod] = [
                         pod_dropped_index]
-                continue
-
-            # pod not dropped or recovered
-            if not (previous_value == 0 and current_value != 0):
                 continue
 
             # pod recovered: was zero, now is nonzero
@@ -463,7 +461,6 @@ class Graphs():
     #     ...
     # }
     def check_for_losses(self, graphs_dict=None, drop_threshold=0, print_info=False):
-        # generate graphs_dict if it isn't passed in
         if graphs_dict is None:
             graphs_dict = self.get_graphs_dict()
 
@@ -528,7 +525,7 @@ class Graphs():
                     pod = pod_dict['pod']
                     start = pod_dict['start']
                     end = pod_dict['end']
-                    # convert time_step to timedelta to be able to divide it
+                    # convert time_step to timedelta to be able to divide it by the requery divisor
                     time_step = time_str_to_delta(
                         self.time_step)/self.requery_step_divisor
                     # convert time_step back to str to be used for querying
