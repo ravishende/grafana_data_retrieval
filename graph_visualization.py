@@ -1,10 +1,10 @@
 # For graphing all of the graph data that is stored in dataframes
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from graphs import Graphs
 from termcolor import colored
-from datetime import datetime as dt
 
 
 # given a sum_by list, return a dict of graphs by title: graph
@@ -73,7 +73,7 @@ def display_graphs(graphs_dict: dict[pd.DataFrame] = None, sum_by: list[str] | s
             continue
 
         # show time as datetimes instead of seconds since epoch(01-01-1970)
-        graph_df["Time"] = graph_df["Time"].apply(dt.fromtimestamp)
+        graph_df['Time'] = pd.to_datetime(graph_df['Time'], unit="s")
 
         # Set graph styling and labels.
         if hue_column is not None:
