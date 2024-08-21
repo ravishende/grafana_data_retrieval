@@ -1,5 +1,6 @@
 .env
 .DS_Store
+query_testing.py
 __pycache__/
 old/
 extras/.DS_Store
