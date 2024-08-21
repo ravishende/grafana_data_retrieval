@@ -7,7 +7,8 @@ from termcolor import colored
 from datetime import datetime as dt
 
 
-def get_graphs_dict(sum_by: list[str] = ["node", "pod"]):
+# given a sum_by list, return a dict of graphs by title: graph
+def get_graphs_dict(sum_by: list[str] = ["node", "pod"]) -> dict[pd.DataFrame]:
     # make sure sum_by metrics are all lower case
     if sum_by is not None:
         for i in range(len(sum_by)):
@@ -25,7 +26,8 @@ def get_graphs_dict(sum_by: list[str] = ["node", "pod"]):
     return graphs_dict
 
 
-def plot_graph(graph_title):
+# given a graph title, set the plot settings for the graph
+def plot_graph(graph_title: str):
     plt.get_current_fig_manager().full_screen_toggle()
     # right is default 0.9. right=0.75 moves the graph left so the legend is not partially cut off.
     plt.subplots_adjust(right=0.75)
@@ -34,7 +36,8 @@ def plot_graph(graph_title):
     plt.xticks(rotation=25)
 
 
-def hue_col_from_sum_by(sum_by: list[str]) -> str:
+# given a sum_by list, return a hue column
+def hue_col_from_sum_by(sum_by: list[str]) -> str | None:
     hue_column = ""
     # handle sum_by to generate hue
     if sum_by is None:
@@ -53,7 +56,7 @@ def hue_col_from_sum_by(sum_by: list[str]) -> str:
 
 # display graphs one at a time in a popup window. After closing one, the next one opens
 # Note: if graphs do not have a pod column, change sum_by to be the string or list of strings that graphs are summed by (instead of pod)
-def display_graphs(graphs_dict: dict = None, sum_by: list[str] | str = ["node", "pod"]):
+def display_graphs(graphs_dict: dict[pd.DataFrame] = None, sum_by: list[str] | str = ["node", "pod"]):
     # if sum_by is a single string, convert it to a list containing that string
     if isinstance(sum_by, str):
         sum_by = [sum_by]
