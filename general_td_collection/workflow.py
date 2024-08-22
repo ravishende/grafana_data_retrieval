@@ -9,9 +9,14 @@ Additionally, for graph queries, you can specify which metrics you would like sa
 
 Usage:
 1. Specify the filter when instantiating the QueryHandler class
+    - query_handler = QueryHandler(pod_regex="...", namespace="wifire-quicfire")
+    - If you later need to redefine filters in the same program, use the update_filter_str() method
 2. Call the query_df method, specifying which query dashboards to include
+    - queried_df = query_handler.query_df(df, rgw_queries=True,gpu_queries=True)
 3. In the Finalizer's sum_df method, specify the graph_metrics to collect for graph queries
+    - finalizer.sum_df(queried_df, graph_metrics=['max', 'mean', 'increase'])
 4. Save the final dataframe of queried information
+    - df.to_csv()
 """
 # autopep8: off
 import shutil
