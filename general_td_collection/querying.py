@@ -44,7 +44,7 @@ class QueryHandler():
         self.node_regex = node_regex
         self.pod_regex = pod_regex
         self.namespace_regex = namespace_regex
-        self.filter_str = self.init_filter_str()
+        self.filter_str = self._init_filter_str()
 
         # csv files
         self._read_file = read_file
@@ -100,11 +100,11 @@ class QueryHandler():
         return filter_str
 
     # initialize the filter string with the class's filters
-    def init_filter_str(self):
+    def _init_filter_str(self):
         return self.update_filter_str(self.node, self.node_regex, self.pod, self.pod_regex,
                                       self.namespace, self.namespace_regex)
 
-    def get_gpu_queries(self) -> dict[str:str]:
+    def _get_gpu_queries(self) -> dict[str:str]:
         # graph queries
         queries = {
             # total gpu usage = gpu_utilization% by pod but averaging out all the pods
@@ -114,7 +114,7 @@ class QueryHandler():
         queries = {}
         return queries
 
-    def get_gpu_compute_resource_queries(self) -> dict[str, str]:
+    def _get_gpu_compute_resource_queries(self) -> dict[str, str]:
         # graph queries
         queries = {
             'gpu_utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self.filter_str + '}',
@@ -125,7 +125,7 @@ class QueryHandler():
         }
         return queries
 
-    def get_rgw_queries(self) -> dict[str, str]:
+    def _get_rgw_queries(self) -> dict[str, str]:
         if "node=" in self.filter_str:
             specifier = ""
             if "node=~" in self.filter_str:
@@ -147,7 +147,7 @@ class QueryHandler():
         return queries
 
     # queries from ../training_data_handling/work_flow.py
-    def get_cpu_compute_resource_queries(self, start, end) -> dict[str, str]:
+    def _get_cpu_compute_resource_queries(self, start, end) -> dict[str, str]:
         start = datetime_ify(start)
         end = datetime_ify(end)
         duration_seconds = int((end-start).total_seconds())
@@ -183,13 +183,13 @@ class QueryHandler():
         graph_queries = {}
 
         if gpu_queries:
-            new_queries = self.get_gpu_queries()
+            new_queries = self._get_gpu_queries()
             graph_queries.update(new_queries)
         if gpu_compute_resource_queries:
-            new_queries = self.get_gpu_compute_resource_queries()
+            new_queries = self._get_gpu_compute_resource_queries()
             graph_queries.update(new_queries)
         if rgw_queries:
-            new_queries = self.get_rgw_queries()
+            new_queries = self._get_rgw_queries()
             graph_queries.update(new_queries)
 
         return graph_queries
@@ -259,7 +259,7 @@ class QueryHandler():
         non_graph_query_functions = []
         if cpu_compute_resource_queries:
             non_graph_query_functions.append(
-                self.get_cpu_compute_resource_queries)
+                self._get_cpu_compute_resource_queries)
         graphs_class = Graphs(time_step=self.graph_timestep)
 
         # query in batches
