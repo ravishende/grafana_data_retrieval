@@ -4,7 +4,8 @@ import pandas as pd
 
 
 class Finalizer():
-    def __init__(self, graph_metrics: list[str] | str | None = None, graph_columns: list[str] | str = None) -> None:
+    def __init__(self, graph_metrics: list[str] | str | None = None,
+                 graph_columns: list[str] | str = None) -> None:
         if graph_columns is not None:
             self._check_graph_columns(graph_columns)
         if graph_metrics is None:
@@ -15,9 +16,9 @@ class Finalizer():
         self.graph_columns = graph_columns
         self.all_graph_metrics = ["min", "max", "mean", "median",
                                   "std", "var", "sum", "increase", "q1", "q3", "iqr"]
-
         self._read_file = "csvs/queried.csv"
 
+    # given a dataframe with some columns prependedd with 'graph_', return all those column names
     def get_graph_columns(self, df: pd.DataFrame) -> list[str]:
         prefix = "graph_"
         graph_columns = [
@@ -33,19 +34,21 @@ class Finalizer():
             raise ValueError(
                 f"graph_columns must be a str or list but was {type(graph_columns)}.")
 
-    # given a dict of metrics and statuses (booleans), check that all the keys are recognized and it is of the right type.
+    # given a dict of metrics and statuses (booleans),
+    # check that all the keys are recognized and it is of the right type.
     def _check_graph_metrics(self, graph_metrics: list[str] | str) -> None:
-        if graph_metrics != []:
-            if not isinstance(graph_metrics, list) and not isinstance(graph_metrics, str):
+        if graph_metrics == []:
+            return
+        wrong_type_msg = f"graph_metrics must be a str or list of strs, with any of the following possible elements: {self.all_graph_metrics}"
+        assert isinstance(graph_metrics, (list, str)), wrong_type_msg
+
+        if len(graph_metrics) == 0:
+            warnings.warn(
+                "graph_metrics list is empty - no information will be saved from graph queries")
+        for metric in graph_metrics:
+            if metric not in self.all_graph_metrics:
                 raise ValueError(
-                    f"graph_query_metrics must be a string or list of strings, with the following possible elements: {self.all_graph_metrics}")
-            if len(graph_metrics) == 0:
-                warnings.warn(
-                    "graph_metrics list is empty - no information will be saved from graph queries")
-            for metric in graph_metrics:
-                if metric not in self.all_graph_metrics:
-                    raise ValueError(
-                        f"metric '{metric}' not in acceptable metrics: {self.all_graph_metrics}.")
+                    f"metric '{metric}' not in acceptable metrics: {self.all_graph_metrics}.")
 
     # given a title that may have capitals and spaces,
     # return a lowercase version, with all spaces replaced with underscores
@@ -104,11 +107,11 @@ class Finalizer():
 
     # given a dataframe with some columns starting with '_graph',
     # return a new df with more columns that summarize those graph columns
-    def _insert_graph_metric_columns(self, df: pd.DataFrame, graph_metrics: list[str] = None) -> pd.DataFrame:
+    def _insert_graph_metric_columns(self, df: pd.DataFrame, graph_metrics: list[str] | None = None) -> pd.DataFrame:
         # handle user input
-        if not isinstance(df, pd.DataFrame):
-            raise ValueError(
-                f"df must be a pandas dataframe but was {type(df)}")
+        assert isinstance(
+            df, pd.DataFrame), f"df must be a pandas dataframe but was {type(df)}"
+
         if graph_metrics is None:
             graph_metrics = self.graph_metrics
         else:
@@ -116,15 +119,16 @@ class Finalizer():
 
         # calculate and insert metric columns
         for graph_title in self.graph_columns:
-            for metric in graph_metrics:
+            for graph_metric in graph_metrics:
                 metric_col_name = self._get_metric_col_name(
-                    graph_title, metric)
+                    graph_title, graph_metric)
+                # make sure metric is passed in by value, not reference (cell-var-from-loop warning)
                 df[metric_col_name] = df[graph_title].apply(
-                    lambda cell: self._summarize_graph_data(cell, metric))
+                    lambda cell, metric=graph_metric: self._summarize_graph_data(cell, metric))
         return df
 
     # given a result list from a query, sum it to get the result
-    def _sum_result_list(self, result_list: list[dict]) -> float:
+    def _sum_result_list(self, result_list: list[dict] | str) -> float:
         total = 0
         if isinstance(result_list, str):
             result_list = ast.literal_eval(result_list)
