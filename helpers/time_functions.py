@@ -4,7 +4,7 @@ import re
 
 
 # returns datetime of time if it matches one of the format strings, otherwise none
-def _try_strptime(time: str, format_strings: list[str]) -> datetime:
+def _try_strptime(time: str, format_strings: list[str]) -> datetime | None:
     for format_str in format_strings:
         try:
             time = datetime.strptime(time, format_str)
@@ -22,24 +22,23 @@ def datetime_ify(time: str | int | float | pd.Timestamp | datetime) -> datetime:
     if isinstance(time, datetime):
         return time
     # handle if time is a float (seconds since the epoch: 01/01/1970)
-    if isinstance(time, float) or isinstance(time, int):
+    if isinstance(time, (float, int)):
         return datetime.fromtimestamp(time)
-    if type(time) != str:
-        raise ValueError(
-            f"time was type {type(time)}, not one of the expected formats: str | pd.Timestamp | float | datetime ")
+    type_error_msg = f"time was type {type(time)}, not one of the expected formats:\
+          str | pd.Timestamp | float | datetime "
+    assert isinstance(time, str), type_error_msg
     # get time as datetime object. Time format should be one of three patterns.
     # get time down to the second, no decimal seconds.
     time = time[0:time.find(".")]
     # define expected format strings
     format_strings = ["%Y-%m-%dT%H:%M:%S",
                       "%m/%d/%Y, %H:%M:%S", '%Y-%m-%d %H:%M:%S']
-    time = _try_strptime(time, format_strings)
+    time_dt = _try_strptime(time, format_strings)
     # return the datetime or raise a value error
-    if time is not None:
-        return time
-    else:
-        raise ValueError(
-            "time did not match one of the expected time string formats")
+    if time_dt is not None:
+        return time_dt
+    raise ValueError(
+        "time did not match one of the expected time string formats")
 
 
 # given a timedelta, get it in the form 2d4h12m30s for use with querying
@@ -86,11 +85,11 @@ def time_str_to_delta(time_str: str) -> timedelta:
 # return the offset of the end of the run from the current time
 def calculate_offset(start: datetime, duration: int) -> str:
     # check for proper inputs
-    if not isinstance(start, datetime):
-        raise ValueError("start must be a datetime object")
+    assert isinstance(start, datetime), "start must be a datetime object"
     try:
         duration = float(duration)
     except ValueError:
+        # pylint: disable=raise-missing-from
         raise ValueError("duration must be a float or int")
 
     # calculate offset from current time by finding end time and subtracting now from end
@@ -109,35 +108,3 @@ def find_time_from_offset(end: datetime, offset: str) -> datetime:
     time_offset = time_str_to_delta(offset)
     # return the start time
     return end-time_offset
-
-
-'''
-====================================
-            old function
-====================================
-# convert a time string into a datetime object
-def datetime_ify(time):
-    # handle if time is already of type pandas datetime or actual datetime
-    if isinstance(time, pd.Timestamp):
-        return time.to_pydatetime(warn=False)
-    if isinstance(time, datetime):
-        return time
-    
-    # handle if time is a float (seconds since the epoch: 01/01/1970)
-    if isinstance(time, float) or isinstance(time, int):
-        return datetime.fromtimestamp(time)
-
-    # get time as datetime object. Time format should be one of two patterns.
-    try:
-        # get time down to the second, no decimal seconds.
-        time = time[0:time.find(".")]
-        # get time as datetime
-        format_string = "%Y-%m-%d %H:%M:%S"
-        time = datetime.strptime(time, format_string)
-        return time
-    except ValueError:
-        # get start and stop as datetimes, then find the difference between them for the runtime
-        format_string = "%Y-%m-%dT%H:%M:%S"
-        time = datetime.strptime(time, format_string)
-        return time
-'''
