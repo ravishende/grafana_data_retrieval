@@ -1,7 +1,7 @@
 import os
-import s3fs
-import json
 import math
+import json
+import s3fs
 import pandas as pd
 from tqdm import tqdm
 from termcolor import colored
@@ -488,11 +488,9 @@ class Phase_1():
 
         return df
 
-    '''
-    ======================
-        Main Program
-    ======================
-    '''
+    # ======================
+    #     Main Program
+    # ======================
 
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self, paths_gathered=False):
