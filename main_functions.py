@@ -1,10 +1,10 @@
-# Contains the definitions for all the functions that are called in main.py
-from helpers.printing import print_heading, print_title, print_sub_title, print_dataframe_dict
+# Contains the definitions for all the functions that are called or can be called in main.py
+import pandas as pd
 from termcolor import colored
 from header import Header
 from tables import Tables
 from graphs import Graphs
-import pandas as pd
+from helpers.printing import print_heading, print_title, print_sub_title, print_dataframe_dict
 
 # create variables for classes
 header_class = Header()
@@ -98,7 +98,8 @@ def print_all_data(data_dict=None):
         print(graphs)
 
 
-# get information on dropped/recovered pods and requery if requested. Then return a dict of 'losses' (dropped/recovered pods) and 'requeried' graphs
+# get information on dropped/recovered pods and requery if requested.
+# Then return a dict of 'losses' (dropped/recovered pods) and 'requeried' graphs
 def check_graphs_losses(graphs, drop_threshold=0, print_info=True, requery=None, show_runtimes=False, display_time_as_datetime=False):
     # check for if graphs was input as single dataframe instead of graph
     if isinstance(graphs, pd.DataFrame):

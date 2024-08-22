@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-from main_functions import *
-import pandas as pd
 import shutil
+import pandas as pd
+from main_functions import get_all_data, print_all_data, check_graphs_losses
 
 # display settings
 pd.set_option('display.max_columns', None)  # for displaying all columns

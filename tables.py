@@ -93,7 +93,10 @@ class Tables():
                     table_df[column] = new_df[column]
         return table_df
 
-    def _generate_table_df(self, query_title, query, start=None, end=None, time_step=None, sum_by=["node", "pod"]):
+    def _generate_table_df(self, query_title, query, start=None, end=None, time_step=None, sum_by="_"):
+        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
+        if sum_by == "_":
+            sum_by = ["node", "pod"]
         # query for data
         result_list = query_data(query)
         if len(result_list) == 0:
@@ -216,14 +219,17 @@ class Tables():
     #        If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of a table_name: table_df if table_name is specified, otherwise returns
     # a dataframe that is the table
-    def get_table_from_queries(self, queries_dict, sum_by=["node", "pod"], table_name=None):
+    def get_table_from_queries(self, queries_dict, sum_by="_", table_name=None):
+        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
+        if sum_by == "_":
+            sum_by = ["node", "pod"]
         # handle if sum_by is a single input (put into list format)
         if isinstance(sum_by, str):
             sum_by = [sum_by]
         # get rid of title case for sum_by metrics
         if sum_by is not None:
-            for i in range(len(sum_by)):
-                sum_by[i] = sum_by[i][0].lower() + sum_by[i][1:]
+            for i, metric in enumerate(sum_by):
+                sum_by[i] = metric[0].lower() + metric[1:]
 
         # generate tables
         table_df = pd.DataFrame()

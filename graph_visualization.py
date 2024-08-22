@@ -3,16 +3,19 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from graphs import Graphs
 from termcolor import colored
+from graphs import Graphs
 
 
 # given a sum_by list, return a dict of graphs by title: graph
-def get_graphs_dict(sum_by: list[str] = ["node", "pod"]) -> dict[pd.DataFrame]:
+def get_graphs_dict(sum_by: list[str] | None = "_") -> dict[pd.DataFrame]:
+    # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
+    if sum_by == "_":
+        sum_by = ["node", "pod"]
     # make sure sum_by metrics are all lower case
     if sum_by is not None:
-        for i in range(len(sum_by)):
-            sum_by[i] = sum_by[i].lower()
+        for i, metric in enumerate(sum_by):
+            sum_by[i] = metric.lower()
     # generate graphs if there is no graphs_dict
     graphs_class = Graphs()
     graphs_dict = graphs_class.get_graphs_dict(
@@ -56,7 +59,10 @@ def hue_col_from_sum_by(sum_by: list[str]) -> str | None:
 
 # display graphs one at a time in a popup window. After closing one, the next one opens
 # Note: if graphs do not have a pod column, change sum_by to be the string or list of strings that graphs are summed by (instead of pod)
-def display_graphs(graphs_dict: dict[pd.DataFrame] = None, sum_by: list[str] | str = ["node", "pod"]):
+def display_graphs(graphs_dict: dict[pd.DataFrame] | None = None, sum_by: list['str'] | str | None = "_"):
+    # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
+    if sum_by == "_":
+        sum_by = ["node", "pod"]
     # if sum_by is a single string, convert it to a list containing that string
     if isinstance(sum_by, str):
         sum_by = [sum_by]

@@ -458,7 +458,7 @@ class Graphs():
 
         return {'dropped': pods_dropped, 'recovered': pods_recovered}
 
-    # returns a dictionary containing all potential dropped or recovered pods with information about them
+    # returns a dictionary containing all potential dropped or recovered pods with info on them
     # the returned dictionary (graphs_losses_dict) is in the form
     # graphs_losses = {
     #     graph_title_1: {
