@@ -1,6 +1,6 @@
-import requests
 import json
 from termcolor import colored
+import requests
 
 TIMEOUT_SEC = 20
 
