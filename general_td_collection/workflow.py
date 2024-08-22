@@ -1,3 +1,18 @@
+"""This file collects performance data of runs in a dataframe
+
+Given a dataframe with 'start' and 'end' columns (and potentially others too),
+Query it over those times with selected queries and metrics from grafana dashboards
+You can specify a filter for the queries as well as which dashboards you would life for querying.
+The filter can be a node, pod, namespace, or regex for any of those.
+Additionally, for graph queries, you can specify which metrics you would like saved 
+(e.g. max, increase, etc.).
+
+Usage:
+1. Specify the filter when instantiating the QueryHandler class
+2. Call the query_df method, specifying which query dashboards to include
+3. In the Finalizer's sum_df method, specify the graph_metrics to collect for graph queries
+4. Save the final dataframe of queried information
+"""
 # autopep8: off
 import shutil
 import pandas as pd
@@ -11,11 +26,6 @@ from finalizing import Finalizer
 pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
-
-
-# File purpose:
-# given a dataframe with 'start' and 'end' columns (and potentially others too),
-# query it over those times with selected queries and metrics
 
 
 # SETTINGS
@@ -38,9 +48,10 @@ prompt_new_run(NEW_RUN)
 # way to filter - can be pod, node, namespace, or regex of any of the three
 POD_PREFIX = 'fc-worker-1-'
 pod_regex_str = f'^{POD_PREFIX}.*'
+NODE_NAME = "node-1-1.sdsc.optiputer.net"
 
 # initialize classes with desired filter and data settings
-query_handler = QueryHandler(node="node-1-1.sdsc.optiputer.net")
+query_handler = QueryHandler(node=NODE_NAME)
 # query_handler = Query_handler(pod_regex=pod_regex_str)
 finalizer = Finalizer()
 
