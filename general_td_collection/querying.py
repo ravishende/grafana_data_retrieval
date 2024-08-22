@@ -1,17 +1,18 @@
 # autopep8: off
+import sys
+import os
 import warnings
-import pandas as pd
 from datetime import timedelta
+import pandas as pd
 from termcolor import colored
 from tqdm import tqdm
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
-import sys
-import os
 # Adjust the path to go up one level
 sys.path.append("../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
+# pylint: disable=wrong-import-position
 from helpers.time_functions import calculate_offset, delta_to_time_str, datetime_ify
 from helpers.querying import query_data
 from graphs import Graphs
@@ -51,13 +52,13 @@ class QueryHandler():
         self._progress_file = "csvs/_query_progress.csv"
 
         self.verbose = verbose
-        return
 
     # given a kubernetes component ('node', 'pod', 'namespace', etc.) and the name (optional)
     # of the component (e..g 'bp3d-worker-pod-a5343...') or a regex expression (optional)
     # for the component name,
     # return a string filtering for that component, e.g. 'pod="bp3d-worker-pod-a5343..."'
-    def _get_component_filter_str(self, component: str, component_name: str = None, component_regex: str = None) -> str:
+    def _get_component_filter_str(
+            self, component: str, component_name: str = None, component_regex: str = None) -> str:
         if component_name and component_regex:
             raise ValueError(
                 "at most one of component_name or component_regex should be defined.")
@@ -77,7 +78,8 @@ class QueryHandler():
         return ""
 
     # update the filter string used for querying based on passed in filter parameters
-    def update_filter_str(self, node=None, node_regex=None, pod=None, pod_regex=None, namespace=None, namespace_regex=None) -> str:
+    def update_filter_str(self, node=None, node_regex=None, pod=None, pod_regex=None,
+                          namespace=None, namespace_regex=None) -> str:
         # get individual filters
         node_filter = self._get_component_filter_str(
             "node", node, node_regex)
@@ -99,11 +101,8 @@ class QueryHandler():
 
     # initialize the filter string with the class's filters
     def init_filter_str(self):
-        return self.update_filter_str(self.node, self.node_regex, self.pod, self.pod_regex, self.namespace, self.namespace_regex)
-
-    def print_if_verbose(self, msg, sep=" ", end="\n"):
-        if self.verbose:
-            print(msg, sep=sep, end=end)
+        return self.update_filter_str(self.node, self.node_regex, self.pod, self.pod_regex,
+                                      self.namespace, self.namespace_regex)
 
     def get_gpu_queries(self) -> dict[str:str]:
         # graph queries
