@@ -2,6 +2,7 @@ import requests
 import json
 from termcolor import colored
 
+TIMEOUT_SEC = 20
 
 
 # Use url and a given query to request data from the website
@@ -16,17 +17,20 @@ def query_data(query, handle_fail=True):
     endpoint = f"query?query={query}"
     full_url = base_url + endpoint
     # query database
-    queried_data = requests.get(full_url).json()
+    queried_data = requests.get(full_url, timeout=TIMEOUT_SEC).json()
 
     # re-request data if it comes back with no value
     if handle_fail:
         try:
             res_list = queried_data['data']['result']
             if len(res_list) == 0:
-                queried_data = requests.get(full_url).json()
+                queried_data = requests.get(
+                    full_url, timeout=TIMEOUT_SEC).json()
         except KeyError:
             print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
-            raise TypeError(f'\n\nBad query string: {query}\n\n')
+            # pylint: disable=raise-missing-from
+            raise TypeError(
+                f'\n\nBad query string: {query}\n\n')
 
     return queried_data['data']['result']
 
@@ -44,16 +48,18 @@ def query_data_for_graph(query, time_filter, handle_fail=True):
     endpoint = f'query_range?query={query}&{time_filter}'
     full_url = base_url + endpoint
     # query database
-    queried_data = requests.get(full_url).json()
+    queried_data = requests.get(full_url, timeout=TIMEOUT_SEC).json()
 
     # re-request data if it comes back with no value
     if (handle_fail):
         try:
             res_list = queried_data['data']['result']
             if (len(res_list) == 0):
-                queried_data = requests.get(full_url).json()
+                queried_data = requests.get(
+                    full_url, timeout=TIMEOUT_SEC).json()
         except KeyError:
             print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
+            # pylint: disable=raise-missing-from
             raise TypeError(f'\n\nBad query string: \n{full_url}\n\n')
 
     return queried_data['data']['result']
@@ -61,14 +67,14 @@ def query_data_for_graph(query, time_filter, handle_fail=True):
 
 # writes json data to a file
 def write_json(file_name, data):
-    with open(file_name, 'w') as file:
+    with open(file_name, 'w', encoding="utf-8") as file:
         json.dump(data, file)
     file.close()
 
 
 # reads json data from a file
 def read_json(file_name):
-    with open(file_name, 'r') as file:
+    with open(file_name, 'r', encoding="utf-8") as file:
         data = json.load(file)
     file.close()
     return data
