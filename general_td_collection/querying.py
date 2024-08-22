@@ -1,9 +1,9 @@
 # autopep8: off
+import warnings
+import pandas as pd
 from datetime import timedelta
 from termcolor import colored
 from tqdm import tqdm
-import pandas as pd
-import warnings
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 import sys
 import os
@@ -18,7 +18,7 @@ from graphs import Graphs
 # autopep8: on
 
 
-class Query_handler():
+class QueryHandler():
     def __init__(self, read_file: str = "csvs/run_inputs.csv",
                  write_file: str = "csvs/queried.csv", graph_timestep: str = "1m",
                  node: str | None = None, node_regex: str | None = None,
@@ -58,12 +58,13 @@ class Query_handler():
     # for the component name,
     # return a string filtering for that component, e.g. 'pod="bp3d-worker-pod-a5343..."'
     def _get_component_filter_str(self, component: str, component_name: str = None, component_regex: str = None) -> str:
-        if component_name is not None and component_regex is not None:
+        if component_name and component_regex:
             raise ValueError(
                 "at most one of component_name or component_regex should be defined.")
         # give a warning if it doesn't seem like the filter str is being used correctly
         known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job', 'instance',
-                                'instance_id', 'container', 'Hostname', 'UUID', 'device', 'endpoint', 'service', 'prometheus', 'service']
+                                'instance_id', 'container', 'Hostname', 'UUID', 'device',
+                                'endpoint', 'service', 'prometheus', 'service']
         if component not in known_k8s_components:
             warnings.warn(
                 f"Unknown component '{component}'. Known components are: {known_k8s_components}")
@@ -128,7 +129,7 @@ class Query_handler():
     def get_rgw_queries(self) -> dict[str, str]:
         if "node=" in self.filter_str:
             specifier = ""
-            if "node=~":
+            if "node=~" in self.filter_str:
                 specifier = "node_regex"
             else:
                 specifier = "node"
@@ -179,9 +180,8 @@ class Query_handler():
 
         return queries
 
-    def _get_queries(self, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False, cpu_compute_resource_queries=False):
+    def _get_graph_queries(self, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False) -> dict[str, str]:
         graph_queries = {}
-        non_graph_queries = {}
 
         if gpu_queries:
             new_queries = self.get_gpu_queries()
@@ -193,11 +193,7 @@ class Query_handler():
             new_queries = self.get_rgw_queries()
             graph_queries.update(new_queries)
 
-        if cpu_compute_resource_queries:
-            new_queries = self.get_cpu_compute_resource_queries()
-            non_graph_queries.update(new_queries)
-
-        return {'graph': graph_queries, 'non_graph': non_graph_queries}
+        return graph_queries
 
     # given a row of a dataframe, a graphs class instantiation, and a dict of queries for graphs,
     # return a queried version of that row,
@@ -228,28 +224,25 @@ class Query_handler():
             row[new_title] = data
         return row
 
-    def query_df(self, df: pd.DataFrame = None, batch_size: int = 5, rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
+    def query_df(self, df: pd.DataFrame | None = None, batch_size: int = 5, rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
         # handle user input
         if not (gpu_queries or gpu_compute_resource_queries or rgw_queries or cpu_compute_resource_queries):
             raise ValueError("No queries specified -> nothing to query")
         if df is None:
             try:
                 pd.read_csv(self._read_file)
-            except:
+            except Exception as exc:
                 raise ValueError(
-                    f"No df passed in, and default read file ({self._read_file}) cannot be read.")
+                    f"No df passed in, and default read file ({self._read_file}) cannot be read: {exc}") from exc
 
-        queries_by_type = self._get_queries(
-            gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries,
-            # cpu_compute_resource_queries=cpu_compute_resource_queries
-        )
         # set up dataframes - progress df and what's left to query
         queried_df = pd.DataFrame()
         df_to_query = pd.DataFrame()
         if os.path.exists(self._progress_file):
             try:
+                # TODO: figure out what error this gives if it's a blank csv
                 queried_df = pd.read_csv(self._progress_file, index_col=0)
-            except:
+            except Exception:
                 pass
 
         if len(queried_df) > 0:
@@ -259,9 +252,10 @@ class Query_handler():
             df_to_query = df.reset_index(drop=True)
 
         # get queries
-        graph_queries = queries_by_type['graph']
-        # TODO: refactor to actually use non_graph_queries
-        non_graph_query_functions = queries_by_type['non_graph']
+        graph_queries = self._get_graph_queries(
+            gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries,
+            # cpu_compute_resource_queries=cpu_compute_resource_queries
+        )
         # TODO: refactor to not pass in a function
         non_graph_query_functions = []
         if cpu_compute_resource_queries:

@@ -1,6 +1,6 @@
-from termcolor import colored
-import pandas as pd
 import os
+import pandas as pd
+from termcolor import colored
 
 
 def reset_files():
@@ -25,6 +25,6 @@ def prompt_new_run(new_run):
         print(colored(new_run_message, "red"))
         response = input(
             "Type 'y' to continue resetting the progress. Any other response will continue as if new_run were set to False.\n")
-        # if it is a new run, initialize files and reset progress, wiping files (but not paths gathered)
+        # if it is a new run, initialize files and reset progress, wiping files
         if response == "y":
             reset_files()

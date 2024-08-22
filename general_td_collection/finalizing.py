@@ -4,10 +4,12 @@ import ast
 
 
 class Finalizer():
-    def __init__(self, graph_metrics: list[str] | str = [], graph_columns: list[str] | str = None) -> None:
+    def __init__(self, graph_metrics: list[str] | str | None = None, graph_columns: list[str] | str = None) -> None:
         if graph_columns is not None:
             self._check_graph_columns(graph_columns)
-        if graph_metrics != []:
+        if graph_metrics is None:
+            graph_metrics = []
+        else:
             self._check_graph_metrics(graph_metrics)
         self.graph_metrics = graph_metrics
         self.graph_columns = graph_columns
@@ -45,13 +47,15 @@ class Finalizer():
                     raise ValueError(
                         f"metric '{metric}' not in acceptable metrics: {self.all_graph_metrics}.")
 
-    # given a title that may have capitals and spaces, return a lowercase version, with all spaces replaced with underscores
+    # given a title that may have capitals and spaces,
+    # return a lowercase version, with all spaces replaced with underscores
     def _title_to_col_name(self, title: str) -> str:
         title = title.lower()
         title = title.replace(" ", "_")
         return title
 
-    # given a title of a graph and a metric, return a title of metric_graph_title, with everything lowercase and no spaces (spaces replaced with underscores)
+    # given a title of a graph and a metric, return a title of metric_graph_title,
+    # with everything lowercase and no spaces (spaces replaced with underscores)
     def _get_metric_col_name(self, graph_title: str, metric: str) -> str:
         if metric not in self.all_graph_metrics:
             raise ValueError(
@@ -98,7 +102,8 @@ class Finalizer():
                 raise ValueError(
                     f"metric {metric} not in known metrics: {self.all_graph_metrics}")
 
-    # given a dataframe with some columns starting with '_graph', return a new df with more columns that summarize those graph columns
+    # given a dataframe with some columns starting with '_graph',
+    # return a new df with more columns that summarize those graph columns
     def _insert_graph_metric_columns(self, df: pd.DataFrame, graph_metrics: list[str] = None) -> pd.DataFrame:
         # handle user input
         if not isinstance(df, pd.DataFrame):
