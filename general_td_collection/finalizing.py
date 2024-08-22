@@ -1,6 +1,6 @@
-import pandas as pd
-import warnings
 import ast
+import warnings
+import pandas as pd
 
 
 class Finalizer():
@@ -25,7 +25,7 @@ class Finalizer():
         return graph_columns
 
     # given a list of graph columns (strings), check that it is the right type
-    def _check_graph_columns(self, graph_columns: list[str]) -> None:
+    def _check_graph_columns(self, graph_columns: list[str] | str) -> None:
         if isinstance(graph_columns, str):
             # if there's just one passed in column, put it in a list still
             graph_columns = [graph_columns]
@@ -34,7 +34,7 @@ class Finalizer():
                 f"graph_columns must be a str or list but was {type(graph_columns)}.")
 
     # given a dict of metrics and statuses (booleans), check that all the keys are recognized and it is of the right type.
-    def _check_graph_metrics(self, graph_metrics: list[str]) -> None:
+    def _check_graph_metrics(self, graph_metrics: list[str] | str) -> None:
         if graph_metrics != []:
             if not isinstance(graph_metrics, list) and not isinstance(graph_metrics, str):
                 raise ValueError(

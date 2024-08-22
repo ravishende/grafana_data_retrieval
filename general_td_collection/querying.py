@@ -89,11 +89,11 @@ class QueryHandler():
         # assemble filter str
         filters = [node_filter, pod_filter, namespace_filter]
         filter_str = ""
-        for filter in filters:
-            if filter == "":
+        for filt in filters:
+            if filt == "":
                 continue
             # in PromQL, it still works if the filter string ends in a comma
-            filter_str += filter + ', '
+            filter_str += filt + ', '
         self.filter_str = filter_str
         return filter_str
 
