@@ -13,6 +13,7 @@ pd.set_option('display.width', terminal_width)
 
 
 class Phase_3():
+    # files are only read, so pylint: disable=dangerous-default-value
     def __init__(self, verbose=True, files=PHASE_3_FILES):
         self.verbose = verbose
         self.files = files
@@ -118,14 +119,12 @@ class Phase_3():
 
         return df
 
-    '''
-    ======================
-        Main Program
-    ======================
-    '''
+    # ======================
+    #     Main Program
+    # ======================
+
     # runs the whole phase. Returns True if successful, False otherwise
     # Note: number of queries = rows_batch_size * 15, so it is better to choose a small number (e.g. 10) for more frequent saving
-
     def run(self, rows_batch_size=10, verbose_status=False):
         success = False
 

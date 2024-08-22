@@ -1,10 +1,12 @@
 import pandas as pd
 from workflow_files import PHASE_4_FILES
 from metrics_and_columns_setup import GET_METRICS, GET_DURATION_COLS, GET_COL_NAMES, GET_ID_COLS
-from helpers_training_data_collection.resource_json_summation import update_columns, insert_percent_cols, set_helitack_status
+from helpers_training_data_collection.resource_json_summation import (
+    update_columns, insert_percent_cols, set_helitack_status)
 
 
 class Phase_4():
+    # files are only read, so pylint: disable=dangerous-default-value
     def __init__(self, output_several_dfs=False, files=PHASE_4_FILES, helitack_status=False):
         self.output_several_dfs = output_several_dfs
         self.files = files
@@ -158,11 +160,9 @@ class Phase_4():
             t_i_df = df[base_cols + t_i_cols[i]]
             t_i_df.to_csv(f"{folder_path}/output_t{i+1}.csv")
 
-    '''
-    ====================================
-            Main Program
-    ====================================
-    '''
+    # ====================================
+    #         Main Program
+    # ====================================
 
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self):

@@ -1,19 +1,20 @@
 # autopep8: off
-import pandas as pd
+import sys
+import os
 import warnings
 import shutil
 import ast
 import random
 from datetime import datetime
+import pandas as pd
 from workflow_files import PHASE_2_FILES
 from metrics_and_columns_setup import GET_DURATION_COLS
-import sys
-import os
 # Adjust the path to go up one level
 sys.path.append("../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
+# pylint: disable=wrong-import-position
 from helpers.time_functions import datetime_ify
 # autopep8: on
 
@@ -24,6 +25,7 @@ pd.set_option('display.width', terminal_width)
 
 
 class Phase_2():
+    # files are only read, so pylint: disable=dangerous-default-value
     def __init__(self, files=PHASE_2_FILES):
         self.files = files
         self.num_duration_cols = GET_DURATION_COLS()['num_cols']
@@ -32,11 +34,9 @@ class Phase_2():
             "extent"
         ]
 
-    '''
-    ==========================
-        Helper functions
-    ==========================
-    '''
+    # ==========================
+    #     Helper functions
+    # ==========================
 
     def _drop_no_extent(self, df, reset_index=True):
         df = df.dropna(subset='extent')
@@ -57,13 +57,14 @@ class Phase_2():
         return area
 
     def _calculate_runtime(self, start, stop):
-        # there are two slightly different ways that time strings are represented. Try the other if the first doesn't work.
         # get start and stop down to the second, no fractional seconds.
         start = start[0:start.find(".")]
         stop = stop[0:stop.find(".")]
 
         # get start and stop as datetimes
         parsing_successful = False
+        # there are two slightly different ways that time strings are represented.
+        # Try the other if the first doesn't work.
         format_strings = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
         for format_str in format_strings:
             try:
@@ -161,11 +162,9 @@ class Phase_2():
                 df, duration_title, method=insert_method)
         return df
 
-    '''
-    ======================
-        Main Program
-    ======================
-    '''
+    # ======================
+    #     Main Program
+    # ======================
 
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self):

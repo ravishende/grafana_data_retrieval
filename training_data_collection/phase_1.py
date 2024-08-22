@@ -12,19 +12,19 @@ from workflow_files import PHASE_1_FILES
 pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', None)
 
-'''
-=========================
-Phase 1:  Collecting Runs
-=========================
-1. get successful bp3d runs from read csv
-2. collect runs from successful bp3d runs
 
-FINISH:
-save df to a file
-'''
+# =========================
+# Phase 1:  Collecting Runs
+# =========================
+# 1. get successful bp3d runs from read csv
+# 2. collect runs from successful bp3d runs
+
+# FINISH:
+# save df to a file
 
 
 class Phase_1():
+    # files are only read, so pylint: disable=dangerous-default-value
     def __init__(self, files=PHASE_1_FILES, verbose=True, debug_mode=False):
         self.verbose = verbose
         self.debug_mode = debug_mode
@@ -76,7 +76,7 @@ class Phase_1():
     # Writes contents to a file. Each element is written on a new line.
     # If txt_file does not exist, it is created.
     def _write_txt_file(self, txt_file, contents):
-        with open(txt_file, "w") as file:  # Open the file in append mode ('a')
+        with open(txt_file, "w", encoding="utf-8") as file:  # Open the file in append mode ('a')
             for entry in contents:
                 file.write(entry + "\n")  # Write each entry on a new line
 
@@ -84,7 +84,7 @@ class Phase_1():
     # appends a batch of entries to txt_file. Each entry is written on a new line.
     # If txt_file does not exist, it is created.
     def _append_txt_file(self, txt_file, batch):
-        with open(txt_file, "a") as file:  # Open the file in append mode ('a')
+        with open(txt_file, "a", encoding="utf-8") as file:  # Open the file in append mode ('a')
             for entry in batch:
                 file.write(str(entry) + "\n")  # Write each entry on a new line
 
@@ -92,7 +92,7 @@ class Phase_1():
     # txt file is an element in the list
     def read_txt_file(self, txt_file):
         contents = []
-        with open(txt_file, "r") as file:
+        with open(txt_file, "r", encoding="utf-8") as file:
             contents = file.read().splitlines()
         return contents
 
@@ -163,41 +163,32 @@ class Phase_1():
     # gather all paths in batches if requested.
     # batch size is a number of paths per batch to get
     def gather_all_paths(self, batch_size=None):
+        # TODO: when gathering new paths, we append to a txt file. Since we re-gather the last gathered directory, we create duplicates in the txt file even though we don't return them. Make sure duplicates don't get added to the txt file.
         # get all directories and previously gathered directories
         directories = self.fs.ls(self.bucket)
         gathered_directories = self._get_gathered_items("path_directories")
+        # the last gathered directory may have new subdirectories. remove it from gathered_directories to account for this
         gathered_directories = gathered_directories[:-1]
 
         # get list of directories that have not been gathered
         ungathered_directories = [
             d for d in directories if d not in gathered_directories]
-        # the last gathered directory may have new subdirectories. Add it into ungathered_directories to get new subdirs
-        '''
-        if len(gathered_directories) > 0:
-            ungathered_directories = [gathered_directories[-1]] + ungathered_directories
-        # get rid of duplicates in ungathered_directories (from adding in gathered_directories[-1])
-        ungathered_directories = list(set(ungathered_directories))
-        '''
         # intialize a list to hold all simulation paths
         simulation_paths_list = self._get_gathered_items("paths")
-        # handle if no new directories
-        '''
-        if len(gathered_directories) > 0 and ungathered_directories == [gathered_directories[-1]]:
-            return simulation_paths_list
-        '''
         # start gathering directories
-        msg = f"{len(gathered_directories)} directories have already been gathered. \
+        progress_msg = f"{len(gathered_directories)} directories have already been gathered. \
             Gathering paths for the remaining {len(ungathered_directories)}. \nThere are {len(directories)} total directories."
-        self._print_if_verbose(msg)
-        # note: if you were to calculate total based on these 2 values, you'd notice that len(directories) = total -1. This is because
-        # we added gathered_directories[-1] to ungathered_directories. We will also have to get the unique paths because of this
+        self._print_if_verbose(progress_msg)
 
         # if we're not using batches, run everything at once
         if batch_size is None:
             new_sim_paths_list = self._get_paths_from_directories(
                 ungathered_directories)
             self._append_txt_file(self.files['paths'], new_sim_paths_list)
-            return simulation_paths_list + new_sim_paths_list
+            # make sure there aren't any duplicates
+            all_paths = simulation_paths_list + new_sim_paths_list
+            all_unique_paths = list(set(all_paths))
+            return all_unique_paths
         # collect runs in batches
         num_batches = math.ceil(len(ungathered_directories)/batch_size)
         for i in range(0, num_batches):
@@ -218,7 +209,8 @@ class Phase_1():
             ungathered_directories = ungathered_directories[end_index:]
             # append newly collected paths to the paths.txt file
             self._append_txt_file(self.files['paths'], sim_paths_batch)
-        return simulation_paths_list
+        unique_simulation_paths = list(set(simulation_paths_list))
+        return unique_simulation_paths
 
     # get the run_uuid (str) from a path (str)
     def _run_id_from_path(self, path):

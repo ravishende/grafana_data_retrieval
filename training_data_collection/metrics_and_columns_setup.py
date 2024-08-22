@@ -1,20 +1,17 @@
-from multiprocessing.sharedctypes import Value
-from workflow_files import NUM_DURATION_COLS_FILE
 from termcolor import colored
+from workflow_files import NUM_DURATION_COLS_FILE
 
 
-'''
-========================
-    Helper Functions
-========================
-'''
+# ========================
+#     Helper Functions
+# ========================
 
 
 # read a txt file written by phase_2 that contains _num_duration_cols
 def _init_num_duration_cols():
     # read the file to get _num_duration_cols
     try:
-        with open(NUM_DURATION_COLS_FILE, "r") as file:
+        with open(NUM_DURATION_COLS_FILE, "r", encoding="utf-8") as file:
             num_duration_cols = int(file.read().strip())
         # return if successful
         return num_duration_cols
@@ -22,11 +19,8 @@ def _init_num_duration_cols():
     # handle errors for reading file
     except FileNotFoundError:
         print(f"Error: File {NUM_DURATION_COLS_FILE} not found.")
-        raise ValueError(f"Error: File {NUM_DURATION_COLS_FILE} not found.")
     except ValueError:
         print(f"Error: Content of {NUM_DURATION_COLS_FILE} is not an integer.")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
 
     # return 0 if there is an error (no file setup) to avoid errors before resetting files
     return 0
@@ -43,17 +37,17 @@ def _init_col_names_by_time(_num_duration_cols, _non_static_metrics):
 
 _INCLUDE_ALL_TOTALS_METRICS = True
 
-'''
-========================
-    Public Functions
-========================
-'''
+
+# ========================
+#     Public Functions
+# ========================
 
 
 def include_all_totals_metrics(status=True):
     if not isinstance(status, bool):
         raise ValueError(
             f"status ({status}) must be of type bool but was type {type(status)}.")
+    # pylint: disable=global-statement
     global _INCLUDE_ALL_TOTALS_METRICS
     _INCLUDE_ALL_TOTALS_METRICS = status
 
@@ -64,12 +58,14 @@ def include_all_totals_metrics(status=True):
 
 def set_num_duration_cols(num, suppress_warning=False):
     # make sure input is an int or convertible to an int
-    if not type(num) == int:
+    if not isinstance(num, int):
         try:
             # make sure that num can be converted to an int and do so for comparisons later
             num = int(num)
         except ValueError:
-            raise TypeError("Input must be an int or convertible to an int.")
+            # pylint: disable=raise-missing-from
+            raise TypeError(
+                f"Input must be an int or convertible to an int, but was {int}, of type {type(int)}.")
 
     # if num is greater than a threshold number, give a warning and promt to continue
     max_num_before_warning = 3
@@ -94,11 +90,12 @@ def set_num_duration_cols(num, suppress_warning=False):
     # initialize num_duration_cols by writing to its specified file
     # convert num back to a string so that it can be written to the file
     num = str(num)
-    with open(NUM_DURATION_COLS_FILE, "w") as file:
+    with open(NUM_DURATION_COLS_FILE, "w", encoding="utf-8") as file:
         file.write(num)
 
 
 # get a dict of metrics by type (all, static, non_static)
+# pylint: disable=invalid-name
 def GET_METRICS():
     # metrics
     all_metrics = [
@@ -131,6 +128,7 @@ def GET_METRICS():
 
 # Note: get_duration_cols must be a function that is called only during initialization or later, otherwise if a user changes the number of duration columns in work_flow, it won't actually update until next run
 # get a dict of duration column information (num_cols, col_names, total_col)
+# pylint: disable=invalid-name
 def GET_DURATION_COLS():
     # duration columns
     # Note: assumes duration columns are in the form "duration_t{N}" where {N} is
@@ -149,6 +147,7 @@ def GET_DURATION_COLS():
 
 
 # get a dict of column names by type (static, totals, by_time, all)
+# pylint: disable=invalid-name
 def GET_COL_NAMES():
     metrics = GET_METRICS()
     num_duration_cols = GET_DURATION_COLS()['num_cols']
@@ -169,6 +168,7 @@ def GET_COL_NAMES():
 
 
 # get a dict of id columns by type (ensemble, run)
+# pylint: disable=invalid-name
 def GET_ID_COLS():
     id_cols_dict = {
         "ensemble": "ensemble_uuid",

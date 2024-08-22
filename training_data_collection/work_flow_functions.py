@@ -12,7 +12,7 @@ NUM_PHASES = 4
 # Writes contents to a file. Each element is written on a new line.
 # If txt_file does not exist, it is created.
 def _write_txt_file(txt_file, contents):
-    with open(txt_file, "w") as file:  # Open the file in append mode ('a')
+    with open(txt_file, "w", encoding="utf-8") as file:  # Open the file in append mode ('a')
         for entry in contents:
             file.write(entry + "\n")  # Write each entry on a new line
 
@@ -51,32 +51,26 @@ def initialize_files():
 # given a filename of a txt file, line number, and message, update the line at line_number to be "message", ending in a new line
 def _update_txt_line(file_name, line_number, message):
     # read file, then update the phase line to be message with a \n
-    try:
-        lines = []
-        # Read the file's current contents
-        with open(file_name, 'r') as file:
-            lines = file.readlines()
+    lines = []
+    # Read the file's current contents
+    with open(file_name, 'r', encoding="utf-8") as file:
+        lines = file.readlines()
 
-        # update the file's contents
-        lines[line_number] = f"{message}\n"
-        with open(file_name, 'w') as file:
-            file.writelines(lines)
-    except Exception as e:
-        raise ValueError(f"An unexpected error occurred: {e}")
+    # update the file's contents
+    lines[line_number] = f"{message}\n"
+    with open(file_name, 'w', encoding="utf-8") as file:
+        file.writelines(lines)
 
 
 # given a file_name and line_number, return the contents of the line (without any trailing whitespace or \n at the end of the line)
 def _read_txt_line(file_name, line_number):
     # read file, then check the line's progress
-    try:
-        # Read the file's current contents
-        with open(file_name, 'r') as file:
-            lines = file.readlines()
-            # Remove leading/trailing whitespace and newline
-            line_content = lines[line_number].strip()
-            return line_content
-    except Exception as e:
-        raise ValueError(f"An unexpected error occurred: {e}")
+    # Read the file's current contents
+    with open(file_name, 'r', encoding="utf-8") as file:
+        lines = file.readlines()
+        # Remove leading/trailing whitespace and newline
+        line_content = lines[line_number].strip()
+        return line_content
 
 
 # check that the input phase_number is a valid phase
@@ -122,7 +116,7 @@ def _wipe_phase_files(phase_number, wipe_paths_gathered=False):
 
     # clear txt files for selected phase
     for txt_file in txt_files_to_reset[phase_number]:
-        with open(txt_file, 'w'):
+        with open(txt_file, 'w', encoding="utf-8"):
             continue
 
 
