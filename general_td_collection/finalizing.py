@@ -14,6 +14,7 @@ class Finalizer():
             self._check_graph_metrics(graph_metrics)
         self.graph_metrics = graph_metrics
         self.graph_columns = graph_columns
+        # NOTE: if any metric gets updated here, self._summarize_graph_data must also be updated
         self.all_graph_metrics = ["min", "max", "mean", "median",
                                   "std", "var", "sum", "increase", "q1", "q3", "iqr"]
         self._read_file = "csvs/queried.csv"
@@ -27,12 +28,11 @@ class Finalizer():
 
     # given a list of graph columns (strings), check that it is the right type
     def _check_graph_columns(self, graph_columns: list[str] | str) -> None:
+        # if there's just one passed in column, still put it in a list
         if isinstance(graph_columns, str):
-            # if there's just one passed in column, put it in a list still
             graph_columns = [graph_columns]
-        if not isinstance(graph_columns, list):
-            raise ValueError(
-                f"graph_columns must be a str or list but was {type(graph_columns)}.")
+        wrong_type_msg = f"graph_columns must be a str or list but was {type(graph_columns)}."
+        assert isinstance(graph_columns, list), wrong_type_msg
 
     # given a dict of metrics and statuses (booleans),
     # check that all the keys are recognized and it is of the right type.
@@ -77,33 +77,39 @@ class Finalizer():
         if isinstance(graph_data_list, str):
             graph_data_list = ast.literal_eval(graph_data_list)
         graph_data = pd.Series(data=graph_data_list)
-        # NOTE: if anything gets updated here, self.all_graph_metrics must also be updated
+        # NOTE: if any metric gets updated here, self.all_graph_metrics must also be updated
+        calculated_metric = 0
         match metric:
             case "min":
-                return graph_data.min()
+                calculated_metric = graph_data.min()
             case "max":
-                return graph_data.max()
+                calculated_metric = graph_data.max()
             case "mean":
-                return graph_data.mean()
+                calculated_metric = graph_data.mean()
             case "std":
-                return graph_data.std()
+                calculated_metric = graph_data.std()
             case "var":
-                return graph_data.var()
+                calculated_metric = graph_data.var()
             case "sum":
-                return graph_data.sum()
+                calculated_metric = graph_data.sum()
             case "q1":
-                return graph_data.quantile(q=0.25)
+                calculated_metric = graph_data.quantile(q=0.25)
             case "median":  # aka q2
-                return graph_data.quantile(q=0.5)
+                calculated_metric = graph_data.quantile(q=0.5)
             case "q3":
-                return graph_data.quantile(q=0.75)
+                calculated_metric = graph_data.quantile(q=0.75)
             case "iqr":
-                return graph_data.quantile(q=0.75) - graph_data.quantile(q=0.25)
+                q3 = graph_data.quantile(q=0.75)
+                q1 = graph_data.quantile(q=0.25)
+                calculated_metric = q3 - q1
             case "increase":
-                return graph_data.iloc[len(graph_data) - 1] - graph_data.iloc[0]
+                first_point = graph_data.iloc[0]
+                final_point = graph_data.iloc[len(graph_data) - 1]
+                calculated_metric = final_point - first_point
             case _:
                 raise ValueError(
                     f"metric {metric} not in known metrics: {self.all_graph_metrics}")
+        return calculated_metric
 
     # given a dataframe with some columns starting with '_graph',
     # return a new df with more columns that summarize those graph columns
