@@ -108,8 +108,7 @@ class QueryHandler():
     def _get_gpu_queries(self) -> dict[str:str]:
         # graph queries
         queries = {
-            # total gpu usage = gpu_utilization% by pod but averaging out all the pods
-            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization' + self._filter_str,
+            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization{' + self._filter_str + '}',
             'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self._filter_str + '})'
         }
         queries = {}
