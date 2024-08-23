@@ -20,6 +20,20 @@ from graphs import Graphs
 
 
 class QueryHandler():
+    """Handles querying of information over time using several dashboards
+
+    Given a read/write files for dataframes (optional), a graph timestep (optional) for how frequent
+    graph datapoints should be queried for, and some way to filter queries, 
+    work with dataframes to query data over their rows (assuming a 'start' and 'end' column exist)
+
+    Note: the filter parameters are optional but highly recommended. If none of them are specified, 
+    the queries will be over the entirity of the relevant data stored in nautilous, which will 
+    almost certainly not be specific to the desired application being queried.
+
+    Attributes:
+        verbose: A boolean for if printing while querying should be verbose
+    """
+
     def __init__(self, read_file: str = "csvs/run_inputs.csv",
                  write_file: str = "csvs/queried.csv", graph_timestep: str = "1m",
                  node: str | None = None, node_regex: str | None = None,
@@ -34,24 +48,16 @@ class QueryHandler():
         if namespace and namespace_regex:
             raise ValueError(
                 "At most one of namespace or namespace_regex can be defined")
+        self.verbose = verbose
         # changes how many datapoints are in each queried graph - tunes accuracy of graph metrics
-        self.graph_timestep = graph_timestep
-
-        # passed in parameters to filter queries
-        self.node = node
-        self.pod = pod
-        self.namespace = namespace
-        self.node_regex = node_regex
-        self.pod_regex = pod_regex
-        self.namespace_regex = namespace_regex
-        self.filter_str = self._init_filter_str()
-
+        self._graph_timestep = graph_timestep
+        # string to insert into queries to filter them
+        self._filter_str = self.update_filter_str(
+            node, node_regex, pod, pod_regex, namespace, namespace_regex)
         # csv files
         self._read_file = read_file
         self._write_file = write_file
         self._progress_file = "csvs/_query_progress.csv"
-
-        self.verbose = verbose
 
     # given a kubernetes component ('node', 'pod', 'namespace', etc.) and the name (optional)
     # of the component (e..g 'bp3d-worker-pod-a5343...') or a regex expression (optional)
@@ -96,20 +102,15 @@ class QueryHandler():
                 continue
             # in PromQL, it still works if the filter string ends in a comma
             filter_str += filt + ', '
-        self.filter_str = filter_str
+        self._filter_str = filter_str
         return filter_str
-
-    # initialize the filter string with the class's filters
-    def _init_filter_str(self):
-        return self.update_filter_str(self.node, self.node_regex, self.pod, self.pod_regex,
-                                      self.namespace, self.namespace_regex)
 
     def _get_gpu_queries(self) -> dict[str:str]:
         # graph queries
         queries = {
             # total gpu usage = gpu_utilization% by pod but averaging out all the pods
-            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization' + self.filter_str,
-            'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self.filter_str + '})'
+            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization' + self._filter_str,
+            'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self._filter_str + '})'
         }
         queries = {}
         return queries
@@ -117,18 +118,18 @@ class QueryHandler():
     def _get_gpu_compute_resource_queries(self) -> dict[str, str]:
         # graph queries
         queries = {
-            'gpu_utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self.filter_str + '}',
-            'memory_copy_utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self.filter_str + '}',
-            'power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self.filter_str + '}',
-            'temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self.filter_str + '}',
-            'fan_speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self.filter_str + '}'
+            'gpu_utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
+            'memory_copy_utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
+            'power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
+            'temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
+            'fan_speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}'
         }
         return queries
 
     def _get_rgw_queries(self) -> dict[str, str]:
-        if "node=" in self.filter_str:
+        if "node=" in self._filter_str:
             specifier = ""
-            if "node=~" in self.filter_str:
+            if "node=~" in self._filter_str:
                 specifier = "node_regex"
             else:
                 specifier = "node"
@@ -136,12 +137,12 @@ class QueryHandler():
                 f"'{specifier}' specified in filtering, but rgw queries don't have node data, resulting in no data returned for them.")
         # graph queries
         queries = {
-            'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self.filter_str + '})',
-            'rgw_cache_hit': 'sum by(instance) (ceph_rgw_cache_hit{' + self.filter_str + '})',
-            'rgw_cache_miss': 'sum by(instance) (ceph_rgw_cache_miss{' + self.filter_str + '})',
-            'rgw_gets': 'sum by(instance) (ceph_rgw_get{' + self.filter_str + '})',
-            'rgw_puts': 'sum by(instance) (ceph_rgw_put{' + self.filter_str + '})',
-            'rgw_failed_req': 'sum by(instance) (ceph_rgw_failed_req{' + self.filter_str + '})'
+            'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self._filter_str + '})',
+            'rgw_cache_hit': 'sum by(instance) (ceph_rgw_cache_hit{' + self._filter_str + '})',
+            'rgw_cache_miss': 'sum by(instance) (ceph_rgw_cache_miss{' + self._filter_str + '})',
+            'rgw_gets': 'sum by(instance) (ceph_rgw_get{' + self._filter_str + '})',
+            'rgw_puts': 'sum by(instance) (ceph_rgw_put{' + self._filter_str + '})',
+            'rgw_failed_req': 'sum by(instance) (ceph_rgw_failed_req{' + self._filter_str + '})'
         }
 
         return queries
@@ -159,22 +160,22 @@ class QueryHandler():
         # all resources and the heart of their queries
         queries = {
             # static metrics
-            'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self.filter_str + '} offset ' + static_offset + ')',
+            'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self._filter_str + '} offset ' + static_offset + ')',
 
-            'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self.filter_str + '} offset ' + static_offset + ')',
+            'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self._filter_str + '} offset ' + static_offset + ')',
 
             # non static metrics
-            'mem_usage': 'sum by (pod) (max_over_time(container_memory_working_set_bytes{' + self.filter_str + '}[' + duration + '] offset ' + offset + '))',
+            'mem_usage': 'sum by (pod) (max_over_time(container_memory_working_set_bytes{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
 
-            'cpu_usage': 'sum by (pod) (increase(container_cpu_usage_seconds_total{' + self.filter_str + '}[' + duration + '] offset ' + offset + '))',
+            'cpu_usage': 'sum by (pod) (increase(container_cpu_usage_seconds_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
 
-            'transmitted_packets': 'sum by (pod) (increase(container_network_transmit_packets_total{' + self.filter_str + '}[' + duration + '] offset ' + offset + '))',
+            'transmitted_packets': 'sum by (pod) (increase(container_network_transmit_packets_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
 
-            'received_packets': 'sum by (pod) (increase(container_network_receive_packets_total{' + self.filter_str + '}[' + duration + '] offset ' + offset + '))',
+            'received_packets': 'sum by (pod) (increase(container_network_receive_packets_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
 
-            'transmitted_bandwidth': 'sum by (pod) (increase(container_network_transmit_bytes_total{' + self.filter_str + '}[' + duration + '] offset ' + offset + '))',
+            'transmitted_bandwidth': 'sum by (pod) (increase(container_network_transmit_bytes_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
 
-            'received_bandwidth': 'sum by (pod) (increase(container_network_receive_bytes_total{' + self.filter_str + '}[' + duration + '] offset ' + offset + '))'
+            'received_bandwidth': 'sum by (pod) (increase(container_network_receive_bytes_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))'
         }
 
         return queries
@@ -260,7 +261,7 @@ class QueryHandler():
         if cpu_compute_resource_queries:
             non_graph_query_functions.append(
                 self._get_cpu_compute_resource_queries)
-        graphs_class = Graphs(time_step=self.graph_timestep)
+        graphs_class = Graphs(time_step=self._graph_timestep)
 
         # query in batches
         for batch_start in range(0, len(df_to_query), batch_size):
