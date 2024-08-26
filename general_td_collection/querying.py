@@ -240,6 +240,22 @@ class QueryHandler():
     def query_df(self, df: pd.DataFrame | None = None, batch_size: int = 5,
                  rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False,
                  cpu_compute_resource_queries=False) -> pd.DataFrame:
+        """Insert queried columns into a dataframe based on chosen dashboards
+
+        Args:
+            df: pandas dataframe to query - must have a 'start' and 'end' column
+            batch_size: how many rows to query for before saving - small numbers recommended
+            rgw_queries: whether to query for rgw queue, cache, and gets/puts metrics
+            gpu_queries: whether to query for total gpu usage and requested gpus
+            gpu_compute_resource_queries: whether to query for gpu utilization and physical metrics
+            cpu_compute_resource_queries: whether to query for cpu, memory and network metrics
+        Returns:
+            dataframe with more columns of queried information
+
+        Raises:
+            ValueError: invalid inputs - no queries specified or no df/read file
+        """
+
         # handle user input
         if not (gpu_queries or gpu_compute_resource_queries or rgw_queries or cpu_compute_resource_queries):
             raise ValueError("No queries specified -> nothing to query")
