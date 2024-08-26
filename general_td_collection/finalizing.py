@@ -4,20 +4,17 @@ import pandas as pd
 
 
 class Finalizer():
-    def __init__(self, graph_metrics: list[str] | str | None = None,
-                 graph_columns: list[str] | str = None) -> None:
-        if graph_columns is not None:
-            self._check_graph_columns(graph_columns)
+    def __init__(self, graph_metrics: list[str] | str | None = None) -> None:
         if graph_metrics is None:
             graph_metrics = []
         else:
             self._check_graph_metrics(graph_metrics)
         self.graph_metrics = graph_metrics
-        self.graph_columns = graph_columns
         # NOTE: if any metric gets updated here, self._summarize_graph_data must also be updated
         self.all_graph_metrics = ["min", "max", "mean", "median",
                                   "std", "var", "sum", "increase", "q1", "q3", "iqr"]
         self._read_file = "csvs/queried.csv"
+        self._graph_columns = []  # they become initialized when self.sum_df is called
 
     # given a dataframe with some columns prependedd with 'graph_', return all those column names
     def get_graph_columns(self, df: pd.DataFrame) -> list[str]:
@@ -124,7 +121,7 @@ class Finalizer():
             self._check_graph_metrics(graph_metrics)
 
         # calculate and insert metric columns
-        for graph_title in self.graph_columns:
+        for graph_title in self._graph_columns:
             for graph_metric in graph_metrics:
                 metric_col_name = self._get_metric_col_name(
                     graph_title, graph_metric)
@@ -143,11 +140,20 @@ class Finalizer():
             total += float(time_value_pair[1])
         return total
 
-    def sum_df(self, df, graph_metrics: list[str] = None) -> pd.DataFrame:
-        if not isinstance(df, pd.DataFrame):
-            raise ValueError(
-                f"Expected df to be a pandas DataFrame but was type {type(df)}")
-        self.graph_columns = self.get_graph_columns(df)
+    def sum_df(self, df: pd.DataFrame, graph_metrics: list[str] | None = None) -> pd.DataFrame:
+        """Sum over a dataframe to go from queried json data to single datapoints in columns
+
+        Args:
+            df: pandas DataFrame containing 'start', 'end', and queried columns
+            graph_metrics: list of metrics for graphs to be summarized by 
+                - for list of all metrics, look at self.all_graph_metrics
+
+        Returns:
+            summed dataframe with new columns and some dropped old ones
+        """
+        wrong_type_msg = f"Expected df to be a pandas DataFrame but was type {type(df)}"
+        assert isinstance(df, pd.DataFrame), wrong_type_msg
+        self._graph_columns = self.get_graph_columns(df)
         sum_col_prefix = "queried_"
         sum_columns = [
             col for col in df.columns if col[:len(sum_col_prefix)] == sum_col_prefix]
@@ -160,5 +166,5 @@ class Finalizer():
         # insert metric columns to summarize them, then drop the original graph columns
         df = self._insert_graph_metric_columns(
             df, graph_metrics)
-        df = df.drop(columns=self.graph_columns)
+        df = df.drop(columns=self._graph_columns)
         return df
