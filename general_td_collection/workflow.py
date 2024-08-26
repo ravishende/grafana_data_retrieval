@@ -22,7 +22,6 @@ Usage:
 import shutil
 import pandas as pd
 from setup import prompt_new_run
-from preprocessing import preprocess_df
 from querying import QueryHandler
 from finalizing import Finalizer
 # autopep8: on
@@ -60,11 +59,10 @@ query_handler = QueryHandler(node=NODE_NAME)
 # query_handler = Query_handler(pod_regex=pod_regex_str)
 finalizer = Finalizer()
 
-df = df.iloc[len(df)-14:]
+df = df.iloc[len(df)-7:]
 print("\n\n\nStarting df:\n", df, "\n\n\n\n")
 
 # Main workflow
-df = preprocess_df(df)
 df = query_handler.query_df(df,
                             rgw_queries=False,
                             gpu_queries=True,

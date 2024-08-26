@@ -111,7 +111,7 @@ class QueryHandler():
             dataframe with more columns of queried information
 
         Raises:
-            ValueError: invalid inputs - no queries specified or no df/read file
+            ValueError: invalid inputs - no queries specified or no/invalid df or read file
         """
 
         # handle user input
@@ -140,6 +140,7 @@ class QueryHandler():
         else:
             df_to_query = df.reset_index(drop=True)
 
+        df_to_query = self._preprocess_df(df_to_query)
         # get queries
         graph_queries = self._get_graph_queries(
             gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries,
@@ -198,6 +199,17 @@ class QueryHandler():
             return f'{component}=~"{component_regex}"'
         # neither are defined
         return ""
+
+    def _preprocess_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        if not 'start' in df.columns or not 'end' in df.columns:
+            raise ValueError(
+                "dataframe must have a 'start' column and an 'end' columnn")
+        # deal with times and create runtime column
+        df['start'] = df['start'].apply(datetime_ify)
+        df['end'] = df['end'].apply(datetime_ify)
+        df['runtime'] = (df['end'] - df['start']).dt.total_seconds()
+        df['runtime'] = df['runtime'].round()
+        return df
 
     def _get_gpu_queries(self) -> dict[str:str]:
         # graph queries
