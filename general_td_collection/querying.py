@@ -34,6 +34,7 @@ class QueryHandler():
         verbose: A boolean for if printing while querying should be verbose
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(self, read_file: str = "csvs/run_inputs.csv",
                  write_file: str = "csvs/queried.csv", graph_timestep: str = "1m",
                  node: str | None = None, node_regex: str | None = None,
@@ -52,7 +53,8 @@ class QueryHandler():
         # changes how many datapoints are in each queried graph - tunes accuracy of graph metrics
         self._graph_timestep = graph_timestep
         # string to insert into queries to filter them
-        self._filter_str = self.update_filter_str(
+        self._filter_str = ""
+        self.update_filter(
             node, node_regex, pod, pod_regex, namespace, namespace_regex)
         # csv files
         self._read_file = read_file
@@ -83,9 +85,22 @@ class QueryHandler():
         # neither are defined
         return ""
 
-    # update the filter string used for querying based on passed in filter parameters
-    def update_filter_str(self, node=None, node_regex=None, pod=None, pod_regex=None,
-                          namespace=None, namespace_regex=None) -> str:
+    def update_filter(self, node: str | None = None, node_regex: str | None = None,
+                      pod: str | None = None, pod_regex: str | None = None,
+                      namespace: str | None = None, namespace_regex: str | None = None) -> None:
+        """Updates the filter settings used in querying based on the passed in filter parameters
+
+        Args:
+            node: the node to filter on
+            node_regex: regex pattern to include any nodes that match the pattern
+            pod: the pod to filter on
+            pod_regex: regex pattern to include any pods that match the pattern
+            namespace: the namespace to filter on
+            namespace_regex: regex pattern to include any namespaces that match the pattern
+
+        Returns:
+            None
+        """
         # get individual filters
         node_filter = self._get_component_filter_str(
             "node", node, node_regex)
@@ -103,7 +118,6 @@ class QueryHandler():
             # in PromQL, it still works if the filter string ends in a comma
             filter_str += filt + ', '
         self._filter_str = filter_str
-        return filter_str
 
     def _get_gpu_queries(self) -> dict[str:str]:
         # graph queries
@@ -223,7 +237,9 @@ class QueryHandler():
             row[new_title] = data
         return row
 
-    def query_df(self, df: pd.DataFrame | None = None, batch_size: int = 5, rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False, cpu_compute_resource_queries=False) -> pd.DataFrame:
+    def query_df(self, df: pd.DataFrame | None = None, batch_size: int = 5,
+                 rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False,
+                 cpu_compute_resource_queries=False) -> pd.DataFrame:
         # handle user input
         if not (gpu_queries or gpu_compute_resource_queries or rgw_queries or cpu_compute_resource_queries):
             raise ValueError("No queries specified -> nothing to query")
@@ -239,7 +255,7 @@ class QueryHandler():
         df_to_query = pd.DataFrame()
         if os.path.exists(self._progress_file):
             try:
-                # TODO: figure out what error this gives if it's a blank csv
+                # TODO: figure out what error this gives if it's a blank file or not a csv
                 queried_df = pd.read_csv(self._progress_file, index_col=0)
             except Exception:
                 pass
