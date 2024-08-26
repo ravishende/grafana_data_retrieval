@@ -53,37 +53,13 @@ class QueryHandler():
         # changes how many datapoints are in each queried graph - tunes accuracy of graph metrics
         self._graph_timestep = graph_timestep
         # string to insert into queries to filter them
-        self._filter_str = ""
+        self._filter = ""
         self.update_filter(
             node, node_regex, pod, pod_regex, namespace, namespace_regex)
         # csv files
         self._read_file = read_file
         self._write_file = write_file
         self._progress_file = "csvs/_query_progress.csv"
-
-    # given a kubernetes component ('node', 'pod', 'namespace', etc.) and the name (optional)
-    # of the component (e..g 'bp3d-worker-pod-a5343...') or a regex expression (optional)
-    # for the component name,
-    # return a string filtering for that component, e.g. 'pod="bp3d-worker-pod-a5343..."'
-    def _get_component_filter_str(
-            self, component: str, component_name: str = None, component_regex: str = None) -> str:
-        if component_name and component_regex:
-            raise ValueError(
-                "at most one of component_name or component_regex should be defined.")
-        # give a warning if it doesn't seem like the filter str is being used correctly
-        known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job', 'instance',
-                                'instance_id', 'container', 'Hostname', 'UUID', 'device',
-                                'endpoint', 'service', 'prometheus', 'service']
-        if component not in known_k8s_components:
-            warnings.warn(
-                f"Unknown component '{component}'. Known components are: {known_k8s_components}")
-        # give the string depending on if it's a regex expression or not
-        if component_name:
-            return f'{component}="{component_name}"'
-        if component_regex:
-            return f'{component}=~"{component_regex}"'
-        # neither are defined
-        return ""
 
     def update_filter(self, node: str | None = None, node_regex: str | None = None,
                       pod: str | None = None, pod_regex: str | None = None,
@@ -117,125 +93,7 @@ class QueryHandler():
                 continue
             # in PromQL, it still works if the filter string ends in a comma
             filter_str += filt + ', '
-        self._filter_str = filter_str
-
-    def _get_gpu_queries(self) -> dict[str:str]:
-        # graph queries
-        queries = {
-            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization{' + self._filter_str + '}',
-            'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self._filter_str + '})'
-        }
-        queries = {}
-        return queries
-
-    def _get_gpu_compute_resource_queries(self) -> dict[str, str]:
-        # graph queries
-        queries = {
-            'gpu_utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
-            'memory_copy_utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
-            'power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
-            'temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}',
-            'fan_speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter_str + '}'
-        }
-        return queries
-
-    def _get_rgw_queries(self) -> dict[str, str]:
-        if "node=" in self._filter_str:
-            specifier = ""
-            if "node=~" in self._filter_str:
-                specifier = "node_regex"
-            else:
-                specifier = "node"
-            warnings.warn(
-                f"'{specifier}' specified in filtering, but rgw queries don't have node data, resulting in no data returned for them.")
-        # graph queries
-        queries = {
-            'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self._filter_str + '})',
-            'rgw_cache_hit': 'sum by(instance) (ceph_rgw_cache_hit{' + self._filter_str + '})',
-            'rgw_cache_miss': 'sum by(instance) (ceph_rgw_cache_miss{' + self._filter_str + '})',
-            'rgw_gets': 'sum by(instance) (ceph_rgw_get{' + self._filter_str + '})',
-            'rgw_puts': 'sum by(instance) (ceph_rgw_put{' + self._filter_str + '})',
-            'rgw_failed_req': 'sum by(instance) (ceph_rgw_failed_req{' + self._filter_str + '})'
-        }
-
-        return queries
-
-    # queries from ../training_data_handling/work_flow.py
-    def _get_cpu_compute_resource_queries(self, start, end) -> dict[str, str]:
-        start = datetime_ify(start)
-        end = datetime_ify(end)
-        duration_seconds = int((end-start).total_seconds())
-        offset = calculate_offset(start, duration_seconds)
-        static_offset = calculate_offset(start, 10)
-        duration = delta_to_time_str(timedelta(seconds=duration_seconds))
-
-        # TODO: test if removing the by (pod) makes a difference - I don't think it should
-        # all resources and the heart of their queries
-        queries = {
-            # static metrics
-            'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self._filter_str + '} offset ' + static_offset + ')',
-
-            'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self._filter_str + '} offset ' + static_offset + ')',
-
-            # non static metrics
-            'mem_usage': 'sum by (pod) (max_over_time(container_memory_working_set_bytes{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
-
-            'cpu_usage': 'sum by (pod) (increase(container_cpu_usage_seconds_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
-
-            'transmitted_packets': 'sum by (pod) (increase(container_network_transmit_packets_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
-
-            'received_packets': 'sum by (pod) (increase(container_network_receive_packets_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
-
-            'transmitted_bandwidth': 'sum by (pod) (increase(container_network_transmit_bytes_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))',
-
-            'received_bandwidth': 'sum by (pod) (increase(container_network_receive_bytes_total{' + self._filter_str + '}[' + duration + '] offset ' + offset + '))'
-        }
-
-        return queries
-
-    def _get_graph_queries(self, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False) -> dict[str, str]:
-        graph_queries = {}
-
-        if gpu_queries:
-            new_queries = self._get_gpu_queries()
-            graph_queries.update(new_queries)
-        if gpu_compute_resource_queries:
-            new_queries = self._get_gpu_compute_resource_queries()
-            graph_queries.update(new_queries)
-        if rgw_queries:
-            new_queries = self._get_rgw_queries()
-            graph_queries.update(new_queries)
-
-        return graph_queries
-
-    # given a row of a dataframe, a graphs class instantiation, and a dict of queries for graphs,
-    # return a queried version of that row,
-    # with the new columns being the graph titles prepended with 'graph_'
-    def _query_row_for_graphs(self, row: pd.Series, graphs_class: Graphs, graph_queries: dict[str, str]) -> pd.Series:
-        # sum by none since we're eventually getting it all down to one data point --> no need to split it further
-        graphs_dict = graphs_class.get_graphs_from_queries(
-            queries_dict=graph_queries, sum_by=None, start=row['start'], end=row['end'])
-        for title, data in graphs_dict.items():
-            new_title = "graph_" + title
-            if data is not None:
-                data = data[title].astype(float).to_list()
-            row[new_title] = data
-        return row
-
-    # TODO: refactor this to not pass a function in
-    def _query_row_for_non_graphs(self, row: pd.Series, query_retrieval_funcs_list: list):
-        if len(query_retrieval_funcs_list) == 0:
-            return row
-        data_dict = {}
-        for query_retrieval_func in tqdm(query_retrieval_funcs_list):
-            queries = query_retrieval_func(row['start'], row['end'])
-            data_dict.update({title: query_data(query)
-                              for title, query in queries.items()})
-        # prepend a string for finalizing.py to know that the column needs to be summed
-        for title, data in data_dict.items():
-            new_title = "queried_" + title
-            row[new_title] = data
-        return row
+        self._filter = filter_str
 
     def query_df(self, df: pd.DataFrame | None = None, batch_size: int = 5,
                  rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False,
@@ -316,3 +174,145 @@ class QueryHandler():
         print(queried_df)
         queried_df.to_csv(self._write_file)
         return queried_df
+
+    # given a kubernetes component ('node', 'pod', 'namespace', etc.) and the name (optional)
+    # of the component (e.g. 'bp3d-worker-pod-a5343...') or a regex expression (optional)
+    # for the component name,
+    # return a string filtering for that component, e.g. 'pod="bp3d-worker-pod-a5343..."'
+    def _get_component_filter_str(
+            self, component: str, component_name: str = None, component_regex: str = None) -> str:
+        if component_name and component_regex:
+            raise ValueError(
+                "at most one of component_name or component_regex should be defined.")
+        # give a warning if it doesn't seem like the filter str is being used correctly
+        known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job', 'instance',
+                                'instance_id', 'container', 'Hostname', 'UUID', 'device',
+                                'endpoint', 'service', 'prometheus', 'service']
+        if component not in known_k8s_components:
+            warnings.warn(
+                f"Unknown component '{component}'. Known components are: {known_k8s_components}")
+        # give the string depending on if it's a regex expression or not
+        if component_name:
+            return f'{component}="{component_name}"'
+        if component_regex:
+            return f'{component}=~"{component_regex}"'
+        # neither are defined
+        return ""
+
+    def _get_gpu_queries(self) -> dict[str:str]:
+        # graph queries
+        queries = {
+            'total_gpu_usage': 'avg_over_time(namespace_gpu_utilization{' + self._filter + '}',
+            'requested_gpus': 'count(DCGM_FI_DEV_GPU_TEMP{' + self._filter + '})'
+        }
+        queries = {}
+        return queries
+
+    def _get_gpu_compute_resource_queries(self) -> dict[str, str]:
+        # graph queries
+        queries = {
+            'gpu_utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter + '}',
+            'memory_copy_utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter + '}',
+            'power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter + '}',
+            'temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter + '}',
+            'fan_speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{' + self._filter + '}'
+        }
+        return queries
+
+    def _get_rgw_queries(self) -> dict[str, str]:
+        if "node=" in self._filter:
+            specifier = ""
+            if "node=~" in self._filter:
+                specifier = "node_regex"
+            else:
+                specifier = "node"
+            warnings.warn(
+                f"'{specifier}' specified in filtering, but rgw queries don't have node data, resulting in no data returned for them.")
+        # graph queries
+        queries = {
+            'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self._filter + '})',
+            'rgw_cache_hit': 'sum by(instance) (ceph_rgw_cache_hit{' + self._filter + '})',
+            'rgw_cache_miss': 'sum by(instance) (ceph_rgw_cache_miss{' + self._filter + '})',
+            'rgw_gets': 'sum by(instance) (ceph_rgw_get{' + self._filter + '})',
+            'rgw_puts': 'sum by(instance) (ceph_rgw_put{' + self._filter + '})',
+            'rgw_failed_req': 'sum by(instance) (ceph_rgw_failed_req{' + self._filter + '})'
+        }
+
+        return queries
+
+    # queries from ../training_data_handling/work_flow.py
+    def _get_cpu_compute_resource_queries(self, start, end) -> dict[str, str]:
+        start = datetime_ify(start)
+        end = datetime_ify(end)
+        duration_seconds = int((end-start).total_seconds())
+        offset = calculate_offset(start, duration_seconds)
+        static_offset = calculate_offset(start, 10)
+        duration = delta_to_time_str(timedelta(seconds=duration_seconds))
+
+        # TODO: test if removing the by (pod) makes a difference - I don't think it should
+        # all resources and the heart of their queries
+        queries = {
+            # static metrics
+            'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self._filter + '} offset ' + static_offset + ')',
+
+            'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self._filter + '} offset ' + static_offset + ')',
+
+            # non static metrics
+            'mem_usage': 'sum by (pod) (max_over_time(container_memory_working_set_bytes{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+
+            'cpu_usage': 'sum by (pod) (increase(container_cpu_usage_seconds_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+
+            'transmitted_packets': 'sum by (pod) (increase(container_network_transmit_packets_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+
+            'received_packets': 'sum by (pod) (increase(container_network_receive_packets_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+
+            'transmitted_bandwidth': 'sum by (pod) (increase(container_network_transmit_bytes_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+
+            'received_bandwidth': 'sum by (pod) (increase(container_network_receive_bytes_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))'
+        }
+
+        return queries
+
+    def _get_graph_queries(self, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False) -> dict[str, str]:
+        graph_queries = {}
+
+        if gpu_queries:
+            new_queries = self._get_gpu_queries()
+            graph_queries.update(new_queries)
+        if gpu_compute_resource_queries:
+            new_queries = self._get_gpu_compute_resource_queries()
+            graph_queries.update(new_queries)
+        if rgw_queries:
+            new_queries = self._get_rgw_queries()
+            graph_queries.update(new_queries)
+
+        return graph_queries
+
+    # given a row of a dataframe, a graphs class instantiation, and a dict of queries for graphs,
+    # return a queried version of that row,
+    # with the new columns being the graph titles prepended with 'graph_'
+    def _query_row_for_graphs(self, row: pd.Series, graphs_class: Graphs, graph_queries: dict[str, str]) -> pd.Series:
+        # sum by none since we're eventually getting it all down to one data point --> no need to split it further
+        graphs_dict = graphs_class.get_graphs_from_queries(
+            queries_dict=graph_queries, sum_by=None, start=row['start'], end=row['end'])
+        for title, data in graphs_dict.items():
+            new_title = "graph_" + title
+            if data is not None:
+                data = data[title].astype(float).to_list()
+            row[new_title] = data
+        return row
+
+    # TODO: refactor this to not pass a function in
+    def _query_row_for_non_graphs(self, row: pd.Series, query_retrieval_funcs_list: list):
+        if len(query_retrieval_funcs_list) == 0:
+            return row
+        data_dict = {}
+        for query_retrieval_func in tqdm(query_retrieval_funcs_list):
+            queries = query_retrieval_func(row['start'], row['end'])
+            data_dict.update({title: query_data(query)
+                              for title, query in queries.items()})
+        # prepend a string for finalizing.py to know that the column needs to be summed
+        for title, data in data_dict.items():
+            new_title = "queried_" + title
+            row[new_title] = data
+        return row
