@@ -14,7 +14,7 @@ pd.set_option('display.width', terminal_width)
 
 class Phase_3():
     # files are only read, so pylint: disable=dangerous-default-value
-    def __init__(self, verbose=True, files=PHASE_3_FILES):
+    def __init__(self, verbose: bool = True, files: dict[str, str] = PHASE_3_FILES):
         self.verbose = verbose
         self.files = files
         # metrics (to be queried)
@@ -37,7 +37,7 @@ class Phase_3():
 
     # If verbose, print the msg. end is the same as in the built in print() function
     # If color (a string in line with termcolor colors) is passed in, print it with that color
-    def _print_if_verbose(self, msg, color=None, end="\n"):
+    def _print_if_verbose(self, msg: str, color: str | None = None, end: str = "\n") -> None:
         # don't print if not verbose
         if not self.verbose:
             return
@@ -48,7 +48,7 @@ class Phase_3():
             print(msg, end=end)
 
     # given a pandas series, return the first row in the series that hasn't been queried
-    def _get_first_unqueried_row_idx(self, series):
+    def _get_first_unqueried_row_idx(self, series: pd.Series) -> pd.Series:
         # get the series as booleans of if it doesn't hold a list or str
         # it will be a str if it was read in from a csv and a list once it's put into the df
         # it will be neither if it is NA, None, or NaN, which is unqueried
@@ -64,7 +64,7 @@ class Phase_3():
         # to save progress after each row, set batch_size = 1
     # query all important metrics, saving to the temporary_save_file after inserting columns of the same duration column.
     # return the updated dataframe with all columns queried
-    def query_metrics(self, df, batch_size):
+    def query_metrics(self, df: pd.DataFrame, batch_size: int) -> pd.DataFrame:
         # try getting saved query progress df
         try:
             # if the first cell of the last queried column in progress_df is not NA, use progress_df instead of df
@@ -125,7 +125,7 @@ class Phase_3():
 
     # runs the whole phase. Returns True if successful, False otherwise
     # Note: number of queries = rows_batch_size * 15, so it is better to choose a small number (e.g. 10) for more frequent saving
-    def run(self, rows_batch_size=10, verbose_status=False):
+    def run(self, rows_batch_size: int = 10, verbose_status: bool = False) -> bool:
         success = False
 
         # set printing status for query functions later on

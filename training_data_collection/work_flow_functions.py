@@ -11,14 +11,14 @@ NUM_PHASES = 4
 # Given contents (a list to write to the file),
 # Writes contents to a file. Each element is written on a new line.
 # If txt_file does not exist, it is created.
-def _write_txt_file(txt_file, contents):
+def _write_txt_file(txt_file: str, contents: list[str]) -> None:
     with open(txt_file, "w", encoding="utf-8") as file:  # Open the file in append mode ('a')
         for entry in contents:
             file.write(entry + "\n")  # Write each entry on a new line
 
 
 # Given a file path (directories/name), if the file exists, do nothing, otherwise, create the file
-def _initialize_file(file_path):
+def _initialize_file(file_path: str) -> None:
     # Extract the directory path from the file name
     directory = os.path.dirname(file_path)
 
@@ -34,7 +34,7 @@ def _initialize_file(file_path):
 
 
 # make sure all necessary files exist
-def initialize_files():
+def initialize_files() -> None:
     all_files_dicts = [MAIN_FILES, PHASE_1_FILES,
                        PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES]
 
@@ -49,7 +49,7 @@ def initialize_files():
 
 
 # given a filename of a txt file, line number, and message, update the line at line_number to be "message", ending in a new line
-def _update_txt_line(file_name, line_number, message):
+def _update_txt_line(file_name: str, line_number: int, message: str) -> None:
     # read file, then update the phase line to be message with a \n
     lines = []
     # Read the file's current contents
@@ -63,7 +63,7 @@ def _update_txt_line(file_name, line_number, message):
 
 
 # given a file_name and line_number, return the contents of the line (without any trailing whitespace or \n at the end of the line)
-def _read_txt_line(file_name, line_number):
+def _read_txt_line(file_name: str, line_number: int) -> str:
     # read file, then check the line's progress
     # Read the file's current contents
     with open(file_name, 'r', encoding="utf-8") as file:
@@ -74,7 +74,7 @@ def _read_txt_line(file_name, line_number):
 
 
 # check that the input phase_number is a valid phase
-def _check_phase_number(phase_number):
+def _check_phase_number(phase_number: int) -> None:
     # check input is a valid phase
     if phase_number not in range(1, NUM_PHASES+1):
         raise ValueError(
@@ -82,7 +82,7 @@ def _check_phase_number(phase_number):
 
 
 # given a phase number, clear the write and progress files for that phase
-def _wipe_phase_files(phase_number, wipe_paths_gathered=False):
+def _wipe_phase_files(phase_number: int, wipe_paths_gathered: bool = False) -> None:
     # check proper input
     _check_phase_number(phase_number)
     if wipe_paths_gathered and phase_number != 1:
@@ -121,7 +121,7 @@ def _wipe_phase_files(phase_number, wipe_paths_gathered=False):
 
 
 # given a phase number (1 through 4): return True or False depending on whether the stater has been finished or not
-def is_phase_finished(phase_number):
+def is_phase_finished(phase_number: int) -> bool:
     # check that input is valid
     _check_phase_number(phase_number)
     # get the status of the requested phase
@@ -132,7 +132,7 @@ def is_phase_finished(phase_number):
 
 
 # given a phase number (1 through 4): set the phase's 'finished' progress to be True
-def set_phase_finished(phase_number):
+def set_phase_finished(phase_number: int) -> None:
     # check input is a valid phase
     _check_phase_number(phase_number)
 
@@ -150,7 +150,7 @@ def set_phase_finished(phase_number):
 
 # given a phase number (1 through 4): set the phase's 'finished' progress to be False
 # if wipe_files is set to True, all progress and write files for the phase will be cleared
-def set_phase_unfinished(phase_number, wipe_files=False):
+def set_phase_unfinished(phase_number: int, wipe_files: bool = False) -> None:
     # check input is a valid phase
     _check_phase_number(phase_number)
     # make sure phases aren't being set incorrecly out of order
@@ -171,7 +171,7 @@ def set_phase_unfinished(phase_number, wipe_files=False):
 
 # given the total number of phases, set the progress of all phases to False
 # also wipe progress & write files if requested, and wipe paths_gathered file if requested (not recommended)
-def reset_phases_progress(wipe_files=False, wipe_paths_gathered=False):
+def reset_phases_progress(wipe_files: bool = False, wipe_paths_gathered: bool = False) -> None:
     # handle invalid user input
     if wipe_paths_gathered and not wipe_files:
         raise ValueError(
@@ -207,7 +207,7 @@ def reset_phases_progress(wipe_files=False, wipe_paths_gathered=False):
 
 # prompt the user for how many duration columns they would like to use for the run.
 # use that number to set the number of duration columns
-def prompt_set_num_duration_cols():
+def prompt_set_num_duration_cols() -> None:
     default_num_duration_cols = 3
     # message strings
     message = f"\n\nHow many partial duration columns would you like to query for?\
@@ -238,7 +238,7 @@ def prompt_set_num_duration_cols():
 
 
 # Handle what to do if it is a new run
-def display_new_run_prompt(new_run, thorough_refresh_status=False):
+def display_new_run_prompt(new_run: bool, thorough_refresh_status: bool = False) -> None:
     if new_run:
         # ask user if they meant to start a new run or continue an old one
         new_run_message = "\
@@ -258,7 +258,7 @@ def display_new_run_prompt(new_run, thorough_refresh_status=False):
 
 
 # use this function to potentially reset the helitack run status
-def prompt_helitack_status(is_helitack_run):
+def prompt_helitack_status(is_helitack_run: bool) -> bool:
     # if it isn't a helitack run, keep it that way
     if not is_helitack_run:
         return False

@@ -25,7 +25,7 @@ pd.set_option('display.max_columns', None)
 
 class Phase_1():
     # files are only read, so pylint: disable=dangerous-default-value
-    def __init__(self, files=PHASE_1_FILES, verbose=True, debug_mode=False):
+    def __init__(self, files: dict[str, str] = PHASE_1_FILES, verbose: bool = True, debug_mode: bool = False):
         self.verbose = verbose
         self.debug_mode = debug_mode
         self.files = files
@@ -47,7 +47,7 @@ class Phase_1():
         self._init_fs_and_bucket()
 
     # initalize self.fs and self.bucket
-    def _init_fs_and_bucket(self):
+    def _init_fs_and_bucket(self) -> None:
         # get login details from .env file
         if not load_dotenv():
             raise EnvironmentError(
@@ -75,7 +75,7 @@ class Phase_1():
     # Given contents (a list to write to the file),
     # Writes contents to a file. Each element is written on a new line.
     # If txt_file does not exist, it is created.
-    def _write_txt_file(self, txt_file, contents):
+    def _write_txt_file(self, txt_file: str, contents: list[str]) -> None:
         with open(txt_file, "w", encoding="utf-8") as file:  # Open the file in append mode ('a')
             for entry in contents:
                 file.write(entry + "\n")  # Write each entry on a new line
@@ -83,14 +83,14 @@ class Phase_1():
     # Given paths_batch (a list of paths to append to the file),
     # appends a batch of entries to txt_file. Each entry is written on a new line.
     # If txt_file does not exist, it is created.
-    def _append_txt_file(self, txt_file, batch):
+    def _append_txt_file(self, txt_file: str, batch: list[str]) -> None:
         with open(txt_file, "a", encoding="utf-8") as file:  # Open the file in append mode ('a')
             for entry in batch:
                 file.write(str(entry) + "\n")  # Write each entry on a new line
 
     # given the path to a .txt file, return a list where each line of the
     # txt file is an element in the list
-    def read_txt_file(self, txt_file):
+    def read_txt_file(self, txt_file: str) -> list[str]:
         contents = []
         with open(txt_file, "r", encoding="utf-8") as file:
             contents = file.read().splitlines()
@@ -98,7 +98,7 @@ class Phase_1():
 
     # If verbose, print the msg. end is the same as in the built in print() function
     # If color (a string in line with termcolor colors) is passed in, print it with that color
-    def _print_if_verbose(self, msg, color=None, end="\n"):
+    def _print_if_verbose(self, msg: str, color: str | None = None, end: str = "\n") -> None:
         # don't print if not verbose
         if not self.verbose:
             return
@@ -110,7 +110,7 @@ class Phase_1():
 
     # If debug, print the msg. end is the same as in the built in print() function
     # If color (a string in line with termcolor colors) is passed in, print it with that color
-    def _print_if_debug(self, msg, color=None, end="\n"):
+    def _print_if_debug(self, msg: str, color: str | None = None, end: str = "\n") -> None:
         # don't print if not verbose
         if not self.debug_mode:
             return
@@ -121,7 +121,7 @@ class Phase_1():
             print(msg, end=end)
 
     # given a subdirectory, return all of the run simulation paths
-    def _get_sim_paths(self, subdir):
+    def _get_sim_paths(self, subdir) -> list[str]:
         sim_paths = []
         paths = self.fs.ls(subdir)
         for path in paths:
@@ -133,7 +133,7 @@ class Phase_1():
     # return all of the previously gathered items of that type.
     # note: only works if workflow_files.PHASE_1_FILES is set up so
     # that item_title and "old"+item_title are both keys of files
-    def _get_gathered_items(self, item_title):
+    def _get_gathered_items(self, item_title: str) -> list[str]:
         # make sure user input is valid
         valid_item_titles = ['path_directories', 'paths']
         if item_title not in valid_item_titles:
@@ -150,7 +150,7 @@ class Phase_1():
         return gathered_items
 
     # given a list of ungathered directories, return all the paths from those directories.
-    def _get_paths_from_directories(self, directories):
+    def _get_paths_from_directories(self, directories: list[str]) -> list[str]:
         paths = []
         for directory in tqdm(directories):
             subdirectories = self.fs.ls(directory)
@@ -162,7 +162,7 @@ class Phase_1():
 
     # gather all paths in batches if requested.
     # batch size is a number of paths per batch to get
-    def gather_all_paths(self, batch_size=None):
+    def gather_all_paths(self, batch_size: int | None = None) -> list[str]:
         # TODO: when gathering new paths, we append to a txt file. Since we re-gather the last gathered directory, we create duplicates in the txt file even though we don't return them. Make sure duplicates don't get added to the txt file.
         # get all directories and previously gathered directories
         directories = self.fs.ls(self.bucket)
@@ -227,7 +227,7 @@ class Phase_1():
     # Given a paths list and a method of dropping old paths ("txt" or "training_data")
     # Return a new list of paths that only contains new paths (paths not in old paths)
     # Note: method="txt" should be used by default, unless there is no old_paths.txt file
-    def _drop_old_paths(self, paths, method="txt"):
+    def _drop_old_paths(self, paths: list[str], method: str = "txt") -> list[str]:
         # use old_paths.txt file to subtract all old paths from current paths file
         if method == "txt":
             # get a list of old paths
@@ -255,7 +255,7 @@ class Phase_1():
 
     # given a start and stop index and a list of paths,
     # return a df of runs in the section of paths[start:stop]
-    def get_df_chunk(self, start, stop, paths):
+    def get_df_chunk(self, start: int, stop: int, paths: list[str]) -> pd.DataFrame:
         # initialize a list of paths that cause filenotfound errors
         bad_paths = []
         # variable to count the amount of runs missing data (columns)
@@ -333,7 +333,7 @@ class Phase_1():
 
     # given the simulation paths, create a df containing runs
     # for all paths that have corresponding files
-    def get_df_from_paths(self, simulation_paths, batch_size=1000):
+    def get_df_from_paths(self, simulation_paths: list[str], batch_size: int = 1000) -> pd.DataFrame:
         # find out how many runs have been looked at already
         try:
             runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
@@ -385,7 +385,7 @@ class Phase_1():
 
     # given a dataframe of runs with ens_status and run_status columns,
     # return a new dataframe with only the successful runs
-    def get_successful_runs(self, df, reset_index=True):
+    def get_successful_runs(self, df: pd.DataFrame, reset_index: bool = True) -> pd.DataFrame:
         if 'ens_status' not in df.columns or 'run_status' not in df.columns:
             warning_message = "\n\nDataFrame does not have 'ens_status' or 'run_status'. Returning df - will not filter by successful runs.\n\n"
             print(colored(warning_message, "red"))
@@ -417,7 +417,7 @@ class Phase_1():
     #     # Merge with successful_runs_list_df to filter out unsuccessful runs
     #     result_df = new_paths_df[new_paths_df['run_uuid'].isin(successful_runs_list_df['run_uuid'])]
     #     return result_df
-    def get_runs_to_gather_df(self, new_paths, successful_runs_list_df):
+    def get_runs_to_gather_df(self, new_paths: list[str], successful_runs_list_df: pd.DataFrame) -> pd.DataFrame:
         # Convert new_paths list to a DataFrame
         new_paths_df = pd.DataFrame(data={'path': new_paths})
         # Apply _run_id_from_path function to get run_uuid
@@ -438,7 +438,7 @@ class Phase_1():
         return result_df
 
     # given a df that contains all successful runs and a df that
-    def merge_dfs(self, runs_data_df, successful_runs_list_df):
+    def merge_dfs(self, runs_data_df: pd.DataFrame, successful_runs_list_df: pd.DataFrame) -> pd.DataFrame:
         # select the required columns from successful_runs_list_df
         if len(runs_data_df) == 0:
             raise ValueError(
@@ -465,7 +465,7 @@ class Phase_1():
         return merged_df
 
     # given a df returns an updated df with the NaN time rows removed
-    def remove_na_rows(self, df, reset_index=True):
+    def remove_na_rows(self, df: pd.DataFrame, reset_index: bool = True) -> pd.DataFrame:
         # crucial columns that need to have data. If they do not, that means the run failed somewhere
         time_cols = ['run_start', 'run_end']
 
@@ -493,7 +493,7 @@ class Phase_1():
     # ======================
 
     # runs the whole phase. Returns True if successful, False otherwise
-    def run(self, paths_gathered=False):
+    def run(self, paths_gathered: bool = False) -> bool:
         success = False
         # for if simulation_paths are fully gathered and we're just getting df from runs
         if paths_gathered:

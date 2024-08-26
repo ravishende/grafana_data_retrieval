@@ -7,7 +7,7 @@ from helpers_training_data_collection.resource_json_summation import (
 
 class Phase_4():
     # files are only read, so pylint: disable=dangerous-default-value
-    def __init__(self, output_several_dfs=False, files=PHASE_4_FILES, helitack_status=False):
+    def __init__(self, output_several_dfs: bool = False, files: dict[str, str] = PHASE_4_FILES, helitack_status: bool = False):
         self.output_several_dfs = output_several_dfs
         self.files = files
         # id columns (for updating queried cols)
@@ -38,14 +38,14 @@ class Phase_4():
 
     # given a df with a column titled "ensemble_uuid" and queried4 columns with json-like data
     # return a df with all queried columns updated to be a single float value
-    def update_queried_cols(self, df):
+    def update_queried_cols(self, df: pd.DataFrame) -> pd.DataFrame:
         # update columns - sum non_static columns, get values for static columns
         df = update_columns(
             df, self.all_col_names, self.ensemble_col, no_sum_metrics=self.static_metrics)
         return df
 
     # given a df, insert percent columns for every duration column
-    def add_percent_columns(self, df):
+    def add_percent_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         # metrics lists that will be used to get/calculate percentages
         # these do not exist yet - the columns for these metrics will be calculated
         percent_metrics = ["cpu_request_%", "mem_request_%"]
@@ -62,7 +62,7 @@ class Phase_4():
 
     # given a dataframe with the columns "cpu_usage_total" and "mem_usage_total", drop all rows where those columns are 0
     # return the updated dataframe
-    def drop_zero_cpu_mem(self, df, reset_index=True):
+    def drop_zero_cpu_mem(self, df: pd.DataFrame, reset_index: bool = True) -> pd.DataFrame:
         zero_mask = (df['cpu_usage_total'] == 0) | (df['mem_usage_total'] == 0)
         non_zeros = df[~zero_mask]
         if reset_index:
@@ -71,7 +71,7 @@ class Phase_4():
 
     # given a df and columns to drop (also a bool for reset_index),
     # drop the ccolumns from the df
-    def drop_columns(self, df, columns_to_drop, reset_index=True):
+    def drop_columns(self, df: pd.DataFrame, columns_to_drop: list[str], reset_index: bool = True) -> pd.DataFrame:
         df = df.drop(columns=columns_to_drop)
         if reset_index:
             df = df.reset_index(drop=True)
@@ -82,7 +82,7 @@ class Phase_4():
         # insert_ratio_cols - a list of ratio column names at i to be inserted
         # numerator_cols - a list of numerator column names at i to use for calculation (that already exist)
         # duration_col - a column name of the duration column at i
-    def _get_ratio_components(self, i):
+    def _get_ratio_components(self, i: int) -> tuple[list[str], list[str], list[str]]:
         if i < 1 or i > self.num_duration_cols:
             raise ValueError(
                 "i should be an int between 1 and num_duration_cols inclusive.")
@@ -97,7 +97,7 @@ class Phase_4():
 
     # given a dataframe, return the updated dataframe
     # with new columns inserted as a ratio of numerator_col/duration_col
-    def insert_ratio_columns(self, df, drop_numerators=True, reset_index=True):
+    def insert_ratio_columns(self, df: pd.DataFrame, drop_numerators: bool = True, reset_index: bool = True) -> pd.DataFrame:
         # handle improper user input
         if reset_index and not drop_numerators:
             raise ValueError(
@@ -124,7 +124,7 @@ class Phase_4():
         return df
 
     # given a df, return the base columns, total columns, and t_i columns as 3 lists
-    def _get_split_cols(self, df):
+    def _get_split_cols(self, df: pd.DataFrame) -> tuple[list[str], list[str], list[str]]:
         base_cols = []
         total_cols = []
         # metric_t1 cols will be indexed at 0, metric_t2 cols indexed at 1, ...
@@ -149,7 +149,7 @@ class Phase_4():
         return base_cols, total_cols, t_i_cols
 
     # given a single df, split it up by duration metrics and save them
-    def split_and_save_dfs(self, df):
+    def split_and_save_dfs(self, df: pd.DataFrame) -> None:
         base_cols, total_cols, t_i_cols = self._get_split_cols(df)
         folder_path = "csvs/output"
 
@@ -165,7 +165,7 @@ class Phase_4():
     # ====================================
 
     # runs the whole phase. Returns True if successful, False otherwise
-    def run(self):
+    def run(self) -> bool:
         success = False
 
         # get queried df from previous phase

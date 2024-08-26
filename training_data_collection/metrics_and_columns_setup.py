@@ -27,7 +27,7 @@ def _init_num_duration_cols():
 
 
 # initialize _col_names_by_time based on self._num_duration_cols and self._non_static_metrics
-def _init_col_names_by_time(_num_duration_cols, _non_static_metrics):
+def _init_col_names_by_time(_num_duration_cols: int, _non_static_metrics: list[str]) -> list[str]:
     col_names_by_time = []
     for i in range(1, _num_duration_cols+1):
         col_names_t_i = [name + "_t" + str(i) for name in _non_static_metrics]
@@ -43,7 +43,7 @@ _INCLUDE_ALL_TOTALS_METRICS = True
 # ========================
 
 
-def include_all_totals_metrics(status=True):
+def include_all_totals_metrics(status: bool = True) -> None:
     if not isinstance(status, bool):
         raise ValueError(
             f"status ({status}) must be of type bool but was type {type(status)}.")
@@ -51,12 +51,11 @@ def include_all_totals_metrics(status=True):
     global _INCLUDE_ALL_TOTALS_METRICS
     _INCLUDE_ALL_TOTALS_METRICS = status
 
+
 # Set the number of partial duration columns (e.g. 2 goes up to duration_t2)
 # Note: do not run this between phase 3 and 4,
 # since they require the same amount of duation columns to be defined
-
-
-def set_num_duration_cols(num, suppress_warning=False):
+def set_num_duration_cols(num: int, suppress_warning: bool = False) -> None:
     # make sure input is an int or convertible to an int
     if not isinstance(num, int):
         try:
@@ -96,7 +95,7 @@ def set_num_duration_cols(num, suppress_warning=False):
 
 # get a dict of metrics by type (all, static, non_static)
 # pylint: disable=invalid-name
-def GET_METRICS():
+def GET_METRICS() -> dict[str, str]:
     # metrics
     all_metrics = [
         "cpu_usage",
@@ -129,7 +128,7 @@ def GET_METRICS():
 # Note: get_duration_cols must be a function that is called only during initialization or later, otherwise if a user changes the number of duration columns in work_flow, it won't actually update until next run
 # get a dict of duration column information (num_cols, col_names, total_col)
 # pylint: disable=invalid-name
-def GET_DURATION_COLS():
+def GET_DURATION_COLS() -> dict[str, str]:
     # duration columns
     # Note: assumes duration columns are in the form "duration_t{N}" where {N} is
     # an int from 1 to _num_duration_cols inclusive
@@ -148,7 +147,7 @@ def GET_DURATION_COLS():
 
 # get a dict of column names by type (static, totals, by_time, all)
 # pylint: disable=invalid-name
-def GET_COL_NAMES():
+def GET_COL_NAMES() -> dict[str, str]:
     metrics = GET_METRICS()
     num_duration_cols = GET_DURATION_COLS()['num_cols']
     # column names
@@ -169,7 +168,7 @@ def GET_COL_NAMES():
 
 # get a dict of id columns by type (ensemble, run)
 # pylint: disable=invalid-name
-def GET_ID_COLS():
+def GET_ID_COLS() -> dict[str, str]:
     id_cols_dict = {
         "ensemble": "ensemble_uuid",
         "run": "run_uuid"
