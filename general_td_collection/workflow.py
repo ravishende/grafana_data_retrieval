@@ -50,9 +50,9 @@ df = df.loc[:, ~unnamed_cols]
 prompt_new_run(NEW_RUN)
 
 # way to filter - can be pod, node, namespace, or regex of any of the three
+NODE_NAME = "node-1-1.sdsc.optiputer.net"
 POD_PREFIX = 'fc-worker-1-'
 pod_regex_str = f'^{POD_PREFIX}.*'
-NODE_NAME = "node-1-1.sdsc.optiputer.net"
 
 # initialize classes with desired filter and data settings
 query_handler = QueryHandler(node=NODE_NAME)
