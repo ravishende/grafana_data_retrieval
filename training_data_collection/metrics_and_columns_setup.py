@@ -8,7 +8,7 @@ from workflow_files import NUM_DURATION_COLS_FILE
 
 
 # read a txt file written by phase_2 that contains _num_duration_cols
-def _init_num_duration_cols():
+def _init_num_duration_cols() -> int:
     # read the file to get _num_duration_cols
     try:
         with open(NUM_DURATION_COLS_FILE, "r", encoding="utf-8") as file:
@@ -16,7 +16,7 @@ def _init_num_duration_cols():
         # return if successful
         return num_duration_cols
 
-    # handle errors for reading file
+    # handle errors for reading file if it's not set up yet
     except FileNotFoundError:
         print(f"Error: File {NUM_DURATION_COLS_FILE} not found.")
     except ValueError:
@@ -35,18 +35,17 @@ def _init_col_names_by_time(_num_duration_cols: int, _non_static_metrics: list[s
     return col_names_by_time
 
 
-_INCLUDE_ALL_TOTALS_METRICS = True
-
-
 # ========================
 #     Public Functions
 # ========================
 
+_INCLUDE_ALL_TOTALS_METRICS = True
+
 
 def include_all_totals_metrics(status: bool = True) -> None:
-    if not isinstance(status, bool):
-        raise ValueError(
-            f"status ({status}) must be of type bool but was type {type(status)}.")
+    wrong_type_msg = f"status ({status}) must be of type bool but was type {type(status)}."
+    assert isinstance(status, bool), wrong_type_msg
+
     # pylint: disable=global-statement
     global _INCLUDE_ALL_TOTALS_METRICS
     _INCLUDE_ALL_TOTALS_METRICS = status

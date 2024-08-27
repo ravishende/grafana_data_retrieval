@@ -25,7 +25,8 @@ pd.set_option('display.max_columns', None)
 
 class Phase_1():
     # files are only read, so pylint: disable=dangerous-default-value
-    def __init__(self, files: dict[str, str] = PHASE_1_FILES, verbose: bool = True, debug_mode: bool = False):
+    def __init__(self, files: dict[str, str] = PHASE_1_FILES,
+                 verbose: bool = True, debug_mode: bool = False) -> None:
         self.verbose = verbose
         self.debug_mode = debug_mode
         self.files = files

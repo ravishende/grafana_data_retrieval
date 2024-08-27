@@ -7,7 +7,7 @@ from helpers_training_data_collection.resource_json_summation import (
 
 class Phase_4():
     # files are only read, so pylint: disable=dangerous-default-value
-    def __init__(self, output_several_dfs: bool = False, files: dict[str, str] = PHASE_4_FILES, helitack_status: bool = False):
+    def __init__(self, output_several_dfs: bool = False, files: dict[str, str] = PHASE_4_FILES, helitack_status: bool = False) -> None:
         self.output_several_dfs = output_several_dfs
         self.files = files
         # id columns (for updating queried cols)

@@ -26,7 +26,7 @@ pd.set_option('display.width', terminal_width)
 
 class Phase_2():
     # files are only read, so pylint: disable=dangerous-default-value
-    def __init__(self, files: dict[str, str] = PHASE_2_FILES):
+    def __init__(self, files: dict[str, str] = PHASE_2_FILES) -> None:
         self.files = files
         self.num_duration_cols = GET_DURATION_COLS()['num_cols']
         self.drop_cols = [

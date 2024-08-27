@@ -14,7 +14,7 @@ pd.set_option('display.width', terminal_width)
 
 class Phase_3():
     # files are only read, so pylint: disable=dangerous-default-value
-    def __init__(self, verbose: bool = True, files: dict[str, str] = PHASE_3_FILES):
+    def __init__(self, verbose: bool = True, files: dict[str, str] = PHASE_3_FILES) -> None:
         self.verbose = verbose
         self.files = files
         # metrics (to be queried)
