@@ -5,6 +5,7 @@ sys.path.append("../grafana_data_retrieval")  # Adjust the path to go up one lev
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
+# pylint: disable=wrong-import-position
 from graphs import Graphs
 from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict
