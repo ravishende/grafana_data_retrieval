@@ -10,13 +10,11 @@ from graph_visualization import display_graphs
 from helpers.printing import print_dataframe_dict
 # autopep8: on
 
-'''
-==========================================================================================
-NOTE:
-This is the dashboard for the following Grafana page: 
-https://grafana.nrp-nautilus.io/d/Tf9PkuSik/k8s-nvidia-gpu-node?orgId=1&refresh=15m&var-interval=1m&var-host=node-2-3.sdsc.optiputer.net
-==========================================================================================
-'''
+# ==========================================================================================
+# NOTE:
+# This is the dashboard for the following Grafana page:
+# https://grafana.nrp-nautilus.io/d/Tf9PkuSik/k8s-nvidia-gpu-node?orgId=1&refresh=15m&var-interval=1m&var-host=node-2-3.sdsc.optiputer.net
+# ==========================================================================================
 
 # display settings
 get_graphs_as_single_df = False
