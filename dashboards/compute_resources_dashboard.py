@@ -18,16 +18,16 @@ from helpers.printing import print_dataframe_dict
 # ==========================================================================================
 
 # display settings
-get_graphs_as_single_df = False
-visualize_graphs = False
+GET_GRAPHS_AS_SINGLE_DF = False
+VISUALIZE_GRAPHS = False
 
-host = "node-2-3.sdsc.optiputer.net"
+HOST = "node-2-3.sdsc.optiputer.net"
 queries = {
-    'GPU Utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-    'Memory Copy Utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-    'Power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-    'Temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}',
-    'Fan Speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + host + '"}'
+    'GPU Utilization': 'DCGM_FI_DEV_GPU_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + HOST + '"}',
+    'Memory Copy Utilization': 'DCGM_FI_DEV_MEM_COPY_UTIL * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + HOST + '"}',
+    'Power': 'DCGM_FI_DEV_POWER_USAGE * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + HOST + '"}',
+    'Temperature': 'DCGM_FI_DEV_GPU_TEMP * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + HOST + '"}',
+    'Fan Speed': 'ipmi_fan_speed * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{node="' + HOST + '"}'
 }
 
 # get graphs class
@@ -38,7 +38,7 @@ graphs_dict = graphs_class.get_graphs_from_queries(
 
 
 # logic for displaying graphs
-if not get_graphs_as_single_df:
+if not GET_GRAPHS_AS_SINGLE_DF:
     # print multiple graphs
     print_dataframe_dict(graphs_dict)
 else:
@@ -47,6 +47,6 @@ else:
         graphs_dict, sum_by=["namespace", "pod"])
     print(graphs_df)
 
-if visualize_graphs:
+if VISUALIZE_GRAPHS:
     # display graphs in another window
     display_graphs(graphs_dict, sum_by=["namespace", "pod"])
