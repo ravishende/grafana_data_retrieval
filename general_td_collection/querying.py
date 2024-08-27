@@ -40,7 +40,7 @@ class QueryHandler():
                  node: str | None = None, node_regex: str | None = None,
                  pod: str | None = None, pod_regex: str | None = None,
                  namespace: str | None = None, namespace_regex: str | None = None,
-                 verbose: bool = True):
+                 verbose: bool = True) -> None:
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -96,8 +96,8 @@ class QueryHandler():
         self._filter = filter_str
 
     def query_df(self, df: pd.DataFrame | None = None, batch_size: int = 5,
-                 rgw_queries=False, gpu_queries=False, gpu_compute_resource_queries=False,
-                 cpu_compute_resource_queries=False) -> pd.DataFrame:
+                 rgw_queries: bool = False, gpu_queries: bool = False, gpu_compute_resource_queries: bool = False,
+                 cpu_compute_resource_queries: bool = False) -> pd.DataFrame:
         """Insert queried columns into a dataframe based on chosen dashboards
 
         Args:
@@ -285,7 +285,7 @@ class QueryHandler():
 
         return queries
 
-    def _get_graph_queries(self, gpu_queries=False, gpu_compute_resource_queries=False, rgw_queries=False) -> dict[str, str]:
+    def _get_graph_queries(self, gpu_queries: bool = False, gpu_compute_resource_queries: bool = False, rgw_queries: bool = False) -> dict[str, str]:
         graph_queries = {}
 
         if gpu_queries:

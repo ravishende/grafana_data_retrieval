@@ -16,7 +16,7 @@ def reset_files():
 
 
 # Handle what to do if it is a new run
-def prompt_new_run(new_run):
+def prompt_new_run(new_run: bool):
     if new_run:
         # ask user if they meant to start a new run or continue an old one
         new_run_message = "\
