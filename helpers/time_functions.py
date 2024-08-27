@@ -1,6 +1,6 @@
-import pandas as pd
-from datetime import datetime, timedelta
 import re
+from datetime import datetime, timedelta
+import pandas as pd
 
 
 # returns datetime of time if it matches one of the format strings, otherwise none
