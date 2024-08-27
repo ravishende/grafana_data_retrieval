@@ -1,17 +1,13 @@
-import pandas as pd
 import shutil
-from pprint import pprint
 from datetime import timedelta
-from termcolor import colored
+import pandas as pd
+
 # modules
 from tables import Tables
-from helpers.printing import print_dataframe_dict
-from helpers.querying import query_data
-from helpers.time_functions import delta_to_time_str, time_str_to_delta, datetime_ify, calculate_offset
+from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_offset
 
 
 # settings
-read_file = "training_data_handling/csv_files/non_zeros.csv"
 NAMESPACE = 'wifire-quicfire'
 
 # display settings
@@ -22,33 +18,109 @@ pd.set_option('display.max_colwidth', 30)
 pd.set_option("display.max_rows", None)
 
 
-
-'''
-Categories of metrics for querying: 
-    1. Max Over Time Range Metrics
-        - Metrics that fluctuate over a run, but only the max value matters (e.g. Memory Usage)
-    2. Increasing Metrics
-        - metrics that increase over a run (e.g. CPU Usage)
-    3. Static Metrics
-        - metrics that never change throughout a run (e.g. Memory Limits)
-'''
+# Categories of metrics for querying:
+#     1. Max Over Time Range Metrics
+#         - Metrics that fluctuate over a run, but only the max value matters (e.g. Memory Usage)
+#     2. Increasing Metrics
+#         - metrics that increase over a run (e.g. CPU Usage)
+#     3. Static Metrics
+#         - metrics that never change throughout a run (e.g. Memory Limits)
 
 
+# =========================================================
+# metrics and corresponding query bodies sorted by category
+# =========================================================
+
+
+STATIC_QUERY_BODIES = {
+    'CPU Requests': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests',
+    'CPU Limits': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits',
+    'Memory Requests': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests',
+    'Memory Limits': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_limits'
+}
+
+INCREASE_QUERY_BODIES = {
+    'CPU Usage': 'container_cpu_usage_seconds_total',
+    'Current Receive Bandwidth': 'container_network_receive_bytes_total',
+    'Current Transmit Bandwidth': 'container_network_transmit_bytes_total',
+    'Rate of Received Packets': 'container_network_receive_packets_total',
+    'Rate of Transmitted Packets': 'container_network_transmit_packets_total',
+    'Rate of Received Packets Dropped': 'container_network_receive_packets_dropped_total',
+    'Rate of Transmitted Packets Dropped': 'container_network_transmit_packets_dropped_total',
+    'IOPS(Reads)': 'container_fs_reads_total',
+    'IOPS(Writes)': 'container_fs_writes_total',
+    'Throughput(Read)': 'container_fs_reads_bytes_total',
+    'Throughput(Write)': 'container_fs_writes_bytes_total'
+}
+
+MAX_QUERY_BODIES = {
+    'Memory Usage': 'container_memory_working_set_bytes',
+    'Memory Usage (RSS)': 'container_memory_rss',
+    'Memory Usage (Cache)': 'container_memory_cache'
+}
+
+
+ALL_QUERY_BODIES_BY_TYPE = {
+    'static': STATIC_QUERY_BODIES,
+    'increase': INCREASE_QUERY_BODIES,
+    'max': MAX_QUERY_BODIES
+}
+
 
 '''
-========================================
-            Helper functions
-========================================
+========================================================
+metrics sorted by tables (for feeding into tables_class)
+========================================================
 '''
+FULL_METRICS = {
+    # CPU Quota
+    'CPU Usage',
+    'CPU Requests',
+    'CPU Limits',
+    # Memory Quota
+    'Memory Usage',
+    'Memory Requests',
+    'Memory Limits',
+    'Memory Usage (RSS)',
+    'Memory Usage (Cache)',
+    # Network Usage
+    'Current Receive Bandwidth',
+    'Current Transmit Bandwidth',
+    'Rate of Received Packets',
+    'Rate of Transmitted Packets',
+    'Rate of Received Packets Dropped',
+    'Rate of Transmitted Packets Dropped'
+}
+PARTIAL_METRICS = {
+    # Input Output
+    'IOPS(Reads)',
+    'IOPS(Writes)',
+    'Throughput(Read)',
+    'Throughput(Write)'
+}
+
+
+ALL_METRICS_DICT = {
+    'full': FULL_METRICS,
+    'partial': PARTIAL_METRICS
+}
+
+
+# ========================================
+#             Helper functions
+# ========================================
+
 # assemble queries for all max based metrics
 def assemble_max_queries(max_query_bodies, start, duration_seconds):
+    duration_seconds = int(duration_seconds)
     # get offset and duration for query
     offset = calculate_offset(start, duration_seconds)
     duration = delta_to_time_str(timedelta(seconds=duration_seconds))
 
     # get components of query ready to be assembled
     prefix = "sum by (node, pod) (max_over_time("
-    suffix = '{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
+    suffix = '{namespace="' + NAMESPACE + \
+        '"}[' + str(duration) + '] offset ' + str(offset) + '))'
 
     # assemble queries
     max_queries = {}
@@ -60,13 +132,15 @@ def assemble_max_queries(max_query_bodies, start, duration_seconds):
 
 # assemble queries for all increase based metrics
 def assemble_increase_queries(increase_query_bodies, start, duration_seconds):
+    duration_seconds = int(duration_seconds)
     # get offset and duration for query
     offset = calculate_offset(start, duration_seconds)
     duration = delta_to_time_str(timedelta(seconds=duration_seconds))
 
     # get components of query ready to be assembled
     prefix = "sum by (node, pod) (increase("
-    suffix = '{namespace="' + NAMESPACE + '"}[' + str(duration) + '] offset ' + str(offset) + '))'
+    suffix = '{namespace="' + NAMESPACE + \
+        '"}[' + str(duration) + '] offset ' + str(offset) + '))'
 
     # assemble queries
     increase_queries = {}
@@ -87,11 +161,11 @@ def assemble_static_queries(static_query_bodies, start, duration_seconds):
 
     # get the right suffix depending on the resource
     suffixes = {
-         # set resource to cpu and multiply by duration seconds to get metric from measuring cpu cores to cpu seconds
-         # ex: cpu_usage is measured in cpu seconds, so to make the cpu requests % (cpu_usage/cpu_requests) accurate, they both have to be in the same units.
-        'cpu':'{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ') * ' + str(duration_seconds),
+        # set resource to cpu and multiply by duration seconds to get metric from measuring cpu cores to cpu seconds
+        # ex: cpu_usage is measured in cpu seconds, so to make the cpu requests % (cpu_usage/cpu_requests) accurate, they both have to be in the same units.
+        'cpu': '{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ') * ' + str(duration_seconds),
         # set resource to memory. It is already in the preferred unit of bytes
-        'mem':'{resource="memory", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')'
+        'mem': '{resource="memory", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')'
     }
 
     # assemble queries
@@ -102,16 +176,20 @@ def assemble_static_queries(static_query_bodies, start, duration_seconds):
         suffix = suffixes[resource]
         # assemble query and put into static_queries
         static_queries[title] = prefix + query_body + suffix
-        
+
     return static_queries
+
 
 # given a dict of all query bodies, a dict of all metrics, a run start (datetime), and run duration_seconds (int or float)
 # return two dictionaries, one with full queries, and one with partial queries, both to be passed into tables_class methods
 def get_queries(query_bodies_dict, metrics_dict, start, duration_seconds):
     # assemble queries
-    max_queries = assemble_max_queries(query_bodies_dict['max'], start, duration_seconds)
-    increase_queries = assemble_increase_queries(query_bodies_dict['increase'], start, duration_seconds)
-    static_queries = assemble_static_queries(query_bodies_dict['static'], start, duration_seconds)
+    max_queries = assemble_max_queries(
+        query_bodies_dict['max'], start, duration_seconds)
+    increase_queries = assemble_increase_queries(
+        query_bodies_dict['increase'], start, duration_seconds)
+    static_queries = assemble_static_queries(
+        query_bodies_dict['static'], start, duration_seconds)
 
     # get all queries into one dictionary
     unsorted_queries = {}
@@ -120,8 +198,9 @@ def get_queries(query_bodies_dict, metrics_dict, start, duration_seconds):
     unsorted_queries.update(static_queries)
 
     # assemble queries and partial_queries for the run - sorted versions of the unsorted_queries separated by full queries vs partial_queries
-    run_queries = {key: unsorted_queries[key] for key in metrics}
-    run_partial_queries = {key: unsorted_queries[key] for key in partial_metrics}
+    run_queries = {key: unsorted_queries[key] for key in metrics_dict['full']}
+    run_partial_queries = {
+        key: unsorted_queries[key] for key in metrics_dict['partial']}
 
     return run_queries, run_partial_queries
 
@@ -137,11 +216,14 @@ def fill_in_static_na(df, resource):
         resource_str = "Memory"
     else:
         raise ValueError('resource must be either "cpu" or "mem"')
-    
+
     # fill in na values
-    df[[f'{resource_str} Requests', f'{resource_str} Limits']] = df[[f'{resource_str} Requests', f'{resource_str} Limits']].fillna(method='ffill')
-    df[f'{resource_str} Requests %'] = df[f'{resource_str} Usage'].astype(float) / df[f'{resource_str} Requests'].astype(float) * 100 
-    df[f'{resource_str} Limits %'] = df[f'{resource_str} Usage'].astype(float) / df[f'{resource_str} Limits'].astype(float) * 100
+    df[[f'{resource_str} Requests', f'{resource_str} Limits']] = df[[
+        f'{resource_str} Requests', f'{resource_str} Limits']].fillna(method='ffill')
+    df[f'{resource_str} Requests %'] = df[f'{resource_str} Usage'].astype(
+        float) / df[f'{resource_str} Requests'].astype(float) * 100
+    df[f'{resource_str} Limits %'] = df[f'{resource_str} Usage'].astype(
+        float) / df[f'{resource_str} Limits'].astype(float) * 100
 
     return df
 
@@ -153,17 +235,18 @@ def fill_in_static_na(df, resource):
 def rename_df_metrics(df):
     rename_dict = {}
     for old_name in df.columns:
-        if "IOPS" in old_name: # change "IOPS" column names to "IO"
+        if "IOPS" in old_name:  # change "IOPS" column names to "IO"
             rename_dict[old_name] = old_name.replace("IOPS", "IO")
-        elif "Current" in old_name: # get rid of "Current"
+        elif "Current" in old_name:  # get rid of "Current"
             rename_dict[old_name] = old_name.replace("Current", "")
-        elif "Rate of" in old_name: # get rid of "Rate of"
+        elif "Rate of" in old_name:  # get rid of "Rate of"
             rename_dict[old_name] = old_name.replace("Rate of", "")
-        else: # keep old name
+        else:  # keep old name
             rename_dict[old_name] = old_name
 
     renamed_df = df.rename(columns=rename_dict)
     return renamed_df
+
 
 # if tables is a single dataframe or list of dataframes, updates names of the metrics in tables.
 # if tables is a dict of dataframes, updates names of the tables and their metrics.
@@ -192,15 +275,14 @@ def rename_tables(tables):
         return tables_list
 
     # If tables is not one of the above, there is a wrong user input
-    raise ValueError("tables must either be a dataframe or a dictionary of dataframes, a list of dataframes.")
+    raise TypeError(
+        "tables must either be a dataframe or a dictionary of dataframes.")
 
 
+# ========================================
+#             User functions
+# ========================================
 
-'''
-========================================
-            User functions
-========================================
-'''
 
 # given a dataframe of runs, and list of indices of runs in the dataframe, (can also specify as_one_df and only_include_worker_pods)
 # return a dataframe (if as_one_df==True) of all of the tables queried for those runs
@@ -223,28 +305,29 @@ def get_tables_for_many_runs(runs_df, run_indices, as_one_df=False, only_include
         duration_seconds = run['runtime']
 
         # get queries and partial_queries to be passed into tables_class methods
-        run_queries, run_partial_queries = get_queries(all_query_bodies_dict, all_metrics_dict, start, duration_seconds)
+        run_queries, run_partial_queries = get_queries(
+            ALL_QUERY_BODIES_BY_TYPE, ALL_METRICS_DICT, start, duration_seconds)
 
         # get tables as one df from queries
         tables_df = tables_class.get_tables_as_one_df(
-            only_include_worker_pods=only_include_worker_pods, 
-            queries=run_queries, 
+            only_include_worker_pods=only_include_worker_pods,
+            queries=run_queries,
             partial_queries=run_partial_queries)
         # fill in missing values in requests and limits
         tables_df = fill_in_static_na(tables_df, "cpu")
         tables_df = fill_in_static_na(tables_df, "mem")
-        
+
         # add tables_df to table_runs_df
         tables_df = rename_tables(tables_df)
-        tables_df.insert(0,'run_id', run['run_uuid'])
-        tables_df.insert(0,'run_index', index)
+        tables_df.insert(0, 'run_id', run['run_uuid'])
+        tables_df.insert(0, 'run_index', index)
         dfs_list.append(tables_df)
 
     # get all runs as a single dataframe
     if as_one_df:
         table_runs_df = pd.concat(dfs_list, ignore_index=True)
         return table_runs_df
-    
+
     # otherwise, return a list of dataframes
     return dfs_list
 
@@ -265,13 +348,14 @@ def get_tables_for_one_run(runs_df, run_index, as_one_df=False, only_include_wor
     duration_seconds = run['runtime']
 
     # get queries and partial_queries to be passed into tables_class methods
-    run_queries, run_partial_queries = get_queries(all_query_bodies_dict, all_metrics_dict, start, duration_seconds)
+    run_queries, run_partial_queries = get_queries(
+        ALL_QUERY_BODIES_BY_TYPE, ALL_METRICS_DICT, start, duration_seconds)
 
     # get tables as one df from queries
     if as_one_df:
         tables_df = tables_class.get_tables_as_one_df(
-            only_include_worker_pods=only_include_worker_pods, 
-            queries=run_queries, 
+            only_include_worker_pods=only_include_worker_pods,
+            queries=run_queries,
             partial_queries=run_partial_queries)
         # fill in missing values in requests and limits
         tables_df = fill_in_static_na(tables_df, "cpu")
@@ -282,124 +366,46 @@ def get_tables_for_one_run(runs_df, run_index, as_one_df=False, only_include_wor
 
     # otherwise get tables as dict of dfs
     tables_dict = tables_class.get_tables_dict(
-    only_include_worker_pods=only_include_worker_pods, 
-    queries=run_queries, 
-    partial_queries=run_partial_queries)
+        only_include_worker_pods=only_include_worker_pods,
+        queries=run_queries,
+        partial_queries=run_partial_queries)
     # fill in missing values in requests and limits
-    tables_dict['CPU Quota'] = fill_in_static_na(tables_dict['CPU Quota'], "cpu")
-    tables_dict['Memory Quota'] = fill_in_static_na(tables_dict['Memory Quota'], "mem")
+    tables_dict['CPU Quota'] = fill_in_static_na(
+        tables_dict['CPU Quota'], "cpu")
+    tables_dict['Memory Quota'] = fill_in_static_na(
+        tables_dict['Memory Quota'], "mem")
     # rename tables
     tables_dict = rename_tables(tables_dict)
 
     return tables_dict
 
-'''
-=========================================================
-metrics and corresponding query bodies sorted by category
-=========================================================
-'''
-static_query_bodies = {
-    'CPU Requests': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests',
-    'CPU Limits': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits',
-    'Memory Requests': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests',
-    'Memory Limits': 'cluster:namespace:pod_memory:active:kube_pod_container_resource_limits'
-}
+# ============================
+#         Main Program
+# ============================
 
-increase_query_bodies = {
-    'CPU Usage': 'container_cpu_usage_seconds_total',
-    'Current Receive Bandwidth': 'container_network_receive_bytes_total',
-    'Current Transmit Bandwidth': 'container_network_transmit_bytes_total',
-    'Rate of Received Packets': 'container_network_receive_packets_total',
-    'Rate of Transmitted Packets': 'container_network_transmit_packets_total',
-    'Rate of Received Packets Dropped': 'container_network_receive_packets_dropped_total',
-    'Rate of Transmitted Packets Dropped': 'container_network_transmit_packets_dropped_total',
-    'IOPS(Reads)': 'container_fs_reads_total',
-    'IOPS(Writes)': 'container_fs_writes_total',
-    'Throughput(Read)': 'container_fs_reads_bytes_total',
-    'Throughput(Write)': 'container_fs_writes_bytes_total'
-}
-
-max_query_bodies = {
-    'Memory Usage': 'container_memory_working_set_bytes',
-    'Memory Usage (RSS)': 'container_memory_rss',
-    'Memory Usage (Cache)': 'container_memory_cache'
-}
-
-
-all_query_bodies_dict = {
-    'static': static_query_bodies,
-    'increase': increase_query_bodies,
-    'max': max_query_bodies
-}
-
-
-'''
-========================================================
-metrics sorted by tables (for feeding into tables_class)
-========================================================
-'''
-metrics = {
-    # CPU Quota
-    'CPU Usage',
-    'CPU Requests',
-    'CPU Limits',
-    # Memory Quota
-    'Memory Usage',
-    'Memory Requests',
-    'Memory Limits',
-    'Memory Usage (RSS)',
-    'Memory Usage (Cache)',
-    # Network Usage
-    'Current Receive Bandwidth',
-    'Current Transmit Bandwidth',
-    'Rate of Received Packets',
-    'Rate of Transmitted Packets',
-    'Rate of Received Packets Dropped',
-    'Rate of Transmitted Packets Dropped'
-}
-partial_metrics = {
-    # Input Output
-    'IOPS(Reads)',
-    'IOPS(Writes)',
-    'Throughput(Read)',
-    'Throughput(Write)'
-}
-
-
-all_metrics_dict = {
-    'metrics':metrics,
-    'partial':partial_metrics
-}
-
-
-'''
-============================
-        Main Program        
-============================
-'''
 
 # get a dataframe of runs
-runs_df = pd.read_csv(read_file, index_col=0)
+READ_FILE = "read.csv"
+runs_info_df = pd.read_csv(READ_FILE, index_col=0)
 
 # get tables data for one run
-run_index = 50 # can pick any run between 0 and len(df)-1 inclusive
+run_ind = 50  # can pick any run between 0 and len(df)-1 inclusive
 run_tables = get_tables_for_one_run(
-    runs_df=runs_df,
-    run_index=run_index,
-    as_one_df=True, # if set to False, returns a dictionary of titles, tables
-    only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
-    )
+    runs_df=runs_info_df,
+    run_index=run_ind,
+    as_one_df=True,  # if set to False, returns a dictionary of titles, tables
+    # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
+    only_include_worker_pods=False
+)
 print(run_tables)
 
 
-'''
-# get tables data for multiple runs
-run_indices = [50, 60, 70] # can pick any runs between 0 and len(df)-1 inclusive
-runs_tables_df = get_tables_for_many_runs(
-    runs_df=runs_df,
-    run_indices=run_indices,
-    as_one_df=True, # if set to False, returns a dictionary of titles, tables
-    only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
-    )
-print(runs_tables_df)
-'''
+# # get tables data for multiple runs
+# run_indices = [50, 60, 70] # can pick any runs between 0 and len(df)-1 inclusive
+# runs_tables_df = get_tables_for_many_runs(
+#     runs_df=runs_df,
+#     run_indices=run_indices,
+#     as_one_df=True, # if set to False, returns a dictionary of titles, tables
+#     only_include_worker_pods=False # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
+#     )
+# print(runs_tables_df)
