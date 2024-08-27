@@ -30,7 +30,7 @@ def get_graphs_dict(sum_by: list[str] | None = "_") -> dict[pd.DataFrame]:
 
 
 # given a graph title, set the plot settings for the graph
-def plot_graph(graph_title: str):
+def plot_graph(graph_title: str) -> None:
     plt.get_current_fig_manager().full_screen_toggle()
     # right is default 0.9. right=0.75 moves the graph left so the legend is not partially cut off.
     plt.subplots_adjust(right=0.75)
@@ -59,7 +59,7 @@ def hue_col_from_sum_by(sum_by: list[str]) -> str | None:
 
 # display graphs one at a time in a popup window. After closing one, the next one opens
 # Note: if graphs do not have a pod column, change sum_by to be the string or list of strings that graphs are summed by (instead of pod)
-def display_graphs(graphs_dict: dict[pd.DataFrame] | None = None, sum_by: list['str'] | str | None = "_"):
+def display_graphs(graphs_dict: dict[pd.DataFrame] | None = None, sum_by: list['str'] | str | None = "_") -> None:
     # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
     if sum_by == "_":
         sum_by = ["node", "pod"]

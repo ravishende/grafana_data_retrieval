@@ -8,7 +8,7 @@ from inputs import NAMESPACE, DEFAULT_DURATION
 
 
 class Tables():
-    def __init__(self, namespace: str = NAMESPACE, duration: str = DEFAULT_DURATION):
+    def __init__(self, namespace: str = NAMESPACE, duration: str = DEFAULT_DURATION) -> None:
         self.namespace = namespace
         self.duration = duration
         self.cpu_quota = pd.DataFrame(columns=[
@@ -94,8 +94,7 @@ class Tables():
                     table_df[column] = new_df[column]
         return table_df
 
-    # TODO: deal with start and end parameters
-    def _generate_table_df(self, query_title: str, query: str, start=None, end=None, time_step: str = None, sum_by: list[str] | str | None = "_"):
+    def _generate_table_df(self, query_title: str, query: str, sum_by: list[str] | str | None = "_") -> pd.DataFrame:
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -204,7 +203,7 @@ class Tables():
         return self.network_usage
 
     # get the storage_io dataframe. If it is empty, generate it
-    def _get_storage_io(self, partial_queries: dict[str, str] | None = None):
+    def _get_storage_io(self, partial_queries: dict[str, str] | None = None) -> pd.DataFrame:
         # check if the table has been filled in. If it has, return it
         if len(self.storage_io.index) > 0:
             return self.storage_io
@@ -284,7 +283,7 @@ class Tables():
     # combines all table dataframes into one large dataframe.
     # Each table is represented as a few columns.
     # this works because all tables are queried for the same time frame and they have the same pods
-    def get_tables_as_one_df(self, tables_dict: dict[str, pd.DataFrame] | None = None, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None):
+    def get_tables_as_one_df(self, tables_dict: dict[str, pd.DataFrame] | None = None, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None) -> pd.DataFrame:
         # initialize total df
         total_df = pd.DataFrame(columns=['Node', 'Pod'])
 

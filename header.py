@@ -8,7 +8,7 @@ from inputs import NAMESPACE
 
 
 class Header():
-    def __init__(self, namespace: str = NAMESPACE):
+    def __init__(self, namespace: str = NAMESPACE) -> None:
         self.namespace = namespace
         self.queries = {
             'CPU Utilisation (from requests)': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}) / sum by(node, pod) (kube_pod_container_resource_requests{job="kube-state-metrics", namespace="' + self.namespace + '", resource="cpu"})',
