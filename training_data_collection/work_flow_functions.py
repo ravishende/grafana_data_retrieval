@@ -2,7 +2,8 @@ import os
 import pandas as pd
 from termcolor import colored
 from metrics_and_columns_setup import set_num_duration_cols
-from workflow_files import MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES, PHASE_3_FILES, PHASE_4_FILES, NUM_DURATION_COLS_FILE
+from workflow_files import (MAIN_FILES, PHASE_1_FILES, PHASE_2_FILES,
+                            PHASE_3_FILES, PHASE_4_FILES, NUM_DURATION_COLS_FILE)
 
 # constants - DO NOT EDIT
 NUM_PHASES = 4
@@ -29,7 +30,7 @@ def _initialize_file(file_path: str) -> None:
     # Check if the file exists
     if not os.path.exists(file_path):
         # If the file does not exist, create it
-        with open(file_path, 'w'):
+        with open(file_path, 'w', encoding='utf-8'):
             return  # we only want to create the file, not write to it.
 
 
