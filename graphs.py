@@ -52,6 +52,138 @@ class Graphs():
             ]
         }
 
+    # ============================
+    #         User Methods
+    # ============================
+
+    # generate and return a dictionary of all the graphs
+    def get_graphs_dict(self, only_include_worker_pods: bool = False, display_time_as_datetime: bool = True, show_runtimes: bool = False) -> dict[str, pd.DataFrame]:
+        graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
+        # loop through graphs
+        for graph_title, graph in graphs_dict.items():
+            if graph is None:
+                continue
+
+            # for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
+            if only_include_worker_pods:
+                graph = filter_df_for_workers(graph)
+
+            # update graphs with correct time columns
+            if display_time_as_datetime:
+                graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
+
+            graphs_dict[graph_title] = graph
+
+        return graphs_dict
+
+    # Given a dictionary of queries, generate graphs based on those queries
+    # Note: if the queries do not start with "sum by(node, pod)", then you must set sum_by
+    #       to be what the query has in "sum by(_____)""
+    #       If queries do not have "sum by(...)", then set sum_by to None
+    # Return a dictionary of graphs of the same names as the queries
+    def get_graphs_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", start: datetime | None = None, end: datetime | None = None, display_time_as_datetime: bool = False, progress_bars: bool = True) -> dict[str, pd.DataFrame]:
+        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
+        if sum_by == "_":
+            sum_by = ["node", "pod"]
+        # handle if sum_by is a single input (put into list format)
+        if isinstance(sum_by, str):
+            sum_by = [sum_by]
+        # make sure sum_by metrics are all lower case
+        if sum_by is not None:
+            for i, metric in enumerate(sum_by):
+                sum_by[i] = metric.lower()
+
+        # generate graphs
+        disable_bars = not progress_bars
+        graphs_dict = {}
+        for title, query in tqdm(queries_dict.items(), disable=disable_bars):
+            graphs_dict[title] = self._generate_graph_df(
+                title, query, start=start, end=end, sum_by=sum_by)
+
+        # update times to be datetimes if requested
+        if display_time_as_datetime:
+            for graph_title, graph in graphs_dict.items():
+                if graph is None:
+                    continue
+                # update graphs with correct time columns
+                graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
+                graphs_dict[graph_title] = graph
+
+        return graphs_dict
+
+    # combines all graph dataframes into one large dataframe. Each graph is represented as a column
+    # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
+    def get_graphs_as_one_df(self, graphs_dict: dict[str, pd.DataFrame] | None = None, sum_by: list[str] | str | None = "_") -> pd.DataFrame:
+        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
+        if sum_by == "_":
+            sum_by = ["node", "pod"]
+        if isinstance(sum_by, str):
+            sum_by = [sum_by]
+
+        total_df = pd.DataFrame(data={})
+
+        # Handle invalid input
+        if graphs_dict is None and sum_by != ['node', 'pod']:
+            raise ValueError(
+                "Must pass in graphs_dict if sum_by is not default value.")
+
+        # Generate graphs if none given
+        if graphs_dict is None:
+            graphs_dict = self._generate_graphs()
+
+        # Fill in Time and sum_by (default: node, pod) columns with the first non-empty graph
+        for graph_df in graphs_dict.values():
+            if graph_df is not None:
+                # Insert Time column
+                total_df['Time'] = graph_df['Time']
+
+                if sum_by is None:
+                    break
+                # Handle if sum_by is single string
+                if isinstance(sum_by, str):
+                    sum_by = [sum_by]
+                # Insert sum_by columns into main graph
+                for metric in sum_by:
+                    metric_col = metric.title()
+                    total_df[metric_col] = graph_df[metric_col]
+                # once columns are inserted, break - start filling in df with graphs
+                break
+
+        # Fill in graphs columns
+        for title, graph_df in graphs_dict.items():
+            if graph_df is None:
+                total_df[title] = None
+                continue
+            total_df[title] = graph_df[title]
+
+        return total_df
+
+    # convert a dataframe containing all graphs data into a dictionary with several graphs
+    # used when a graphs_df is passed in instead of a graphs_dict in check_for_losses
+    # this can happen when a user requests the graph data to be a single df, then passes
+    # that df back in to check_for_losses
+    def convert_graphs_df_to_dict(self, graphs_df: pd.DataFrame) -> dict[str, pd.DataFrame]:
+        if not isinstance(graphs_df, pd.DataFrame):
+            raise TypeError("Input must be a pandas DataFrame")
+
+        graphs_dict = {}
+        for col_title in graphs_df.columns:
+            # create a new graph for each column with metric data
+            metadata_columns = ['Node', 'Pod', 'Time']
+            if col_title in metadata_columns:
+                pass
+            # assemble new graph df
+            graph_data = {
+                'Time': graphs_df['Time'],
+                'Node': graphs_df['Node'],
+                'Pod': graphs_df['Pod'],
+                col_title: graphs_df[col_title]
+            }
+            graph_df = pd.DataFrame(data=graph_data)
+            graphs_dict[col_title] = graph_df
+
+        return graphs_dict
+
     # assembles string for the time filter to be passed into query_data_for_graph()
     def _assemble_time_filter(self, start: datetime | None = None, end: datetime | None = None, time_step: str | None = None) -> str:
         # set default values if not given
@@ -194,141 +326,9 @@ class Graphs():
 
         return graphs_dict
 
-    # ============================
-    #         User Methods
-    # ============================
-
-    # Given a dictionary of queries, generate graphs based on those queries
-    # Note: if the queries do not start with "sum by(node, pod)", then you must set sum_by
-    #       to be what the query has in "sum by(_____)""
-    #       If queries do not have "sum by(...)", then set sum_by to None
-    # Return a dictionary of graphs of the same names as the queries
-    def get_graphs_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", start: datetime | None = None, end: datetime | None = None, display_time_as_datetime: bool = False, progress_bars: bool = True) -> dict[str, pd.DataFrame]:
-        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
-        if sum_by == "_":
-            sum_by = ["node", "pod"]
-        # handle if sum_by is a single input (put into list format)
-        if isinstance(sum_by, str):
-            sum_by = [sum_by]
-        # make sure sum_by metrics are all lower case
-        if sum_by is not None:
-            for i, metric in enumerate(sum_by):
-                sum_by[i] = metric.lower()
-
-        # generate graphs
-        disable_bars = not progress_bars
-        graphs_dict = {}
-        for title, query in tqdm(queries_dict.items(), disable=disable_bars):
-            graphs_dict[title] = self._generate_graph_df(
-                title, query, start=start, end=end, sum_by=sum_by)
-
-        # update times to be datetimes if requested
-        if display_time_as_datetime:
-            for graph_title, graph in graphs_dict.items():
-                if graph is None:
-                    continue
-                # update graphs with correct time columns
-                graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-                graphs_dict[graph_title] = graph
-
-        return graphs_dict
-
-    # generate and return a dictionary of all the graphs
-    def get_graphs_dict(self, only_include_worker_pods: bool = False, display_time_as_datetime: bool = True, show_runtimes: bool = False) -> dict[str, pd.DataFrame]:
-        graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
-        # loop through graphs
-        for graph_title, graph in graphs_dict.items():
-            if graph is None:
-                continue
-
-            # for every worker pod in graph, change pod's value to just be the worker id, drop all non-worker pods
-            if only_include_worker_pods:
-                graph = filter_df_for_workers(graph)
-
-            # update graphs with correct time columns
-            if display_time_as_datetime:
-                graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
-
-            graphs_dict[graph_title] = graph
-
-        return graphs_dict
-
-    # combines all graph dataframes into one large dataframe. Each graph is represented as a column
-    # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
-    def get_graphs_as_one_df(self, graphs_dict: dict[str, pd.DataFrame] | None = None, sum_by: list[str] | str | None = "_") -> pd.DataFrame:
-        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
-        if sum_by == "_":
-            sum_by = ["node", "pod"]
-        if isinstance(sum_by, str):
-            sum_by = [sum_by]
-
-        total_df = pd.DataFrame(data={})
-
-        # Handle invalid input
-        if graphs_dict is None and sum_by != ['node', 'pod']:
-            raise ValueError(
-                "Must pass in graphs_dict if sum_by is not default value.")
-
-        # Generate graphs if none given
-        if graphs_dict is None:
-            graphs_dict = self._generate_graphs()
-
-        # Fill in Time and sum_by (default: node, pod) columns with the first non-empty graph
-        for graph_df in graphs_dict.values():
-            if graph_df is not None:
-                # Insert Time column
-                total_df['Time'] = graph_df['Time']
-
-                if sum_by is None:
-                    break
-                # Handle if sum_by is single string
-                if isinstance(sum_by, str):
-                    sum_by = [sum_by]
-                # Insert sum_by columns into main graph
-                for metric in sum_by:
-                    metric_col = metric.title()
-                    total_df[metric_col] = graph_df[metric_col]
-                # once columns are inserted, break - start filling in df with graphs
-                break
-
-        # Fill in graphs columns
-        for title, graph_df in graphs_dict.items():
-            if graph_df is None:
-                total_df[title] = None
-                continue
-            total_df[title] = graph_df[title]
-
-        return total_df
-
-    # =========================================
-    #           Requery Methods
-    # =========================================
-
-    # convert a dataframe containing all graphs data into a dictionary with several graphs
-    # used when a graphs_df is passed in instead of a graphs_dict in check_for_losses
-    # this can happen when a user requests the graph data to be a single df, then passes
-    # that df back in to check_for_losses
-    def convert_graphs_df_to_dict(self, graphs_df: pd.DataFrame) -> dict[str, pd.DataFrame]:
-        if not isinstance(graphs_df, pd.DataFrame):
-            raise TypeError("Input must be a pandas DataFrame")
-
-        graphs_dict = {}
-        for col_title in graphs_df.columns:
-            # create a new graph for each column with metric data
-            metadata_columns = ['Node', 'Pod', 'Time']
-            if col_title in metadata_columns:
-                pass
-            # assemble new graph df
-            graph_data = {
-                'Time': graphs_df['Time'],
-                'Node': graphs_df['Node'],
-                'Pod': graphs_df['Pod'],
-                col_title: graphs_df[col_title]
-            }
-            graph_df = pd.DataFrame(data=graph_data)
-            graphs_dict[col_title] = graph_df
-
-        return graphs_dict
+    # =============================================
+    #               Requery Methods
+    # =============================================
 
     # change a query to only query for the given pod
     def _update_query_for_requery(self, query: str, pod: str) -> str:

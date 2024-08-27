@@ -17,6 +17,25 @@ class Header():
             'Memory Utilisation (from limits)': 'sum by(node, pod) (container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="' + self.namespace + '",container!="", image!=""}) / sum by(node, pod) (kube_pod_container_resource_limits{job="kube-state-metrics", namespace="' + self.namespace + '", resource="memory"})'
         }
 
+    # returns a dict in the form {header_title:dataframe}
+    # where the dataframe contains header values per node, pod
+    def get_header_dict(self, only_include_worker_pods: bool = False) -> dict[str, pd.DataFrame]:
+        header_dict = {}
+
+        # generate a dataframe for each header item, then add it to header_dict
+        for query_title, query in tqdm(self.queries.items()):
+            # generate dataframe
+            result_list = query_data(query)
+            header_item = self._generate_df(query_title, result_list)
+
+            # filter by worker pods if requested
+            if only_include_worker_pods:
+                header_item = filter_df_for_workers(header_item)
+
+            header_dict[query_title] = header_item
+
+        return header_dict
+
     # returns a dataframe containing nodes, pods, and values for
     # a given result_list from a query (header data)
     def _generate_df(self, col_title: str, res_list: list[dict]) -> pd.DataFrame:
@@ -39,22 +58,3 @@ class Header():
             # df.loc[len(df.index)] = [timestamp, node, pod, value]  # for timestamp
 
         return df
-
-    # returns a dict in the form {header_title:dataframe}
-    # where the dataframe contains header values per node, pod
-    def get_header_dict(self, only_include_worker_pods: bool = False) -> dict[str, pd.DataFrame]:
-        header_dict = {}
-
-        # generate a dataframe for each header item, then add it to header_dict
-        for query_title, query in tqdm(self.queries.items()):
-            # generate dataframe
-            result_list = query_data(query)
-            header_item = self._generate_df(query_title, result_list)
-
-            # filter by worker pods if requested
-            if only_include_worker_pods:
-                header_item = filter_df_for_workers(header_item)
-
-            header_dict[query_title] = header_item
-
-        return header_dict

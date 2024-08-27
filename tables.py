@@ -46,6 +46,93 @@ class Tables():
             'Throughput(Write)': 'sum by(node, pod) (rate(container_fs_writes_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor", container!="", namespace="' + self.namespace + '"}[' + self.duration + ']))'
         }
 
+    # get a dictionary of all the tables
+    def get_tables_dict(self, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None) -> dict[str, pd.DataFrame]:
+        # Note: queries and partial_queries can be passed in as None and will be updated in
+        # _fill_df_by_queries() for the first 3 and _get_storage_io() for 'Current Storage IO'
+        tables_dict = {
+            'CPU Quota': self._get_cpu_quota(queries=queries),
+            'Memory Quota': self._get_mem_quota(queries=queries),
+            'Current Network Usage': self._get_network_usage(queries=queries),
+            'Current Storage IO': self._get_storage_io(partial_queries=partial_queries)
+        }
+
+        # filter by worker pods if requested
+        if only_include_worker_pods:
+            for title, table in tables_dict.items():
+                tables_dict[title] = filter_df_for_workers(table)
+
+        return tables_dict
+
+    # Given a dictionary of queries, generate a table based on those queries
+    # Note: if the queries do not start with "sum by(node, pod)", then you must set sum_by
+    #        to be what the query has in "sum by(_____)""
+    #        If queries do not have "sum by(...)", then set sum_by to None
+    # Return a dictionary of a table_name: table_df if table_name is specified, otherwise returns
+    # a dataframe that is the table
+    def get_table_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", table_name: str = "") -> pd.DataFrame | dict[str, pd.DataFrame]:
+        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
+        if sum_by == "_":
+            sum_by = ["node", "pod"]
+        # handle if sum_by is a single input (put into list format)
+        if isinstance(sum_by, str):
+            sum_by = [sum_by]
+        # get rid of title case for sum_by metrics
+        if sum_by is not None:
+            for i, metric in enumerate(sum_by):
+                sum_by[i] = metric[0].lower() + metric[1:]
+
+        # generate tables
+        table_df = pd.DataFrame()
+        for title, query in tqdm(queries_dict.items()):
+            single_query_table = self._generate_table_df(
+                title, query, sum_by=sum_by)
+            # add column to table
+            if single_query_table is not None:
+                # initialize table if it isn't already
+                if len(table_df) == 0:
+                    table_df = single_query_table
+                else:
+                    table_df[title] = single_query_table[title]
+            else:
+                table_df[title] = None
+
+        # if table_name is specified, return the table_df in a dict of table_name:table_df
+        if table_name != "":
+            return {table_name: table_df}
+        # otherwise, return the table_df
+        return table_df
+
+    # combines all table dataframes into one large dataframe.
+    # Each table is represented as a few columns.
+    # this works because all tables are queried for the same time frame and they have the same pods
+    def get_tables_as_one_df(self, tables_dict: dict[str, pd.DataFrame] | None = None, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None) -> pd.DataFrame:
+        # initialize total df
+        total_df = pd.DataFrame(columns=['Node', 'Pod'])
+
+        # Generate tables if none given
+        if tables_dict is None:
+            tables_dict = self.get_tables_dict(
+                only_include_worker_pods=only_include_worker_pods,
+                queries=queries, partial_queries=partial_queries)
+
+        # get first table_df that isn't empty and use its Node and Pod columns
+        for table_df in tables_dict.values():
+            if not table_df.empty:
+                total_df = table_df[['Node', 'Pod']].copy()
+                break
+
+        # Fill in tables columns
+        for table_df in tables_dict.values():
+            for column in table_df.columns:
+                # Node and Pod columns are all the same for each table_df
+                if column in ["Node", "Pod"]:
+                    continue
+                # Add unique columns to total_df
+                total_df[column] = table_df[column].copy()
+
+        return total_df
+
     # return a dataframe of pods, nodes, and values for a given result_list for a
     # column in a table (e.g. CPUQuota: CPU usage)
     def _generate_df(self, col_title: str, res_list: list[dict]) -> pd.DataFrame:
@@ -222,90 +309,3 @@ class Tables():
             self.storage_io['Throughput(Read)'].astype(
                 float) + self.storage_io['Throughput(Write)'].astype(float)
         return self.storage_io
-
-    # Given a dictionary of queries, generate a table based on those queries
-    # Note: if the queries do not start with "sum by(node, pod)", then you must set sum_by
-    #        to be what the query has in "sum by(_____)""
-    #        If queries do not have "sum by(...)", then set sum_by to None
-    # Return a dictionary of a table_name: table_df if table_name is specified, otherwise returns
-    # a dataframe that is the table
-    def get_table_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", table_name: str = "") -> pd.DataFrame | dict[str, pd.DataFrame]:
-        # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
-        if sum_by == "_":
-            sum_by = ["node", "pod"]
-        # handle if sum_by is a single input (put into list format)
-        if isinstance(sum_by, str):
-            sum_by = [sum_by]
-        # get rid of title case for sum_by metrics
-        if sum_by is not None:
-            for i, metric in enumerate(sum_by):
-                sum_by[i] = metric[0].lower() + metric[1:]
-
-        # generate tables
-        table_df = pd.DataFrame()
-        for title, query in tqdm(queries_dict.items()):
-            single_query_table = self._generate_table_df(
-                title, query, sum_by=sum_by)
-            # add column to table
-            if single_query_table is not None:
-                # initialize table if it isn't already
-                if len(table_df) == 0:
-                    table_df = single_query_table
-                else:
-                    table_df[title] = single_query_table[title]
-            else:
-                table_df[title] = None
-
-        # if table_name is specified, return the table_df in a dict of table_name:table_df
-        if table_name != "":
-            return {table_name: table_df}
-        # otherwise, return the table_df
-        return table_df
-
-    # get a dictionary of all the tables
-    def get_tables_dict(self, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None) -> dict[str, pd.DataFrame]:
-        # Note: queries and partial_queries can be passed in as None and will be updated in
-        # _fill_df_by_queries() for the first 3 and _get_storage_io() for 'Current Storage IO'
-        tables_dict = {
-            'CPU Quota': self._get_cpu_quota(queries=queries),
-            'Memory Quota': self._get_mem_quota(queries=queries),
-            'Current Network Usage': self._get_network_usage(queries=queries),
-            'Current Storage IO': self._get_storage_io(partial_queries=partial_queries)
-        }
-
-        # filter by worker pods if requested
-        if only_include_worker_pods:
-            for title, table in tables_dict.items():
-                tables_dict[title] = filter_df_for_workers(table)
-
-        return tables_dict
-
-    # combines all table dataframes into one large dataframe.
-    # Each table is represented as a few columns.
-    # this works because all tables are queried for the same time frame and they have the same pods
-    def get_tables_as_one_df(self, tables_dict: dict[str, pd.DataFrame] | None = None, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None) -> pd.DataFrame:
-        # initialize total df
-        total_df = pd.DataFrame(columns=['Node', 'Pod'])
-
-        # Generate tables if none given
-        if tables_dict is None:
-            tables_dict = self.get_tables_dict(
-                only_include_worker_pods=only_include_worker_pods,
-                queries=queries, partial_queries=partial_queries)
-
-        # get first table_df that isn't empty and use its Node and Pod columns
-        for table_df in tables_dict.values():
-            if not table_df.empty:
-                total_df = table_df[['Node', 'Pod']].copy()
-                break
-
-        # Fill in tables columns
-        for table_df in tables_dict.values():
-            for column in table_df.columns:
-                # Node and Pod columns are all the same for each table_df
-                if column in ["Node", "Pod"]:
-                    continue
-                # Add unique columns to total_df
-                total_df[column] = table_df[column].copy()
-
-        return total_df
