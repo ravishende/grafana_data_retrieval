@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import time
 import pandas as pd
+from datetime import datetime
 from tqdm import tqdm
 from termcolor import colored
 from helpers.querying import query_data_for_graph
@@ -14,7 +15,7 @@ from inputs import (NAMESPACE, DEFAULT_FINAL_GRAPH_TIME, DEFAULT_DURATION,
 
 
 class Graphs():
-    def __init__(self, namespace=NAMESPACE, end=DEFAULT_FINAL_GRAPH_TIME, duration=DEFAULT_DURATION, time_offset=DEFAULT_GRAPH_TIME_OFFSET, time_step=DEFAULT_GRAPH_STEP, requery_step_divisor=REQUERY_GRAPH_STEP_DIVISOR):
+    def __init__(self, namespace: str = NAMESPACE, end: datetime = DEFAULT_FINAL_GRAPH_TIME, duration: str = DEFAULT_DURATION, time_offset: str = DEFAULT_GRAPH_TIME_OFFSET, time_step: str = DEFAULT_GRAPH_STEP, requery_step_divisor: int = REQUERY_GRAPH_STEP_DIVISOR):
         # variables for querying data for graphs
         self.namespace = namespace
         self.end = end
@@ -52,7 +53,7 @@ class Graphs():
         }
 
     # assembles string for the time filter to be passed into query_data_for_graph()
-    def _assemble_time_filter(self, start=None, end=None, time_step=None):
+    def _assemble_time_filter(self, start: datetime | None = None, end: datetime | None = None, time_step: str | None = None) -> str:
         # set default values if not given
         if time_step is None:
             time_step = self.time_step
@@ -82,7 +83,7 @@ class Graphs():
     # note: sum_by is a string or list of strings that must have the same items that queries start with in their "sum by(___, ___) (...)".
     # If sum_by is specified, the df won't contain node or pod cols it will contain the sum_by cols
     # this is only used by get_graphs_from_queries
-    def _generate_graph_df(self, query_title, query, start=None, end=None, time_step=None, sum_by="_", show_runtimes=False):
+    def _generate_graph_df(self, query_title: str, query: str, start=None, end=None, time_step: str | None = None, sum_by: str = "_", show_runtimes: bool = False) -> pd.DataFrame:
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -144,7 +145,7 @@ class Graphs():
         return graph_df
 
     # get a dictionary in the form of {graph titles: list of graph data}
-    def _generate_graphs(self, show_runtimes=False):
+    def _generate_graphs(self, show_runtimes: bool = False) -> dict[str, pd.DataFrame]:
         queries_dict = self.queries
         partial_queries_dict = self.partial_queries
         graphs_dict = {}
@@ -200,7 +201,7 @@ class Graphs():
     #       to be what the query has in "sum by(_____)""
     #       If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of graphs of the same names as the queries
-    def get_graphs_from_queries(self, queries_dict, sum_by="_", start=None, end=None, display_time_as_datetime=False, progress_bars=True):
+    def get_graphs_from_queries(self, queries_dict: dict[str, str], sum_by: str = "_", start: datetime | None = None, end: datetime | None = None, display_time_as_datetime: bool = False, progress_bars: bool = True) -> dict[str, pd.DataFrame]:
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -231,7 +232,7 @@ class Graphs():
         return graphs_dict
 
     # generate and return a dictionary of all the graphs
-    def get_graphs_dict(self, only_include_worker_pods=False, display_time_as_datetime=True, show_runtimes=False):
+    def get_graphs_dict(self, only_include_worker_pods: bool = False, display_time_as_datetime: bool = True, show_runtimes: bool = False) -> dict[str, pd.DataFrame]:
         graphs_dict = self._generate_graphs(show_runtimes=show_runtimes)
         # loop through graphs
         for graph_title, graph in graphs_dict.items():
@@ -252,7 +253,7 @@ class Graphs():
 
     # combines all graph dataframes into one large dataframe. Each graph is represented as a column
     # this works because all graphs are queried for the same time frame and time step. They also have the same pods set
-    def get_graphs_as_one_df(self, graphs_dict: dict[str, str] | None = None, sum_by: str | None = "_"):
+    def get_graphs_as_one_df(self, graphs_dict: dict[str, pd.DataFrame] | None = None, sum_by: str | None = "_") -> pd.DataFrame:
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -303,7 +304,7 @@ class Graphs():
     # used when a graphs_df is passed in instead of a graphs_dict in check_for_losses
     # this can happen when a user requests the graph data to be a single df, then passes
     # that df back in to check_for_losses
-    def convert_graphs_df_to_dict(self, graphs_df):
+    def convert_graphs_df_to_dict(self, graphs_df: dict[str, pd.DataFrame]):
         if not isinstance(graphs_df, pd.DataFrame):
             raise TypeError("Input must be a pandas DataFrame")
 
@@ -326,7 +327,7 @@ class Graphs():
         return graphs_dict
 
     # change a query to only query for the given pod
-    def _update_query_for_requery(self, query, pod):
+    def _update_query_for_requery(self, query: str, pod: str):
         # add specific pod to query so only the one specific pod is queried instead of all pods
         # insert the pod specification just before the namespace is specified
         namespace_index = query.find('namespace="')
@@ -336,7 +337,7 @@ class Graphs():
 
         return updated_query
 
-    def _print_pod_losses(self, graph_title, pods_dropped, pods_recovered):
+    def _print_pod_losses(self, graph_title: str, pods_dropped: dict, pods_recovered: dict):
         print_sub_title(graph_title)
         # Print Info for Pods Dropped: pod, previous value, time of last value, time dropped,
         print(colored(
@@ -358,7 +359,7 @@ class Graphs():
     # {'dropped': [{'pod':str, 'start':datetime, 'end':datetime, 'prev_val':float}, {...}, ...],
     #  'recovered': [{'pod':str, 'start':datetime, 'end':datetime, 'val':float}, {...}, ...]}
     # returns none if no losses
-    def _check_graph_loss(self, graph_title, graph_df, drop_threshold=0, print_info=False):
+    def _check_graph_loss(self, graph_title: str, graph_df: pd.DataFrame, drop_threshold: int | float = 0, print_info: bool = False) -> dict:
         if drop_threshold < 0:
             raise ValueError(
                 "drop_threshold must be greater than or equal to 0.")
@@ -468,7 +469,7 @@ class Graphs():
     #     graph_title_2: {...},
     #     ...
     # }
-    def check_for_losses(self, graphs_dict=None, drop_threshold=0, print_info=False):
+    def check_for_losses(self, graphs_dict: dict[str, pd.DataFrame] | None = None, drop_threshold: int | float = 0, print_info: bool = False) -> dict:
         if graphs_dict is None:
             graphs_dict = self.get_graphs_dict()
 
@@ -503,7 +504,7 @@ class Graphs():
         #     graph_title_2: {...},
         #     ...
         # }
-    def requery_graphs(self, graphs_losses_dict, show_runtimes=False):
+    def requery_graphs(self, graphs_losses_dict: dict, show_runtimes: bool = False) -> dict:
         # declare variables
         requeried_graphs_dict = {}
         query = ''
