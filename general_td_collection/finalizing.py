@@ -16,12 +16,42 @@ class Finalizer():
         self._read_file = "csvs/queried.csv"
         self._graph_columns = []  # they become initialized when self.sum_df is called
 
-    # given a dataframe with some columns prependedd with 'graph_', return all those column names
     def get_graph_columns(self, df: pd.DataFrame) -> list[str]:
+        """given a dataframe with some columns prepended with 'graph_',
+          return all those column names"""
         prefix = "graph_"
         graph_columns = [
             col for col in df.columns if col[:len(prefix)] == prefix]
         return graph_columns
+
+    def sum_df(self, df: pd.DataFrame, graph_metrics: list[str] | None = None) -> pd.DataFrame:
+        """Sum over a dataframe to go from queried json data to single datapoints in columns
+
+        Args:
+            df: pandas DataFrame containing 'start', 'end', and queried columns
+            graph_metrics: list of metrics for graphs to be summarized by 
+                - for list of all metrics, look at self.all_graph_metrics
+
+        Returns:
+            summed dataframe with new columns and some dropped old ones
+        """
+        wrong_type_msg = f"Expected df to be a pandas DataFrame but was type {type(df)}"
+        assert isinstance(df, pd.DataFrame), wrong_type_msg
+        self._graph_columns = self.get_graph_columns(df)
+        sum_col_prefix = "queried_"
+        sum_columns = [
+            col for col in df.columns if col[:len(sum_col_prefix)] == sum_col_prefix]
+        for col_name in sum_columns:
+            summed_col = col_name[len(sum_col_prefix):]
+            df[summed_col] = df[col_name].apply(self._sum_result_list)
+        # drop queried columns
+        df = df.drop(columns=sum_columns)
+        # since each cell in a graph_column contains many datapoints,
+        # insert metric columns to summarize them, then drop the original graph columns
+        df = self._insert_graph_metric_columns(
+            df, graph_metrics)
+        df = df.drop(columns=self._graph_columns)
+        return df
 
     # given a list of graph columns (strings), check that it is the right type
     def _check_graph_columns(self, graph_columns: list[str] | str) -> None:
@@ -139,32 +169,3 @@ class Finalizer():
             time_value_pair = metric_value_dict['value']
             total += float(time_value_pair[1])
         return total
-
-    def sum_df(self, df: pd.DataFrame, graph_metrics: list[str] | None = None) -> pd.DataFrame:
-        """Sum over a dataframe to go from queried json data to single datapoints in columns
-
-        Args:
-            df: pandas DataFrame containing 'start', 'end', and queried columns
-            graph_metrics: list of metrics for graphs to be summarized by 
-                - for list of all metrics, look at self.all_graph_metrics
-
-        Returns:
-            summed dataframe with new columns and some dropped old ones
-        """
-        wrong_type_msg = f"Expected df to be a pandas DataFrame but was type {type(df)}"
-        assert isinstance(df, pd.DataFrame), wrong_type_msg
-        self._graph_columns = self.get_graph_columns(df)
-        sum_col_prefix = "queried_"
-        sum_columns = [
-            col for col in df.columns if col[:len(sum_col_prefix)] == sum_col_prefix]
-        for col_name in sum_columns:
-            summed_col = col_name[len(sum_col_prefix):]
-            df[summed_col] = df[col_name].apply(self._sum_result_list)
-        # drop queried columns
-        df = df.drop(columns=sum_columns)
-        # since each cell in a graph_column contains many datapoints,
-        # insert metric columns to summarize them, then drop the original graph columns
-        df = self._insert_graph_metric_columns(
-            df, graph_metrics)
-        df = df.drop(columns=self._graph_columns)
-        return df
