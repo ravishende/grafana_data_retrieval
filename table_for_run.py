@@ -14,7 +14,7 @@ class TableQueryer():
 
     def __init__(self, namespace: str = "wifire-quicfire") -> None:
         self.namespace = namespace
-        self._tables_class = Tables(namespace=NAMESPACE)
+        self._tables_class = Tables(namespace=namespace)
 
     # given a dataframe of runs, and list of indices of runs in the dataframe, (can also specify as_one_df and only_include_worker_pods)
     # return a dataframe (if as_one_df==True) of all of the tables queried for those runs
@@ -366,10 +366,10 @@ if __name__ == "__main__":
     runs_info_df = pd.read_csv(READ_FILE, index_col=0)
     table_queryer = TableQueryer(namespace=NAMESPACE)
     # get tables data for one run
-    run_to_query = 50  # can pick any run between 0 and len(df)-1 inclusive
+    RUN_INDEX = 50  # can pick any run between 0 and len(df)-1 inclusive
     run_tables = table_queryer.get_tables_for_one_run(
         runs_df=runs_info_df,
-        run_index=run_to_query,
+        run_index=RUN_INDEX,
         as_one_df=True,  # if set to False, returns a dictionary of titles, tables
         # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
         only_include_worker_pods=False
@@ -378,10 +378,10 @@ if __name__ == "__main__":
 
     if QUERY_MULTIPLE_RUNS:
         # can pick any runs between 0 and len(df)-1 inclusive
-        run_indices = [50, 60, 70]
+        RUN_INDICES = [50, 60, 70]
         runs_tables_df = table_queryer.get_tables_for_many_runs(
             runs_df=runs_info_df,
-            run_indices=run_indices,
+            run_indices=RUN_INDICES,
             as_one_df=True,  # if set to False, returns a dictionary of titles, tables
             # if set to True, only includes bp3d-worker pods and changes their name to be just their ensemble id
             only_include_worker_pods=False
