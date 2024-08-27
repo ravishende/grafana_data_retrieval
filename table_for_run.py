@@ -1,5 +1,5 @@
 import shutil
-from datetime import timedelta
+from datetime import datetime, timedelta
 import pandas as pd
 
 # modules
@@ -8,9 +8,7 @@ from helpers.time_functions import delta_to_time_str, datetime_ify, calculate_of
 
 
 class TableQueryer():
-    """Meant for querying data for tables metrics
-
-    """
+    """Meant for querying data for tables metrics"""
 
     def __init__(self, namespace: str = "wifire-quicfire") -> None:
         self.namespace = namespace
@@ -19,8 +17,7 @@ class TableQueryer():
     # given a dataframe of runs, and list of indices of runs in the dataframe, (can also specify as_one_df and only_include_worker_pods)
     # return a dataframe (if as_one_df==True) of all of the tables queried for those runs
     # or return a list of dataframes (if_as_one_df==False) of all the tables queried for that run
-    def get_tables_for_many_runs(self, runs_df, run_indices, as_one_df=False, only_include_worker_pods=False):
-
+    def get_tables_for_many_runs(self, runs_df: pd.DataFrame, run_indices: list[int], as_one_df: bool = False, only_include_worker_pods: bool = False) -> list[pd.DataFrame]:
         # get run start times as datetimes
         runs_df['start'] = runs_df['start'].apply(datetime_ify)
 
@@ -65,9 +62,10 @@ class TableQueryer():
     # given a dataframe of runs, and an index of a run in the dataframe, (can also specify as_one_df and only_include_worker_pods)
     # return a dataframe (if as_one_df==True) of all of the tables queried for that run
     # or return a dict of dataframes (if_as_one_df==False) of all the tables queried for that run separated by table type
-    def get_tables_for_one_run(self, runs_df, run_index, as_one_df=False, only_include_worker_pods=False):
+    def get_tables_for_one_run(
+            self, runs_df: pd.DataFrame, run_index: int, as_one_df: bool = False, only_include_worker_pods: bool = False) -> list[pd.DataFrame]:
         # get tables class to be able to use methods for querying tables
-        tables_class = Tables(namespace=NAMESPACE)
+        tables_class = Tables(namespace=self.namespace)
 
         # get run start times as datetimes and select run to use
         runs_df['start'] = runs_df['start'].apply(datetime_ify)
@@ -109,7 +107,7 @@ class TableQueryer():
 
         return tables_dict
 
-    def _get_static_query_bodies(self):
+    def _get_static_query_bodies(self) -> dict[str, str]:
         # Static Metrics: metrics that never change throughout a run, e.g. Memory Limits
         static_query_bodies = {
             'CPU Requests': 'cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests',
@@ -119,7 +117,7 @@ class TableQueryer():
         }
         return static_query_bodies
 
-    def _get_max_query_bodies(self):
+    def _get_max_query_bodies(self) -> dict[str, str]:
         # Max Over Time Range Metrics:
         # Metrics that fluctuate over a run but only max val matters, e.g. Memory Usage
         max_query_bodies = {
@@ -146,7 +144,7 @@ class TableQueryer():
         }
         return increase_query_bodies
 
-    def _get_metrics_by_type(self):
+    def _get_metrics_by_type(self) -> dict[str, str]:
         full_metrics = {
             # CPU Quota
             'CPU Usage',
@@ -180,7 +178,7 @@ class TableQueryer():
         return all_metrics
 
     # assemble queries for all max based metrics
-    def _assemble_max_queries(self, start, duration_seconds):
+    def _assemble_max_queries(self, start: datetime, duration_seconds: int) -> dict[str, str]:
         duration_seconds = int(duration_seconds)
         # get offset and duration for query
         offset = calculate_offset(start, duration_seconds)
@@ -188,7 +186,7 @@ class TableQueryer():
 
         # get components of query ready to be assembled
         prefix = "sum by (node, pod) (max_over_time("
-        suffix = '{namespace="' + NAMESPACE + \
+        suffix = '{namespace="' + self.namespace + \
             '"}[' + str(duration) + '] offset ' + str(offset) + '))'
 
         # assemble queries
@@ -200,7 +198,7 @@ class TableQueryer():
         return max_queries
 
     # assemble queries for all increase based metrics
-    def _assemble_increase_queries(self, start, duration_seconds):
+    def _assemble_increase_queries(self, start: datetime, duration_seconds: int) -> dict[str, str]:
         duration_seconds = int(duration_seconds)
         # get offset and duration for query
         offset = calculate_offset(start, duration_seconds)
@@ -208,7 +206,7 @@ class TableQueryer():
 
         # get components of query ready to be assembled
         prefix = "sum by (node, pod) (increase("
-        suffix = '{namespace="' + NAMESPACE + \
+        suffix = '{namespace="' + self.namespace + \
             '"}[' + str(duration) + '] offset ' + str(offset) + '))'
 
         # assemble queries
@@ -220,7 +218,7 @@ class TableQueryer():
         return increase_queries
 
     # assemble queries for all static metrics
-    def _assemble_static_queries(self, start, duration_seconds):
+    def _assemble_static_queries(self, start: datetime, duration_seconds: int) -> dict[str, str]:
         # get offset for query 5 seconds after run started instead of as run ends - fewer NA pods for limits and requests
         # to get offset for when the run ends, use `offset = calculate_offset(start, duration_seconds)`
         offset = calculate_offset(start, 5)
@@ -231,8 +229,8 @@ class TableQueryer():
         # get the right suffix depending on the resource
         suffixes = {
             # change metric from measuring cpu cores to cpu seconds by multiplying by seconds
-            'cpu': '{resource="cpu", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ') * ' + str(duration_seconds),
-            'mem': '{resource="memory", namespace="' + NAMESPACE + '"} offset ' + str(offset) + ')'
+            'cpu': '{resource="cpu", namespace="' + self.namespace + '"} offset ' + str(offset) + ') * ' + str(duration_seconds),
+            'mem': '{resource="memory", namespace="' + self.namespace + '"} offset ' + str(offset) + ')'
         }
 
         # assemble queries
@@ -249,7 +247,7 @@ class TableQueryer():
 
     # given a dict of all query bodies, a dict of all metrics, a run start (datetime), and run duration_seconds (int or float)
     # return two dictionaries, one with full queries, and one with partial queries, both to be passed into tables_class methods
-    def _get_queries(self, start, duration_seconds):
+    def _get_queries(self, start: datetime, duration_seconds: int) -> tuple[dict, dict]:
         # assemble queries
         max_queries = self._assemble_max_queries(start, duration_seconds)
         increase_queries = self._assemble_increase_queries(
@@ -273,7 +271,7 @@ class TableQueryer():
 
     # given a table dataframe of either cpu quota or memory quota, a resource ("mem" or "cpu"),
     # fill in the na values for requests, limits, requests %, and limits %
-    def _fill_in_static_na(self, df, resource):
+    def _fill_in_static_na(self, df: pd.DataFrame, resource: str) -> pd.DataFrame:
         # use resource to determine resource_str
         resource_str = ""
         if resource == "cpu":
@@ -297,7 +295,7 @@ class TableQueryer():
     # a run rather than the current snapshot in time.
     # Note: The updated queries already query the correct information, we just have to change
     # the names to match, after we do the querying from the tables_class methods (which rely on the names).
-    def _rename_df_metrics(self, df):
+    def _rename_df_metrics(self, df: pd.DataFrame) -> pd.DataFrame:
         rename_dict = {}
         for old_name in df.columns:
             if "IOPS" in old_name:  # change "IOPS" column names to "IO"
@@ -315,7 +313,11 @@ class TableQueryer():
     # if tables is a single dataframe or list of dataframes, updates names of the metrics in tables.
     # if tables is a dict of dataframes, updates names of the tables and their metrics.
     # returns the orginal dataframe or dict of dataframes
-    def _rename_tables(self, tables):
+    def _rename_tables(self, tables: pd.DataFrame | dict[str, pd.DataFrame] | list[pd.DataFrame]):
+        # If tables is not one of the above, there is a wrong user input
+        wrong_type_msg = "tables must either be a dataframe, a list of dataframes, or a dict of dataframes."
+        assert isinstance(tables, (pd.DataFrame, dict, list)), wrong_type_msg
+
         # tables is a single dataframe
         if isinstance(tables, pd.DataFrame):
             return self._rename_df_metrics(tables)
@@ -333,15 +335,11 @@ class TableQueryer():
             return tables_dict
 
         # tables is a list of dataframes
-        if isinstance(tables, dict):
+        if isinstance(tables, list):
             tables_list = []
             for table_df in tables:
                 tables_list.append(self._rename_df_metrics(table_df))
             return tables_list
-
-        # If tables is not one of the above, there is a wrong user input
-        raise TypeError(
-            "tables must either be a dataframe or a dictionary of dataframes.")
 
 
 # ============================
@@ -359,7 +357,7 @@ if __name__ == "__main__":
 
     # settings
     NAMESPACE = 'wifire-quicfire'
-    READ_FILE = "read.csv"
+    READ_FILE = "general_td_collection/csvs/read.csv"
     QUERY_MULTIPLE_RUNS = False
 
     # get a dataframe of runs
