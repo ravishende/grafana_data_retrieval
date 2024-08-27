@@ -1,9 +1,10 @@
 # autopep8: off
-import pandas as pd
 import shutil
 import time
 import sys
 import os
+import pandas as pd
+# pylint: disable=wrong-import-position
 sys.path.append("../grafana_data_retrieval")  # Adjust the path to go up one level
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
@@ -19,11 +20,12 @@ terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
 
 # query settings
-filter_graphs_for_pod = False
+FILTER_GRAPHS_FOR_POD = False
 
 # optional filtering for pods with a given prefix
+# pylint: disable='invalid-name'
 filter_pod_str = ""
-if filter_graphs_for_pod:
+if FILTER_GRAPHS_FOR_POD:
     pod_prefix = 'fc-worker-1-'
     filter_pod_str = f', pod=~"^{pod_prefix}.*"'
 
@@ -52,7 +54,7 @@ def _get_queried_df():
 
 
 # query a row in a dataframe
-def query_row(row):
+def query_row(row: pd.Series) -> pd.Series:
     # get dict containing all queried graphs
     graphs_dict = graphs_class.get_graphs_from_queries(
         queries, start=row['start'], end=row['end'], sum_by=["namespace", "pod"])
@@ -69,16 +71,15 @@ def query_row(row):
         row[f'Max {title}'] = None
         row[f'Min {title}'] = None
         row[f'Standard Deviation {title}'] = None
-        print(f"No value for", title)
+        print("No value for", title)
     return row
 
 
 # query a chunk of a dataframe (n rows)
-def query_chunk(df_chunk, track_time=True):
+def query_chunk(df_chunk: pd.DataFrame, track_time: bool = True) -> pd.DataFrame:
     # query df chunk
     start = time.time()
-    df_chunk = df_chunk.apply(
-        lambda row: query_row(row), axis=1)
+    df_chunk = df_chunk.apply(query_row, axis=1)
     end = time.time()
     # print elapsed time info
     if track_time:
@@ -90,7 +91,7 @@ def query_chunk(df_chunk, track_time=True):
 
 # given a df and optional batch size,
 # return a fully queried df, saving progress every batch
-def query_df(df, batch_size=100, track_batch_times=True):
+def query_df(df: pd.DataFrame, batch_size: int = 100, track_batch_times: bool = True) -> pd.DataFrame:
     # get the queried df and remove already queried rows from df_to_query
     queried_df = _get_queried_df()
     queried_rows = len(queried_df)
@@ -112,8 +113,8 @@ def query_df(df, batch_size=100, track_batch_times=True):
     return queried_df
 
 
-# given a column, rename it to remove spaces, make lowercase, and shorten words
-def rename_col(column):
+# given a column name, rename it to remove spaces, make lowercase, and shorten words
+def rename_col(column: str) -> str:
     column = column.lower()
     column = column.replace(" ", "_")
     column = column.replace("memory", "mem")
@@ -122,17 +123,17 @@ def rename_col(column):
     return column
 
 
-df = pd.read_csv(READ_FILE)
+og_df = pd.read_csv(READ_FILE)
 # get times back to datetimes from strings
-df['start'] = df['start'].apply(datetime_ify)
-df['end'] = df['end'].apply(datetime_ify)
+og_df['start'] = og_df['start'].apply(datetime_ify)
+og_df['end'] = og_df['end'].apply(datetime_ify)
 
 # querying - takes a while
-queried_df = query_df(df)
+fully_queried_df = query_df(og_df)
 
 # take a queried dataframe and get it ready for machine learning
-rename_dict = {col: rename_col(col) for col in queried_df.columns}
-final_df = queried_df.rename(columns=rename_dict)
+rename_dict = {col: rename_col(col) for col in fully_queried_df.columns}
+final_df = fully_queried_df.rename(columns=rename_dict)
 final_df = final_df.drop(columns=['start', 'end', 'question_method',
                                   'pdf_pages', 'pdf_load_time'])
 
