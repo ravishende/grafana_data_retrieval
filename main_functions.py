@@ -12,7 +12,7 @@ tables_class = Tables()
 graphs_class = Graphs()
 
 
-def get_header_data() -> dict[str, float]:
+def get_header_data() -> dict[str, pd.DataFrame]:
     return header_class.get_header_dict()
 
 

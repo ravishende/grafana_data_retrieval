@@ -8,7 +8,7 @@ from inputs import NAMESPACE
 
 
 class Header():
-    def __init__(self, namespace=NAMESPACE):
+    def __init__(self, namespace: str = NAMESPACE):
         self.namespace = namespace
         self.queries = {
             'CPU Utilisation (from requests)': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}) / sum by(node, pod) (kube_pod_container_resource_requests{job="kube-state-metrics", namespace="' + self.namespace + '", resource="cpu"})',
@@ -19,7 +19,7 @@ class Header():
 
     # returns a dataframe containing nodes, pods, and values for
     # a given result_list from a query (header data)
-    def _generate_df(self, col_title, res_list):
+    def _generate_df(self, col_title: str, res_list: list[dict]) -> pd.DataFrame:
         # parse json data and initialize dataframe
         df = pd.DataFrame(columns=['Node', 'Pod', col_title])
         # df = pd.DataFrame(columns=['Time', 'Node', 'Pod', col_title])  # for timestamp
@@ -42,7 +42,7 @@ class Header():
 
     # returns a dict in the form {header_title:dataframe}
     # where the dataframe contains header values per node, pod
-    def get_header_dict(self, only_include_worker_pods=False):
+    def get_header_dict(self, only_include_worker_pods: bool = False) -> dict[str, pd.DataFrame]:
         header_dict = {}
 
         # generate a dataframe for each header item, then add it to header_dict

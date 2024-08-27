@@ -8,7 +8,7 @@ from inputs import NAMESPACE, DEFAULT_DURATION
 
 
 class Tables():
-    def __init__(self, namespace=NAMESPACE, duration=DEFAULT_DURATION):
+    def __init__(self, namespace: str = NAMESPACE, duration: str = DEFAULT_DURATION):
         self.namespace = namespace
         self.duration = duration
         self.cpu_quota = pd.DataFrame(columns=[
@@ -48,7 +48,7 @@ class Tables():
 
     # return a dataframe of pods, nodes, and values for a given result_list for a
     # column in a table (e.g. CPUQuota: CPU usage)
-    def _generate_df(self, col_title, res_list):
+    def _generate_df(self, col_title: str, res_list: list[dict]) -> pd.DataFrame:
         # initialize dataframe and filter json data
         df = pd.DataFrame(columns=['Node', 'Pod', col_title])
         # df = pd.DataFrame(columns=['Time', 'Node', 'Pod', col_title])  # for timestamp
@@ -66,7 +66,8 @@ class Tables():
 
     # returns an updated dataframe by filling in data queried from the
     # columns in a passed in dataframe
-    def _fill_df_by_queries(self, table_df, queries=None):
+    def _fill_df_by_queries(
+            self, table_df: pd.DataFrame, queries: dict[str, str] | None = None) -> pd.DataFrame:
         # check if they passed in a dict of queries.
         if queries is None:
             queries = self.queries
@@ -93,7 +94,8 @@ class Tables():
                     table_df[column] = new_df[column]
         return table_df
 
-    def _generate_table_df(self, query_title, query, start=None, end=None, time_step=None, sum_by="_"):
+    # TODO: deal with start and end parameters
+    def _generate_table_df(self, query_title: str, query: str, start=None, end=None, time_step: str = None, sum_by: list[str] | str | None = "_"):
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -138,16 +140,19 @@ class Tables():
 
         return table_df
 
-    def _calc_percent(self, numerator_col, divisor_col):
+    def _calc_percent(self, numerator_col: pd.Series, divisor_col: pd.Series) -> pd.Series:
         # divide the two columns, then multiply by 100 to get the percentage
         result = numerator_col.astype(float).div(divisor_col.astype(float))
         return result.multiply(100)
 
     # get the cpu_quota dataframe. If it is empty, generate it
-    def _get_cpu_quota(self, queries=None):
+    def _get_cpu_quota(self, queries: dict[str, str] | None = None) -> pd.DataFrame:
         # check if the table has been filled in. If it has, return it
         if len(self.cpu_quota.index) > 0:
             return self.cpu_quota
+
+        if queries is None:
+            queries = self.queries
 
         # if not, fill in the table then return it
         self.cpu_quota = self._fill_df_by_queries(
@@ -163,10 +168,13 @@ class Tables():
         return self.cpu_quota
 
     # get the mem_quota dataframe. If it is empty, generate it
-    def _get_mem_quota(self, queries=None):
+    def _get_mem_quota(self, queries: dict[str, str] | None = None) -> pd.DataFrame:
         # check if the table has been filled in. If it has, return it
         if len(self.mem_quota.index) > 0:
             return self.mem_quota
+
+        if queries is None:
+            queries = self.queries
 
         # if not, fill in the table then return it
         self.mem_quota = self._fill_df_by_queries(
@@ -182,10 +190,13 @@ class Tables():
         return self.mem_quota
 
     # get the network_usage dataframe. If it is empty, generate it
-    def _get_network_usage(self, queries=None):
+    def _get_network_usage(self, queries: dict[str, str] | None = None) -> pd.DataFrame:
         # check if the table has been filled in. If it has, return it
         if len(self.network_usage.index) > 0:
             return self.network_usage
+
+        if queries is None:
+            queries = self.queries
 
         # if not, fill in the table then return it
         self.network_usage = self._fill_df_by_queries(
@@ -193,7 +204,7 @@ class Tables():
         return self.network_usage
 
     # get the storage_io dataframe. If it is empty, generate it
-    def _get_storage_io(self, partial_queries=None):
+    def _get_storage_io(self, partial_queries: dict[str, str] | None = None):
         # check if the table has been filled in. If it has, return it
         if len(self.storage_io.index) > 0:
             return self.storage_io
@@ -219,7 +230,7 @@ class Tables():
     #        If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of a table_name: table_df if table_name is specified, otherwise returns
     # a dataframe that is the table
-    def get_table_from_queries(self, queries_dict, sum_by="_", table_name=None):
+    def get_table_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", table_name: str = "") -> pd.DataFrame | dict[str, pd.DataFrame]:
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -247,13 +258,13 @@ class Tables():
                 table_df[title] = None
 
         # if table_name is specified, return the table_df in a dict of table_name:table_df
-        if table_name is not None:
+        if table_name != "":
             return {table_name: table_df}
         # otherwise, return the table_df
         return table_df
 
     # get a dictionary of all the tables
-    def get_tables_dict(self, only_include_worker_pods=False, queries=None, partial_queries=None):
+    def get_tables_dict(self, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None) -> dict[str, pd.DataFrame]:
         # Note: queries and partial_queries can be passed in as None and will be updated in
         # _fill_df_by_queries() for the first 3 and _get_storage_io() for 'Current Storage IO'
         tables_dict = {
@@ -273,7 +284,7 @@ class Tables():
     # combines all table dataframes into one large dataframe.
     # Each table is represented as a few columns.
     # this works because all tables are queried for the same time frame and they have the same pods
-    def get_tables_as_one_df(self, tables_dict=None, only_include_worker_pods=False, queries=None, partial_queries=None):
+    def get_tables_as_one_df(self, tables_dict: dict[str, pd.DataFrame] | None = None, only_include_worker_pods: bool = False, queries: dict[str, str] = None, partial_queries: dict[str, str] = None):
         # initialize total df
         total_df = pd.DataFrame(columns=['Node', 'Pod'])
 
@@ -293,7 +304,7 @@ class Tables():
         for table_df in tables_dict.values():
             for column in table_df.columns:
                 # Node and Pod columns are all the same for each table_df
-                if column == "Node" or column == "Pod":
+                if column in ["Node", "Pod"]:
                     continue
                 # Add unique columns to total_df
                 total_df[column] = table_df[column].copy()
