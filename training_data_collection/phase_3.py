@@ -35,6 +35,27 @@ class Phase_3():
         self.col_names_by_time = col_names["by_time"]
         self.all_col_names = col_names["all"]
 
+    # runs the whole phase. Returns True if successful, False otherwise
+    # Note: number of queries = rows_batch_size * 15, so it is better to choose a small number (e.g. 10) for more frequent saving
+    def run(self, rows_batch_size: int = 10, verbose_status: bool = False) -> bool:
+        success = False
+
+        # set printing status for query functions later on
+        set_verbose(verbose_status)
+
+        # get preprocessed_df
+        preprocessed_df = pd.read_csv(self.files['read'], index_col=0)
+
+        # 7. query resource metrics (metrics total, t1, t2)
+        queried_df = self.query_metrics(preprocessed_df, rows_batch_size)
+
+        # save df to a csv file
+        queried_df.to_csv(self.files['write'])
+        print(queried_df)
+
+        success = True
+        return success
+
     # If verbose, print the msg. end is the same as in the built in print() function
     # If color (a string in line with termcolor colors) is passed in, print it with that color
     def _print_if_verbose(self, msg: str, color: str | None = None, end: str = "\n") -> None:
@@ -118,28 +139,3 @@ class Phase_3():
             df.to_csv(self.files['query_progress'])
 
         return df
-
-    # ======================
-    #     Main Program
-    # ======================
-
-    # runs the whole phase. Returns True if successful, False otherwise
-    # Note: number of queries = rows_batch_size * 15, so it is better to choose a small number (e.g. 10) for more frequent saving
-    def run(self, rows_batch_size: int = 10, verbose_status: bool = False) -> bool:
-        success = False
-
-        # set printing status for query functions later on
-        set_verbose(verbose_status)
-
-        # get preprocessed_df
-        preprocessed_df = pd.read_csv(self.files['read'], index_col=0)
-
-        # 7. query resource metrics (metrics total, t1, t2)
-        queried_df = self.query_metrics(preprocessed_df, rows_batch_size)
-
-        # save df to a csv file
-        queried_df.to_csv(self.files['write'])
-        print(queried_df)
-
-        success = True
-        return success
