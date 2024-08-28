@@ -56,7 +56,8 @@ pod_regex_str = f'^{POD_PREFIX}.*'
 
 # initialize classes with desired filter and data settings
 query_handler = QueryHandler(node=NODE_NAME)
-# query_handler = Query_handler(pod_regex=pod_regex_str)
+# query_handler = QueryHandler(pod_regex=pod_regex_str)
+# query_handler = QueryHandler(namespace="rook")  # has data for rgw queries
 finalizer = Finalizer()
 
 df = df.iloc[len(df)-7:]
