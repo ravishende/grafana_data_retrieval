@@ -242,12 +242,12 @@ class QueryHandler():
                 f"'{specifier}' specified in filtering, but rgw queries don't have node data, resulting in no data returned for them.")
         # graph queries
         queries = {
-            'rgw_queue_length': 'sum by(instance) (ceph_rgw_qlen{' + self._filter + '})',
-            'rgw_cache_hit': 'sum by(instance) (ceph_rgw_cache_hit{' + self._filter + '})',
-            'rgw_cache_miss': 'sum by(instance) (ceph_rgw_cache_miss{' + self._filter + '})',
-            'rgw_gets': 'sum by(instance) (ceph_rgw_get{' + self._filter + '})',
-            'rgw_puts': 'sum by(instance) (ceph_rgw_put{' + self._filter + '})',
-            'rgw_failed_req': 'sum by(instance) (ceph_rgw_failed_req{' + self._filter + '})'
+            'rgw_queue_length': 'sum(ceph_rgw_qlen{' + self._filter + '})',
+            'rgw_cache_hit': 'sum(ceph_rgw_cache_hit{' + self._filter + '})',
+            'rgw_cache_miss': 'sum(ceph_rgw_cache_miss{' + self._filter + '})',
+            'rgw_gets': 'sum(ceph_rgw_get{' + self._filter + '})',
+            'rgw_puts': 'sum(ceph_rgw_put{' + self._filter + '})',
+            'rgw_failed_req': 'sum(ceph_rgw_failed_req{' + self._filter + '})'
         }
 
         return queries
@@ -261,26 +261,25 @@ class QueryHandler():
         static_offset = calculate_offset(start, 10)
         duration = delta_to_time_str(timedelta(seconds=duration_seconds))
 
-        # TODO: test if removing the by (pod) makes a difference - I don't think it should
         # all resources and the heart of their queries
         queries = {
             # static metrics
-            'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self._filter + '} offset ' + static_offset + ')',
+            'cpu_request': 'sum (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self._filter + '} offset ' + static_offset + ')',
 
-            'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self._filter + '} offset ' + static_offset + ')',
+            'mem_request': 'sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self._filter + '} offset ' + static_offset + ')',
 
             # non static metrics
-            'mem_usage': 'sum by (pod) (max_over_time(container_memory_working_set_bytes{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+            'mem_usage': 'sum(max_over_time(container_memory_working_set_bytes{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
 
-            'cpu_usage': 'sum by (pod) (increase(container_cpu_usage_seconds_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+            'cpu_usage': 'sum(increase(container_cpu_usage_seconds_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
 
-            'transmitted_packets': 'sum by (pod) (increase(container_network_transmit_packets_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+            'transmitted_packets': 'sum(increase(container_network_transmit_packets_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
 
-            'received_packets': 'sum by (pod) (increase(container_network_receive_packets_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+            'received_packets': 'sum(increase(container_network_receive_packets_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
 
-            'transmitted_bandwidth': 'sum by (pod) (increase(container_network_transmit_bytes_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
+            'transmitted_bandwidth': 'sum(increase(container_network_transmit_bytes_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
 
-            'received_bandwidth': 'sum by (pod) (increase(container_network_receive_bytes_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))'
+            'received_bandwidth': 'sum(increase(container_network_receive_bytes_total{' + self._filter + '}[' + duration + '] offset ' + offset + '))'
         }
 
         return queries
