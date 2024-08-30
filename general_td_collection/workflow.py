@@ -66,7 +66,7 @@ print("\n\n\nStarting df:\n", df, "\n\n\n\n")
 
 # Main workflow
 df = query_handler.query_df(
-    df,
+    df,  # pandas dataframe containing 'start' and 'end' columns
     rgw_queries=False,  # rgw queue, cache, and gets/puts metrics
     gpu_queries=True,  # total gpu usage and requested gpus
     gpu_compute_resource_queries=True,  # gpu utilization and physical metrics
