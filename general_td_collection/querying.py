@@ -143,9 +143,8 @@ class QueryHandler():
         df_to_query = pd.DataFrame()
         if os.path.exists(self._progress_file):
             try:
-                # TODO: figure out what error this gives if it's a blank file or not a csv
                 queried_df = pd.read_csv(self._progress_file, index_col=0)
-            except Exception:
+            except (pd.errors.EmptyDataError, pd.errors.ParserError):
                 pass
 
         if len(queried_df) > 0:
