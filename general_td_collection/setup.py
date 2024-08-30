@@ -22,9 +22,10 @@ def prompt_new_run(new_run: bool):
         new_run_message = "\
             \nATTENTION: new_run is set to True. This means all previous progress will be reset.\
             \nAre you sure you want to continue?"
-        print(colored(new_run_message, "red"))
+        print(colored(new_run_message, "magenta"))
         response = input(
             "Type 'y' to continue resetting the progress. Any other response will continue as if new_run were set to False.\n")
+        print("\n")
         # if it is a new run, initialize files and reset progress, wiping files
         if response == "y":
             reset_files()
