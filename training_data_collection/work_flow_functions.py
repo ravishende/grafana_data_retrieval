@@ -49,7 +49,8 @@ def initialize_files() -> None:
         _initialize_file(file_path)
 
 
-# given a filename of a txt file, line number, and message, update the line at line_number to be "message", ending in a new line
+# given a filename of a txt file, line number, and message, update the line at line_number to
+# be "message", ending in a new line
 def _update_txt_line(file_name: str, line_number: int, message: str) -> None:
     # read file, then update the phase line to be message with a \n
     lines = []
@@ -63,7 +64,8 @@ def _update_txt_line(file_name: str, line_number: int, message: str) -> None:
         file.writelines(lines)
 
 
-# given a file_name and line_number, return the contents of the line (without any trailing whitespace or \n at the end of the line)
+# given a file_name and line_number, return the contents of the line (without any
+# trailing whitespace or \n at the end of the line)
 def _read_txt_line(file_name: str, line_number: int) -> str:
     # read file, then check the line's progress
     # Read the file's current contents
@@ -121,7 +123,8 @@ def _wipe_phase_files(phase_number: int, wipe_paths_gathered: bool = False) -> N
             continue
 
 
-# given a phase number (1 through 4): return True or False depending on whether the stater has been finished or not
+# given a phase number (1 through 4): return True or False depending on whether the phase
+# has been finished or not
 def is_phase_finished(phase_number: int) -> bool:
     # check that input is valid
     _check_phase_number(phase_number)
@@ -160,7 +163,8 @@ def set_phase_unfinished(phase_number: int, wipe_files: bool = False) -> None:
             raise ValueError(
                 f"Phase {phase_number} cannot be set as unfinished because phase {phase_number+1} is finished. Phases must be done sequentially.")
 
-    # write the line number to be "F" (False) at the line corresponding to the phase_number in the phases_progress txt file
+    # write the line number to be "F" (False) at the line corresponding to the phase_number in
+    # the phases_progress txt file
     line_num = phase_number-1
     _update_txt_line(
         file_name=MAIN_FILES['phases_progress'], line_number=line_num, message="F")
@@ -170,8 +174,9 @@ def set_phase_unfinished(phase_number: int, wipe_files: bool = False) -> None:
         _wipe_phase_files(phase_number)
 
 
-# given the total number of phases, set the progress of all phases to False
-# also wipe progress & write files if requested, and wipe paths_gathered file if requested (not recommended)
+# given the total number of phases, set the progress of all phases to False.
+# also wipe progress & write files if requested, and wipe paths_gathered file if
+# requested (not recommended)
 def reset_phases_progress(wipe_files: bool = False, wipe_paths_gathered: bool = False) -> None:
     # handle invalid user input
     if wipe_paths_gathered and not wipe_files:
