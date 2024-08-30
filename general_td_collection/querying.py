@@ -128,7 +128,8 @@ class QueryHandler():
         """
 
         # handle user input
-        if not (gpu_queries or gpu_compute_resource_queries or rgw_queries or cpu_compute_resource_queries):
+        if not (gpu_queries or gpu_compute_resource_queries or
+                rgw_queries or cpu_compute_resource_queries):
             raise ValueError("No queries specified -> nothing to query")
         if df is None:
             try:
@@ -297,7 +298,9 @@ class QueryHandler():
 
         return queries
 
-    def _get_graph_queries(self, gpu_queries: bool = False, gpu_compute_resource_queries: bool = False, rgw_queries: bool = False) -> dict[str, str]:
+    def _get_graph_queries(self, gpu_queries: bool = False,
+                           gpu_compute_resource_queries: bool = False,
+                           rgw_queries: bool = False) -> dict[str, str]:
         graph_queries = {}
 
         if gpu_queries:
@@ -315,8 +318,9 @@ class QueryHandler():
     # given a row of a dataframe, a graphs class instantiation, and a dict of queries for graphs,
     # return a queried version of that row,
     # with the new columns being the graph titles prepended with 'graph_'
-    def _query_row_for_graphs(self, row: pd.Series, graphs_class: Graphs, graph_queries: dict[str, str]) -> pd.Series:
-        # sum by none since we're eventually getting it all down to one data point --> no need to split it further
+    def _query_row_for_graphs(
+            self, row: pd.Series, graphs_class: Graphs, graph_queries: dict[str, str]) -> pd.Series:
+        # sum by none since we eventually get it to one datapoint --> no need to split it further
         graphs_dict = graphs_class.get_graphs_from_queries(
             queries_dict=graph_queries, sum_by=None, start=row['start'], end=row['end'])
         for title, data in graphs_dict.items():
@@ -326,7 +330,6 @@ class QueryHandler():
             row[new_title] = data
         return row
 
-    # TODO: refactor this to not pass a function in
     def _query_row_for_non_graphs(self, row: pd.Series, query_retrieval_funcs_list: list):
         if len(query_retrieval_funcs_list) == 0:
             return row
