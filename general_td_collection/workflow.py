@@ -60,6 +60,7 @@ query_handler = QueryHandler(node=NODE_NAME)
 # query_handler = QueryHandler(namespace="rook")  # has data for rgw queries
 finalizer = Finalizer()
 
+# for testing on just a few datapoints - if you want the whole dataset, remove this line:
 df = df.iloc[len(df)-7:]
 print("\n\n\nStarting df:\n", df, "\n\n\n\n")
 
