@@ -4,6 +4,15 @@ import pandas as pd
 
 
 class Finalizer():
+    """Handles summation/synthesis of queried metrics
+
+    Given a list of graph metrics (optional), work with dataframes to sum over their rows
+
+    Attributes:
+        graph_metrics: A list of metrics for graphs to be summarized by. For all possible
+                       options, use Finalizer.get_graph_metrics_list()
+    """
+
     def __init__(self, graph_metrics: list[str] | str | None = None) -> None:
         if graph_metrics is None:
             graph_metrics = []
