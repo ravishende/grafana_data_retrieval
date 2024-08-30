@@ -93,16 +93,20 @@ class QueryHandler():
                 continue
             # in PromQL, it still works if the filter string ends in a comma
             filter_str += filt + ', '
-        if filter_str == "":
-            warning_msg = (
-                "No filters specified. This will likely cause any queried data to be inaccurate." +
-                "You can either specify them while initializing QueryHandler or call" +
-                "QueryHandler.update_filter, passing in the relevant arguments.")
-            warnings.warn(colored(warning_msg, "red"))
-        response = input("\nContinue without filter? Type 'y' to continue.\n")
+
+        if filter_str != "":
+            self._filter = filter_str
+            return
+
+        warning_msg = (
+            "No filters specified. This will likely cause any queried data to be inaccurate." +
+            "You can either specify them while initializing QueryHandler or call" +
+            "QueryHandler.update_filter, passing in the relevant arguments.")
+        warnings.warn(colored(warning_msg, "red"))
+        response = input(
+            "\nContinue without filter? Type 'y' to continue.\n")
         if response != 'y':
             sys.exit()
-        self._filter = filter_str
 
     def query_df(self, df: pd.DataFrame | None = None, batch_size: int = 5,
                  rgw_queries: bool = False, gpu_queries: bool = False, gpu_compute_resource_queries: bool = False,
