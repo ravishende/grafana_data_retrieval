@@ -11,10 +11,14 @@ class Finalizer():
             self._check_graph_metrics(graph_metrics)
         self.graph_metrics = graph_metrics
         # NOTE: if any metric gets updated here, self._summarize_graph_data must also be updated
-        self.all_graph_metrics = ["min", "max", "mean", "median",
-                                  "std", "var", "sum", "increase", "q1", "q3", "iqr"]
+        self._all_graph_metrics = ["min", "max", "mean", "median",
+                                   "std", "var", "sum", "increase", "q1", "q3", "iqr"]
         self._read_file = "csvs/queried.csv"
         self._graph_columns = []  # they become initialized when self.sum_df is called
+
+    def get_graph_metrics_list(self):
+        """Get a list of all available metrics to describe graph queries"""
+        return self._all_graph_metrics.copy()
 
     def get_graph_columns(self, df: pd.DataFrame) -> list[str]:
         """Get the names of columns in a dataframe that contain graph metrics.
@@ -73,7 +77,7 @@ class Finalizer():
     # given a dict of metrics and statuses (booleans),
     # check that all the keys are recognized and it is of the right type.
     def _check_graph_metrics(self, graph_metrics: list[str] | str) -> None:
-        wrong_type_msg = f"graph_metrics must be a str or list of strs, with any of the following possible elements: {self.all_graph_metrics}"
+        wrong_type_msg = f"graph_metrics must be a str or list of strs, with any of the following possible elements: {self._all_graph_metrics}"
         assert isinstance(graph_metrics, (list, str)), wrong_type_msg
 
         if len(graph_metrics) == 0:
@@ -83,9 +87,9 @@ class Finalizer():
         if isinstance(graph_metrics, str):
             graph_metrics = [graph_metrics]
         for metric in graph_metrics:
-            if metric not in self.all_graph_metrics:
+            if metric not in self._all_graph_metrics:
                 raise ValueError(
-                    f"metric '{metric}' not in acceptable metrics: {self.all_graph_metrics}.")
+                    f"metric '{metric}' not in acceptable metrics: {self._all_graph_metrics}.")
 
     # given a title that may have capitals and spaces,
     # return a lowercase version, with all spaces replaced with underscores
@@ -97,7 +101,7 @@ class Finalizer():
     # given a title of a graph and a metric, return a title of metric_graph_title,
     # with everything lowercase and no spaces (spaces replaced with underscores)
     def _get_metric_col_name(self, graph_title: str, metric: str) -> str:
-        if metric not in self.all_graph_metrics:
+        if metric not in self._all_graph_metrics:
             raise ValueError(
                 f"metric {metric} not in acceptable metrics: {self.graph_metrics}")
         prefix = "graph_"
@@ -145,7 +149,7 @@ class Finalizer():
                 calculated_metric = final_point - first_point
             case _:
                 raise ValueError(
-                    f"metric {metric} not in known metrics: {self.all_graph_metrics}")
+                    f"metric {metric} not in known metrics: {self._all_graph_metrics}")
         return calculated_metric
 
     # given a dataframe with some columns starting with '_graph',
