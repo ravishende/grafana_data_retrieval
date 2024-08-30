@@ -157,9 +157,9 @@ class QueryHandler():
         # get queries
         graph_queries = self._get_graph_queries(
             gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries,
-            # cpu_compute_resource_queries=cpu_compute_resource_queries
         )
-        # TODO: refactor to not pass in a function
+        # since non-graph queries require start and end times embedded in the queries,
+        # pass them in as functions
         non_graph_query_functions = []
         if cpu_compute_resource_queries:
             non_graph_query_functions.append(
