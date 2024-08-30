@@ -73,14 +73,15 @@ class Finalizer():
     # given a dict of metrics and statuses (booleans),
     # check that all the keys are recognized and it is of the right type.
     def _check_graph_metrics(self, graph_metrics: list[str] | str) -> None:
-        if graph_metrics == []:
-            return
         wrong_type_msg = f"graph_metrics must be a str or list of strs, with any of the following possible elements: {self.all_graph_metrics}"
         assert isinstance(graph_metrics, (list, str)), wrong_type_msg
 
         if len(graph_metrics) == 0:
             warnings.warn(
                 "graph_metrics list is empty - no information will be saved from graph queries")
+            return
+        if isinstance(graph_metrics, str):
+            graph_metrics = [graph_metrics]
         for metric in graph_metrics:
             if metric not in self.all_graph_metrics:
                 raise ValueError(
