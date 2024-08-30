@@ -9,14 +9,14 @@ Additionally, for graph queries, you can specify which metrics you would like sa
 
 Usage:
 1. Specify the filter when instantiating the QueryHandler class
-    - query_handler = QueryHandler(pod_regex="...", namespace="wifire-quicfire")
+    - Ex: query_handler = QueryHandler(pod_regex="...", namespace="wifire-quicfire")
     - If you later need to redefine filters in the same program, use the update_filter_str() method
 2. Call the query_df method, specifying which query dashboards to include
-    - queried_df = query_handler.query_df(df, rgw_queries=True,gpu_queries=True)
+    - Ex: queried_df = query_handler.query_df(df, rgw_queries=True, gpu_queries=True)
 3. In the Finalizer's sum_df method, specify the graph_metrics to collect for graph queries
-    - finalizer.sum_df(queried_df, graph_metrics=['max', 'mean', 'increase'])
+    - Ex: finalizer.sum_df(queried_df, graph_metrics=['max', 'mean', 'increase'])
 4. Save the final dataframe of queried information
-    - df.to_csv()
+    - df.to_csv(WRITE_FILE)
 """
 # autopep8: off
 import shutil
@@ -64,11 +64,13 @@ df = df.iloc[len(df)-7:]
 print("\n\n\nStarting df:\n", df, "\n\n\n\n")
 
 # Main workflow
-df = query_handler.query_df(df,
-                            rgw_queries=False,
-                            gpu_queries=True,
-                            gpu_compute_resource_queries=True,
-                            cpu_compute_resource_queries=True)
+df = query_handler.query_df(
+    df,
+    rgw_queries=False,  # rgw queue, cache, and gets/puts metrics
+    gpu_queries=True,  # total gpu usage and requested gpus
+    gpu_compute_resource_queries=True,  # gpu utilization and physical metrics
+    cpu_compute_resource_queries=True  # cpu, memory and network metrics
+)
 df = finalizer.sum_df(
     df, graph_metrics=['min', 'max', 'mean', 'median', 'increase'])
 
