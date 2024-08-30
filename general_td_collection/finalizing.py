@@ -17,8 +17,17 @@ class Finalizer():
         self._graph_columns = []  # they become initialized when self.sum_df is called
 
     def get_graph_columns(self, df: pd.DataFrame) -> list[str]:
-        """given a dataframe with some columns prepended with 'graph_',
-          return all those column names"""
+        """Get the names of columns in a dataframe that contain graph metrics.
+
+        Given a dataframe with some columns prepended with 'graph_', 
+        return a list of all those column names.
+
+        Args:
+            df: a dataframe containing queried information 
+
+        Returns:
+            A list of column names
+       """
         prefix = "graph_"
         graph_columns = [
             col for col in df.columns if col[:len(prefix)] == prefix]
@@ -33,7 +42,7 @@ class Finalizer():
                 - for list of all metrics, look at self.all_graph_metrics
 
         Returns:
-            summed dataframe with new columns and some dropped old ones
+            Summed dataframe with new columns and some dropped old ones.
         """
         wrong_type_msg = f"Expected df to be a pandas DataFrame but was type {type(df)}"
         assert isinstance(df, pd.DataFrame), wrong_type_msg
