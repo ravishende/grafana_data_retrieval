@@ -35,7 +35,6 @@ class Phase_2():
         ]
 
     # runs the whole phase. Returns True if successful, False otherwise
-
     def run(self) -> bool:
         success = False
         # get df from csv file
