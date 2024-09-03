@@ -1,33 +1,28 @@
+'''
+This file assumes there is already a column called 'ensemble'
+that contains the ensemble that each run is a part of.
+'''
 # autopep8: off
-from multiprocessing.sharedctypes import Value
-import pandas as pd
 from ast import literal_eval
-from termcolor import colored
 from uuid import UUID
 import shutil
-from metrics_and_columns_setup import GET_DURATION_COLS
-from workflow_files import PHASE_1_FILES
 import sys
 import os
+import pandas as pd
+from termcolor import colored
+from metrics_and_columns_setup import GET_DURATION_COLS
+from workflow_files import PHASE_1_FILES
 # get set up to be able to import helper files from parent directory (grafana_data_retrieval)
 sys.path.append("../../grafana_data_retrieval")
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 grandparent = os.path.dirname(parent)
 sys.path.append(grandparent)
+# pylint: disable=wrong-import-position
 from helpers.filtering import get_worker_id
 from helpers.printing import print_heading
 # autopep8: off
 
-'''
-NOTE:
-This file should be run after find_ensembles.py creates a new csv 
-of the training data with an included ensemble_id column.
-This file assumes there is already a column called 'ensemble'
-that contains the ensemble that each run is a part of.
-'''
-def GET_NUM_INSERTED_DURATION_COLS():
-    return GET_DURATION_COLS()['num_cols']
 ENSEMBLE_RUN_FILE = PHASE_1_FILES['read']
 IS_HELITACK = False # runs that are done through the dev that have non default hardware settings
 
@@ -35,12 +30,15 @@ IS_HELITACK = False # runs that are done through the dev that have non default h
 pd.set_option("display.max_columns", None)
 terminal_width = shutil.get_terminal_size().columns
 pd.set_option('display.width', terminal_width)
-# pd.set_option("display.max_rows", None)
+
+def get_num_inserted_duration_cols():
+    return GET_DURATION_COLS()['num_cols']
 
 def set_helitack_status(helitack_status=False):
     if helitack_status != True and helitack_status != False:
         raise ValueError("helitack_status must be either True or False, with False by default")
     # update the helitack status
+    # pylint: disable=global-statement
     global IS_HELITACK
     IS_HELITACK = helitack_status
 
@@ -49,7 +47,7 @@ def set_helitack_status(helitack_status=False):
 def get_columns_from_metrics(
     metric_list, num_inserted_duration_cols=None, include_total=True):
     if num_inserted_duration_cols is None:
-        num_inserted_duration_cols = GET_NUM_INSERTED_DURATION_COLS()
+        num_inserted_duration_cols = get_num_inserted_duration_cols()
     summary_columns = []
     for name in metric_list:
         # get total duration column names
@@ -76,7 +74,7 @@ def get_columns_from_metrics(
         # insert the percent columns into the dataframe as 100 * numerator columns / denominator columns
 def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metrics, static_metrics, num_inserted_duration_cols=None):
     if num_inserted_duration_cols is None:
-        num_inserted_duration_cols = GET_NUM_INSERTED_DURATION_COLS()
+        num_inserted_duration_cols = get_num_inserted_duration_cols()
 
     # make sure that all metrics lists are the same size
     if not (len(percent_metrics) == len(numerator_metrics) == len(denominator_metrics)):
@@ -87,8 +85,8 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
         final_duration_col = df[f"duration_t{num_inserted_duration_cols}"]
         try:
             final_duration_col = final_duration_col.astype(int)
-        except:
-            raise ValueError(f"Expected final duration column to be numeric, but was type {type(final_duration_col[0])}")
+        except Exception as exc:
+            raise ValueError(f"Expected final duration column to be numeric, but was type {type(final_duration_col[0])}.") from exc
 
     # get columns lists by adding _total, and _t1, _t2, etc. to each metric in each metric_list in percent_metrics_format. If num_inserted_duration_cols==0, it will just be _total metrics
     percent_col_names = get_columns_from_metrics(percent_metrics, num_inserted_duration_cols, include_total=False)
@@ -105,20 +103,22 @@ def insert_percent_cols(df, percent_metrics, numerator_metrics, denominator_metr
             denominator_col_names += get_columns_from_metrics([metric], num_inserted_duration_cols, include_total=False)
 
     # calculate percentage columns
-    for i in range(len(percent_col_names)):
-        # get numerator and denominator for calculation
-        numerator_col = df[numerator_col_names[i]]
-        denominator_col = df[denominator_col_names[i]]
-        percent_col = percent_col_names[i]
-        # handle if denominator column is cpu_request (multiply it by duration_t{x} to get into cpu_seconds)
-        if denominator_col_names[i] == "cpu_request":
-            time_suffix = numerator_col_names[i].split('_')[-1]  # should be "total", "t1", "t2", etc. 
+    zipped_col_names = zip(percent_col_names, numerator_col_names, denominator_col_names)
+    for percent_name, numerator_name, denominator_name in zipped_col_names:
+        # denominator col may be updated - save it separately to avoid changing the column in the df
+        denominator_col = df[denominator_name]
+        # if denominator is cpu_request, multiply it by duration_t{x} to get into cpu_seconds so
+        # it is the same unit as the numerator (cpu_usage)
+        if denominator_name == "cpu_request":
+            time_suffix = numerator_name.split('_')[-1]  # should be "total", "t1", "t2", etc. 
             if time_suffix == "total":
                 continue
+            # multiply cpu_request denominator col by duration_t{x} to get into cpu_seconds
             duration_t_x = df[f"duration_{time_suffix}"]
             denominator_col = denominator_col * duration_t_x
+
         # calculate and insert percent column
-        df[percent_col] = 100 * numerator_col / denominator_col
+        df[percent_name] = 100 * df[numerator_name] / denominator_col
 
     return df
 
@@ -172,8 +172,8 @@ def sum_pods_for_ensemble(result_list, ensemble, sum=True):
         else:
             try:
                 uuid = UUID(worker_id)
-            except: 
-                print(colored(pod, "magenta"))
+            # pylint: disable=bare-except
+            except:
                 continue
         # if ensemble id matches run's ensemble, add it to total
         if str(uuid) == ensemble:
@@ -259,18 +259,16 @@ def update_columns(df, update_col_names, ensemble_col_title, no_sum_metrics):
 
 
 
-'''
-============================================
-                Main Program
-============================================
-'''
+# ============================================
+#                 Main Program
+# ============================================
 
 if __name__ == "__main__":
-    read_file = "old/csv_files/queried.csv" 
-    write_file = "old/csv_files/partial_summed_all_metrics.csv"
+    READ_FILE = "old/csv_files/queried.csv"
+    WRITE_FILE = "old/csv_files/partial_summed_all_metrics.csv"
 
     # all queried metrics
-    all_metrics = [
+    ALL_METRICS = [
         "cpu_usage",
         "mem_usage",
         "cpu_request",
@@ -281,69 +279,35 @@ if __name__ == "__main__":
         "received_bandwidth"
     ]
 
-    static_metrics = [
+    STATIC_METRICS = [
         "mem_request"
         "cpu_request"
     ]
 
     # get a list of metrics that need to be summed (all metrics - no_sum metrics)
-    non_static_metrics = [metric for metric in all_metrics if metric not in static_metrics]
+    NON_STATIC_METRICS = [metric for metric in ALL_METRICS if metric not in STATIC_METRICS]
     # get names of all columns to sum
-    columns_to_sum = get_columns_from_metrics(non_static_metrics)
-    all_metric_cols = static_metrics + columns_to_sum
+    columns_to_sum = get_columns_from_metrics(NON_STATIC_METRICS)
+    all_metric_cols = STATIC_METRICS + columns_to_sum
 
     # get the csv file as a pandas dataframe
-    summed_runs = pd.read_csv(read_file, index_col=0)
+    summed_runs = pd.read_csv(READ_FILE, index_col=0)
     # specify the ensemble ids column name
     ensemble_col = "ensemble_uuid"
 
     # update columns to get float values from json
     print_heading("Summing Up Columns")
-    summed_runs = update_columns(summed_runs, all_metric_cols, ensemble_col, no_sum_metrics=static_metrics)
+    summed_runs = update_columns(summed_runs, all_metric_cols, ensemble_col, no_sum_metrics=STATIC_METRICS)
 
     # try to fill in any na values in static columns by looking at other runs with same ensemble
-    summed_runs = fill_in_static_na(summed_runs, static_metrics)
+    summed_runs = fill_in_static_na(summed_runs, STATIC_METRICS)
 
     # insert percent columns into the dataframe
-    percent_metrics = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
-    numerator_metrics = ["cpu_usage", "mem_usage"]
-    denominator_metrics = static_metrics
-    summed_runs = insert_percent_cols(summed_runs, percent_metrics, numerator_metrics, denominator_metrics, static_metrics)
+    PERCENT_METRICS = ["cpu_request_%", "mem_request_%"]  # these do not exist yet - the columns for these metrics will be calculated
+    NUMERATOR_METRICS = ["cpu_usage", "mem_usage"]
+    DENOMINATOR_METRICS = STATIC_METRICS
+    summed_runs = insert_percent_cols(summed_runs, PERCENT_METRICS, NUMERATOR_METRICS, DENOMINATOR_METRICS, STATIC_METRICS)
 
     # save the dataframe to a file and print it
-    summed_runs.to_csv(write_file)
+    summed_runs.to_csv(WRITE_FILE)
     print(summed_runs)
-
-
-'''
-# split the summed_runs into runs that had data for total resources and for ones that didn't (no bp3d-workers)
-# in other words, if cpu_tot or mem_tot are none, add row to na_mask
-# na_mask = summed_runs[cpu_tot].isna() | summed_runs[mem_tot].isna()
-# na_worker_runs = summed_runs[na_mask]
-# valid_worker_runs = summed_runs[~na_mask]
-
-# summed_runs = update_col(summed_runs, "cpu_request_total", ensemble_col, sum=False)
-# summed_runs = update_col(summed_runs, "mem_request_total", ensemble_col, sum=False)
-# save dataframes to new files and print summed_runs
-
-# valid_worker_runs.to_csv(success_write_file)
-# na_worker_runs.to_csv(na_write_file)
-
-# can be used to find the worker ids of each run for analysis/debugging purposes
-# def get_ids(res_list):
-#     ids = []
-#     for item in res_list:
-#         ids.append(get_worker_id(item['metric']['pod']))
-#     return ids
-
-
-# update column (sum json-like data to get single float) for multiple columns
-# cpu
-# summed_runs = update_col(summed_runs, cpu_tot, ensemble_col)
-# summed_runs = update_col(summed_runs, cpu_t1, ensemble_col)
-# summed_runs = update_col(summed_runs, cpu_t2, ensemble_col)
-# memory
-# summed_runs = update_col(summed_runs, mem_tot, ensemble_col)
-# summed_runs = update_col(summed_runs, mem_t1, ensemble_col)
-# summed_runs = update_col(summed_runs, mem_t2, ensemble_col)
-'''
