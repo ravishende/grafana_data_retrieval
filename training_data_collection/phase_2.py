@@ -38,14 +38,16 @@ class Phase_2():
     def run(self) -> bool:
         success = False
         ids_included_df = pd.read_csv(self.files['read'], index_col=0)
-        # rename 'run_start', 'run_end' columns to 'start', 'stop' for add_area_and_runtime method to work (as well as many other methods in different phases)
+        # rename 'run_start', 'run_end' columns to 'start', 'stop' for add_area_and_runtime method
+        # to work (as well as many other methods in different phases)
         ids_included_df = self._rename_start_stop(ids_included_df)
         calculated_df = self.add_area_and_runtime(ids_included_df)
         calculated_df = self._add_queue_seconds_if_applicable(calculated_df)
         filtered_df = self.drop_columns(
             calculated_df, self.drop_cols, reset_index=True)
         # add duration_t1, duration_t2, etc. columns
-        # self.num_duration_cols is the number of duration columns to insert and query for (doesn't include "runtime")
+        # self.num_duration_cols is the number of duration columns to insert and query
+        # for (doesn't include "runtime")
         preprocessed_df = self.insert_n_duration_columns(
             filtered_df, self.num_duration_cols)
         preprocessed_df.to_csv(self.files['write'])
@@ -54,14 +56,18 @@ class Phase_2():
         success = True
         return success
 
-    # given a dataframe and number of duration columns to insert, (also single_method, which is either -1 (not a single method) or some int between 0 and 2)
+    # given a dataframe and number of duration columns to insert, along with single_method, which
+    # is either -1 (not a single method) or some int between 0 and 2
     # return an updated dataframe with an added n duration columns of various insert methods
-    def insert_n_duration_columns(self, df: pd.DataFrame, n: int, single_method: int = -1) -> pd.DataFrame:
+    def insert_n_duration_columns(
+            self, df: pd.DataFrame, n: int, single_method: int = -1) -> pd.DataFrame:
         num_insert_methods = 3
-        # warn the user if they are expecting more insert methods than are available in _insert_rand_refresh_col
+        # warn the user if they are expecting more insert methods than
+        # are available in _insert_rand_refresh_col
         if n > num_insert_methods and not single_method:
             warnings.warn(
-                "There are more columns requested than insert methods defined. Repeating the last method after other methods are used.")
+                "There are more columns requested than insert methods defined. "
+                "Repeating the last method after other methods are used.")
         for i in range(0, n):
             # get the insert method
             if single_method != -1:
@@ -88,7 +94,8 @@ class Phase_2():
             row['start'], row['stop']), axis=1)
         return df
 
-    def drop_columns(self, df: pd.DataFrame, columns_to_drop: list[str], reset_index: bool = True) -> pd.DataFrame:
+    def drop_columns(self, df: pd.DataFrame, columns_to_drop: list[str],
+                     reset_index: bool = True) -> pd.DataFrame:
         df = df.drop(columns=columns_to_drop)
         if reset_index:
             df = df.reset_index(drop=True)
@@ -144,7 +151,7 @@ class Phase_2():
 
     def _add_queue_seconds_if_applicable(self, df: pd.DataFrame) -> pd.DataFrame:
         # if there's no queue time given, don't change it
-        if not ('queue_time' in df.columns):
+        if not 'queue_time' in df.columns:
             return df
         df['queue_time'] = df['queue_time'].apply(datetime_ify)
         df['start'] = df['start'].apply(datetime_ify)
@@ -164,7 +171,8 @@ class Phase_2():
         return df
 
     # generate random values between run_start and some end time, put into duration1
-    def _insert_rand_refresh_col(self, df: pd.DataFrame, refresh_title: str, method: int = 0) -> pd.DataFrame:
+    def _insert_rand_refresh_col(self, df: pd.DataFrame, refresh_title: str,
+                                 method: int = 0) -> pd.DataFrame:
         duration_seconds = df['runtime']
         if method == 0:
             # generate random values between 45sec and 5min
