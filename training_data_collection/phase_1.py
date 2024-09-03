@@ -16,8 +16,8 @@ pd.set_option('display.max_columns', None)
 # =========================
 # Phase 1:  Collecting Runs
 # =========================
-# 1. get successful bp3d runs from read csv
-# 2. collect runs from successful bp3d runs
+# 1. get successful bp3d run ids from read file
+# 2. collect runs from successful bp3d run ids
 
 # FINISH:
 # save df to a file
@@ -91,10 +91,13 @@ class Phase_1():
         runs_df = self.get_df_from_paths(final_paths_list, batch_size=500)
 
         self._print_if_verbose("getting finalized dataframe")
-        # remove rows with na values for run_start, run_end, renaming those columns to start and stop
+        # add ensemble ids to the runs
         result_df = self._merge_dfs(
             runs_data_df=runs_df, successful_runs_list_df=successful_runs_list_df)
+
         result_df = self._remove_na_rows(result_df, reset_index=True)
+        result_df = result_df.rename(
+            columns={"run_end": "stop", "run_start": "start"})
 
         # save final_df
         print(result_df)
@@ -111,7 +114,8 @@ class Phase_1():
         # get all directories and previously gathered directories
         directories = self.fs.ls(self.bucket)
         gathered_directories = self._get_gathered_items("path_directories")
-        # the last gathered directory may have new subdirectories. remove it from gathered_directories to account for this
+        # the last gathered directory may have new subdirectories. remove it from
+        # gathered_directories to account for this
         gathered_directories = gathered_directories[:-1]
 
         # get list of directories that have not been gathered
@@ -170,6 +174,7 @@ class Phase_1():
             else:
                 runs_df_exists = False
                 self._print_if_debug("RUN DF DOESNT EXIST", "magenta")
+        # pylint: disable=bare-except
         except:
             num_gathered_runs = 0
             runs_df_exists = False
@@ -536,9 +541,6 @@ class Phase_1():
 
         # Drop columns with NA values in any of the time columns
         df = df.dropna(subset=time_cols)
-
-        # Rename the 'run_end' column to stop and run_start column to 'start'
-        df = df.rename(columns={"run_end": "stop", "run_start": "start"})
 
         # reset the indices to 0 to len(df)-1 if requested
         if reset_index:
