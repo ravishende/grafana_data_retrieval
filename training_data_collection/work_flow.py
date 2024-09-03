@@ -32,11 +32,13 @@ pd.set_option('display.width', terminal_width)
 #     User Settings
 # ========================
 
-# If this is the first time running it with new data, set new_run to True. Otherwise, if you are partway through running it, set new_run to False.
+# If this is the first time running the program with new data, set new_run to True. Otherwise,
+# if you are partway through running it, set new_run to False.
 NEW_RUN = True
-# If running into unexpected issues in phase 1 with paths and run uuids not matching up, try setting thorough_refresh to True. Otherwise, keep it False to not waste time regathering paths.
+# If running into unexpected issues in phase 1 with paths and run uuids not matching up, try
+# setting thorough_refresh to True. Otherwise, keep it False to not waste time regathering paths.
 THOROUGH_REFRESH = False
-# If we're collecting helitack (nonstandard - dev) runs, set this to True, otherwise by default, set it to False
+# If we're collecting helitack (nonstandard dev) runs, set this to True, otherwise default to False
 IS_HELITACK_RUN = False
 # If the "..._total" columns should be more than just cpu_usage and mem_usage, set this to True
 ALL_TOTALS_INCLUDED = True
@@ -64,16 +66,17 @@ phases = [p_1, p_2, p_3, p_4]
 
 # Run phases that have not yet been run
 for i, phase in enumerate(phases):
-    # Get phase number (start at 1, not 0)
+    # Phases start at 1, not 0
     phase_number = i+1
     # If phase has previously been finished, move on to next stage
     if is_phase_finished(phase_number):
-        if phase_number == len(phases):
-            print("Entire work flow has already been completed. Perhaps you would like a new run? If so, set new_run to be True and run again.")
-            break
         print(colored(
             f"\n\nPhase {phase_number} has already been completed. Moving on.", "green"))
-    # For each unfinished phase, run the phase, then set phase_finished of that stage to True
+        if phase_number == len(phases):
+            print("\nEntire work flow has already been completed. Perhaps you would like a new run?"
+                  "\nIf so, set NEW_RUN to be True and run again.\n")
+            break
+    # Run each unfinished phase, setting it to finished once it is complete
     else:
         # Run the phase and see what the resulting success flag is
         print(colored(f"\n\nBeginning Phase {phase_number}...", "magenta"))
