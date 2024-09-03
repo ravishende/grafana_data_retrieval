@@ -81,7 +81,8 @@ class Phase_1():
         successful_runs_list_df = self._get_successful_runs(
             runs_list_df, reset_index=True)
 
-        # get a df of [path, run_uuid], where we filter new_paths, only including the paths with run_uuids that were successful.
+        # get a df of [path, run_uuid], where we filter new_paths, only including the paths with
+        # run_uuids that were successful.
         runs_to_gather_df = self._get_runs_to_gather_df(
             new_paths, successful_runs_list_df)
         final_paths_list = runs_to_gather_df['path'].to_list()
@@ -125,7 +126,8 @@ class Phase_1():
         simulation_paths_list = self._get_gathered_items("paths")
         # start gathering directories
         progress_msg = f"{len(gathered_directories)} directories have already been gathered. \
-            Gathering paths for the remaining {len(ungathered_directories)}. \nThere are {len(directories)} total directories."
+            Gathering paths for the remaining {len(ungathered_directories)}. \nThere are \
+            {len(directories)} total directories."
         self._print_if_verbose(progress_msg)
 
         # if we're not using batches, run everything at once
@@ -147,12 +149,14 @@ class Phase_1():
                 end_index = len(ungathered_directories)
             # get simulation paths for this batch
             self._print_if_verbose(
-                f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left.", end=" ")
+                f"\nGetting paths for {end_index} / {len(ungathered_directories)} directories left"
+            )
             self._print_if_verbose(
                 f"Batch {i+1}/{num_batches}", "magenta")
             sim_paths_batch = self._get_paths_from_directories(
                 ungathered_directories[:end_index])
-            # update all simulation paths and remove newly gathered directories from ungathered directories
+            # update all simulation paths and remove newly gathered directories from
+            # ungathered directories
             simulation_paths_list += sim_paths_batch
             ungathered_directories = ungathered_directories[end_index:]
             # append newly collected paths to the paths.txt file
@@ -162,7 +166,8 @@ class Phase_1():
 
     # given the simulation paths, create a df containing runs
     # for all paths that have corresponding files
-    def get_df_from_paths(self, simulation_paths: list[str], batch_size: int = 1000) -> pd.DataFrame:
+    def get_df_from_paths(self, simulation_paths: list[str],
+                          batch_size: int = 1000) -> pd.DataFrame:
         # find out how many runs have been looked at already
         try:
             runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
@@ -453,7 +458,8 @@ class Phase_1():
     # return a new dataframe with only the successful runs
     def _get_successful_runs(self, df: pd.DataFrame, reset_index: bool = True) -> pd.DataFrame:
         if 'ens_status' not in df.columns or 'run_status' not in df.columns:
-            warning_message = "\n\nDataFrame does not have 'ens_status' or 'run_status'. Returning df - will not filter by successful runs.\n\n"
+            warning_message = ("\n\nDataFrame does not have 'ens_status' or 'run_status'."
+                               "Returning df - will not filter by successful runs.\n\n")
             print(colored(warning_message, "red"))
             return df
         # handle if df is empty
@@ -478,7 +484,8 @@ class Phase_1():
 
     # get a df of path, run_uuid, where we filter new_paths, only including the paths with
     # run_uuids that were successful.
-    def _get_runs_to_gather_df(self, new_paths: list[str], successful_runs_list_df: pd.DataFrame) -> pd.DataFrame:
+    def _get_runs_to_gather_df(self, new_paths: list[str],
+                               successful_runs_list_df: pd.DataFrame) -> pd.DataFrame:
         # Convert new_paths list to a DataFrame
         new_paths_df = pd.DataFrame(data={'path': new_paths})
         # Apply _run_id_from_path function to get run_uuid
