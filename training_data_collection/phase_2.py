@@ -37,21 +37,17 @@ class Phase_2():
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self) -> bool:
         success = False
-        # get df from csv file
         ids_included_df = pd.read_csv(self.files['read'], index_col=0)
         # rename 'run_start', 'run_end' columns to 'start', 'stop' for add_area_and_runtime method to work (as well as many other methods in different phases)
         ids_included_df = self._rename_start_stop(ids_included_df)
-        # calculate area and runtime and add those columns to dataframe
         calculated_df = self.add_area_and_runtime(ids_included_df)
         calculated_df = self._add_queue_seconds_if_applicable(calculated_df)
-        # drop self.drop_cols (columns that were used to calculate area)
         filtered_df = self.drop_columns(
             calculated_df, self.drop_cols, reset_index=True)
         # add duration_t1, duration_t2, etc. columns
         # self.num_duration_cols is the number of duration columns to insert and query for (doesn't include "runtime")
         preprocessed_df = self.insert_n_duration_columns(
             filtered_df, self.num_duration_cols)
-        # save preprocessed_df to file and print it
         preprocessed_df.to_csv(self.files['write'])
         print(preprocessed_df)
 
