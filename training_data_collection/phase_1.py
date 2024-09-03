@@ -139,8 +139,8 @@ class Phase_1():
             return all_unique_paths
         # collect runs in batches
         num_batches = math.ceil(len(ungathered_directories)/batch_size)
-        for i in range(0, num_batches):
-            # get end index for batch. Shouldn't change because
+        for i in range(num_batches):
+            # get end index for batch. Shouldn't change because ungathered_directories is decreasing
             end_index = batch_size
             # if this is the last iteration, generate paths until the end of ungathered_directories
             if i == num_batches-1:
@@ -183,7 +183,8 @@ class Phase_1():
         num_batches = math.ceil(
             (len(simulation_paths) - num_gathered_runs) / batch_size)
         self._print_if_debug(
-            f'\tnum_batches = {num_batches}\n\tbatch_size = {batch_size}\n\tnum simulation_paths = {len(simulation_paths)}\n\tnum_gathered_runs = {num_gathered_runs}', "magenta")
+            f'\tnum_batches = {num_batches}\n\tbatch_size = {batch_size}\n\tnum simulation_paths \
+            = {len(simulation_paths)}\n\tnum_gathered_runs = {num_gathered_runs}', color="magenta")
         # loop over unexplored simulation paths, getting df chunks for each batch
         current_batch = 1
         for start_index in range(num_gathered_runs, len(simulation_paths), batch_size):
@@ -218,7 +219,8 @@ class Phase_1():
         # get login details from .env file
         if not load_dotenv():
             raise EnvironmentError(
-                "Failed to load the .env file. This file should contain the ACCESS_KEY and SECRET_KEY for the s3 file system")
+                "Failed to load the .env file. This file should contain the ACCESS_KEY and"
+                " SECRET_KEY for the s3 file system")
         endpoint = 'https://wifire-data.sdsc.edu:9000'
         access_key = os.getenv("ACCESS_KEY")
         secret_key = os.getenv("SECRET_KEY")
@@ -438,7 +440,8 @@ class Phase_1():
             f"\nFinished reading from {start} to {stop-1}\n", "green")
         num_successful_rows = len(rows)
         self._print_if_debug(
-            f"{num_successful_rows} collected runs | {len(bad_paths)} files not found.\n{runs_missing_data} runs were missing at least some data\n")
+            f"{num_successful_rows} collected runs | {len(bad_paths)} files not found.\
+            \n{runs_missing_data} runs were missing at least some data\n")
 
         # append bad paths to files not found
         self._append_txt_file(self.files['files_not_found'], bad_paths)
@@ -456,7 +459,9 @@ class Phase_1():
         # handle if df is empty
         if len(df) == 0:
             raise ValueError(
-                "The read file df is empty; cannot get successful runs from it. Please provide a proper dataframe that contains the columns 'run_uuid', 'ensemble_uuid', 'ens_status', and 'runs_status'.")
+                "The read file dataframe is empty; cannot get successful runs from it."
+                "Please provide a proper dataframe that contains the columns: "
+                "'run_uuid', 'ensemble_uuid', 'ens_status', and 'runs_status'.")
         # get a df with only the successful runs
         successful_runs = df[(df["ens_status"].str.lower() == "done")
                              & (df["run_status"].str.lower() == "done")]
@@ -471,15 +476,8 @@ class Phase_1():
             columns=['ens_status', 'run_status'])
         return successful_runs
 
-    # get a df of path, run_uuid, where we filter new_paths, only including the paths with run_uuids that were successful.
-    # def get_runs_to_gather_df(self, new_paths, successful_runs_list_df):
-    #     # Convert new_paths list to a DataFrame
-    #     new_paths_df = pd.DataFrame(new_paths, columns=['path'])
-    #     # Apply _run_id_from_path function to get run_uuid
-    #     new_paths_df['run_uuid'] = new_paths_df['path'].apply(self._run_id_from_path)
-    #     # Merge with successful_runs_list_df to filter out unsuccessful runs
-    #     result_df = new_paths_df[new_paths_df['run_uuid'].isin(successful_runs_list_df['run_uuid'])]
-    #     return result_df
+    # get a df of path, run_uuid, where we filter new_paths, only including the paths with
+    # run_uuids that were successful.
     def _get_runs_to_gather_df(self, new_paths: list[str], successful_runs_list_df: pd.DataFrame) -> pd.DataFrame:
         # Convert new_paths list to a DataFrame
         new_paths_df = pd.DataFrame(data={'path': new_paths})
@@ -490,7 +488,8 @@ class Phase_1():
             f"new paths df length: {len(new_paths_df)}", "green")
         self._print_if_debug(
             f"successful_runs_list_df length: {len(successful_runs_list_df)}", "green")
-        # Merge with successful_runs_list_df on 'run_uuid' to include 'ensemble_uuid' and filter out unsuccessful runs
+        # Merge with successful_runs_list_df on 'run_uuid' to include 'ensemble_uuid' and
+        # filter out unsuccessful runs
         result_df = pd.merge(
             new_paths_df, successful_runs_list_df, on='run_uuid', how='right')
         self._print_if_debug(
@@ -501,14 +500,17 @@ class Phase_1():
         return result_df
 
     # given a df that contains all successful runs and a df that
-    def _merge_dfs(self, runs_data_df: pd.DataFrame, successful_runs_list_df: pd.DataFrame) -> pd.DataFrame:
+    def _merge_dfs(self, runs_data_df: pd.DataFrame,
+                   successful_runs_list_df: pd.DataFrame) -> pd.DataFrame:
         # select the required columns from successful_runs_list_df
         if len(runs_data_df) == 0:
             raise ValueError(
                 "\n\nruns_data_df is empty, so it cannot be merged with successful runs df")
         if len(successful_runs_list_df) == 0:
             raise ValueError(
-                "\n\nsuccessful_runs_list_df is empty, so it cannot be merged with runs data df.\nFirst, make sure that there are some successful runs in the read df. If there are, try setting `new_run=True`, `thorough_refresh=True` in work_flow.py and rerunning.\n\n")
+                "\n\nsuccessful_runs_list_df is empty, so it cannot be merged with runs data df."
+                "\nMake sure there are successful runs in the read df. If there are, try setting"
+                " `new_run=True`, `thorough_refresh=True` in work_flow.py and rerunning.\n\n")
 
         # remove duplicate runs (drop duplicate run ids)
         runs_data_df = runs_data_df.drop_duplicates(subset='run_uuid')
@@ -521,7 +523,8 @@ class Phase_1():
             cols_to_keep.append("queue_time")
         successful_runs = successful_runs_list_df[cols_to_keep]
 
-        # merge the dataframes on 'run_uuid' with a left join to include only the rows from runs_data_df - merged_df['run_uuid'] is the same as runs_data_df['run_uuid]
+        # merge the dataframes on 'run_uuid' with a left join to include only the rows from
+        # runs_data_df - merged_df['run_uuid'] is the same as runs_data_df['run_uuid]
         merged_df = pd.merge(
             runs_data_df, successful_runs, on='run_uuid', how='left')
 
@@ -529,11 +532,10 @@ class Phase_1():
 
     # given a df returns an updated df with the NaN time rows removed
     def _remove_na_rows(self, df: pd.DataFrame, reset_index: bool = True) -> pd.DataFrame:
-        # crucial columns that need to have data. If they do not, that means the run failed somewhere
+        # crucial columns that need to have data. If they don't, that means the run failed somewhere
         time_cols = ['run_start', 'run_end']
 
-        # Create a new DataFrame that includes rows with NA values in 'start', 'stop', or 'runtime'
-        # Then store it in a csv file called na_times
+        # save failed runs in a separate csv for potential later analysis
         na_mask = df[time_cols].isna()
         na_rows_df = df[na_mask.any(axis=1)]
         if len(na_rows_df) > 0:
