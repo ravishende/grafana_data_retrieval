@@ -36,6 +36,8 @@ class Phase_2():
 
     # runs the whole phase. Returns True if successful, False otherwise
     def run(self) -> bool:
+        """Read the output from Phase_1.run() and preprocess the dataframe for querying.
+        """
         success = False
         ids_included_df = pd.read_csv(self.files['read'], index_col=0)
         # rename 'run_start', 'run_end' columns to 'start', 'stop' for add_area_and_runtime method
@@ -56,11 +58,20 @@ class Phase_2():
         success = True
         return success
 
-    # given a dataframe and number of duration columns to insert, along with single_method, which
-    # is either -1 (not a single method) or some int between 0 and 2
-    # return an updated dataframe with an added n duration columns of various insert methods
     def insert_n_duration_columns(
             self, df: pd.DataFrame, n: int, single_method: int = -1) -> pd.DataFrame:
+        """
+        Given a dataframe and number of duration columns to insert, along with single_method, which
+        is either -1 (not a single method) or some int between 0 and 2
+        return an updated dataframe with an added n duration columns of various insert methods
+        Args:
+            df: The dataframe to insert the columns into
+            n: how many partial duration columns to insert
+            single_method: (0 to 2) the method by which the durations are calculated. Default is -1: use all of them if possible (bounded by n)
+
+        Returns:
+            The updated dataframe
+        """
         num_insert_methods = 3
         # warn the user if they are expecting more insert methods than
         # are available in _insert_rand_refresh_col
@@ -76,16 +87,17 @@ class Phase_2():
                 insert_method = i
                 if insert_method >= num_insert_methods:
                     insert_method = num_insert_methods - 1
-            # assemble the duration_title
             duration_title = "duration_t" + str(i + 1)
             # insert the duration column into the df
             df = self._insert_rand_refresh_col(
                 df, duration_title, method=insert_method)
         return df
 
-    # given a dataframe with 'extent', 'start', and 'stop' columns,
-    # return a df with added 'area' and 'runtime' columns
     def add_area_and_runtime(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Given a dataframe with 'extent', 'start', and 'stop' columns,
+        Return a df with added 'area' and 'runtime' columns
+        """
         # extent is required to calculate area - drop rows that don't contain it
         df = self._drop_no_extent(df, reset_index=True)
         # calculate area and runtime
@@ -96,6 +108,8 @@ class Phase_2():
 
     def drop_columns(self, df: pd.DataFrame, columns_to_drop: list[str],
                      reset_index: bool = True) -> pd.DataFrame:
+        """Drop columns of a dataframe with an option to reset the index
+        """
         df = df.drop(columns=columns_to_drop)
         if reset_index:
             df = df.reset_index(drop=True)
