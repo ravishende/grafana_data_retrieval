@@ -9,6 +9,8 @@ data/remove_unnamed.py
 data/burn_unit_distr.py
 data/compare_contrast.py
 data/analysis/
+realtime_runtime_prediction/
+general_td_collection/csvs
 training_data_collection/txts/
 training_data_collection/csvs/
 training_data_collection/old_csvs/
@@ -22,4 +24,3 @@ training_data_collection/get_data.py
 training_data_collection/get_run_uuids.py
 training_data_collection/investigate_row_drops.py
 training_data_collection/helpers_training_data_collection/old/csv_files/
-general_td_collection/csvs
