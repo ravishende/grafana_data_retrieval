@@ -25,7 +25,7 @@ def datetime_ify(time: str | int | float | pd.Timestamp | datetime) -> datetime:
     if isinstance(time, (float, int)):
         return datetime.fromtimestamp(time)
     type_error_msg = f"time was type {type(time)}, not one of the expected formats:\
-          str | pd.Timestamp | float | datetime "
+          str | int | float | pd.Timestamp | datetime "
     assert isinstance(time, str), type_error_msg
     # get time as datetime object. Time format should be one of three patterns.
     # get time down to the second, no decimal seconds.
