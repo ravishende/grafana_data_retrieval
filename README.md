@@ -24,7 +24,7 @@ Other Features:
 
    &nbsp; &nbsp; `table_for_run.py`
 
-4. Get analytics from other Grafana Dashboards
+4. Get analytics from other Grafana Dashboards - GPUs, storage, etc.
 
    &nbsp; &nbsp; `dashboards/`
 
