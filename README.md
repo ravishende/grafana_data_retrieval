@@ -16,7 +16,7 @@ Other Features:
 
    &nbsp; &nbsp; `training_data_collection/` (specifically work_flow.py)
 
-2. Collect training data for any run (BP3D or otherwise) over a period of time, with a wide variety of potential queries.
+2. Collect training data for any application runs (BP3D or otherwise) over a period of time, with a wide variety of potential queries.
 
    &nbsp; &nbsp; `general_td_collection/` (specifically workflow.py)
 
@@ -24,7 +24,7 @@ Other Features:
 
    &nbsp; &nbsp; `table_for_run.py`
 
-4. Get analytics from other Grafana Dashboards
+4. Get analytics from other Grafana Dashboards - GPUs, storage, etc.
 
    &nbsp; &nbsp; `dashboards/`
 
