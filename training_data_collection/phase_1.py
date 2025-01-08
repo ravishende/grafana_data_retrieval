@@ -1,5 +1,5 @@
 """
-This class implements step 1 of automatic training data: collecting runs and their inputs
+This class implements step 1 of automatic training data collection: collecting runs and their inputs
 When using this class, specify the input parameters and then call the `run` method.
 """
 
