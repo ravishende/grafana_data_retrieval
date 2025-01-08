@@ -1,3 +1,8 @@
+"""
+This class implements step 1 of automatic training data: collecting runs and their inputs
+When using this class, specify the input parameters and then call the `run` method.
+"""
+
 import os
 import math
 import json
@@ -24,6 +29,11 @@ pd.set_option('display.max_columns', None)
 
 
 class Phase_1():
+    """
+    Class for running phase 1 of automated training data collection: 
+    collecting application runs and their inputs. 
+    To begin collectection of data, call the `run` method.
+    """
     # files are only read, so pylint: disable=dangerous-default-value
     def __init__(self, files: dict[str, str] = PHASE_1_FILES,
                  verbose: bool = True, debug_mode: bool = False) -> None:
@@ -47,8 +57,13 @@ class Phase_1():
         self.bucket = ""
         self._init_fs_and_bucket()
 
-    # runs the whole phase. Returns True if successful, False otherwise
     def run(self, paths_gathered: bool = False) -> bool:
+        """
+        Runs the whole phase.
+        Parameters:
+            paths_gathered: whether or not the paths have already been collected for run data
+        Returns True if successful, False otherwise
+        """
         success = False
         # for if simulation_paths are fully gathered and we're just getting df from runs
         if paths_gathered:
@@ -108,9 +123,15 @@ class Phase_1():
         success = True
         return success
 
-    # gather all paths in batches if requested.
     # batch size is a number of paths per batch to get
     def gather_all_paths(self, batch_size: int | None = None) -> list[str]:
+        """
+        Gather all paths in batches if requested. Paths are then used to get the run information.
+        Parameters:
+            batch_size: number of paths per back to collect.
+        Returns:
+            a list of all of the gathered paths
+        """
         # TODO: when gathering new paths, we append to a txt file. Since we re-gather the last gathered directory, we create duplicates in the txt file even though we don't return them. Make sure duplicates don't get added to the txt file.
         # get all directories and previously gathered directories
         directories = self.fs.ls(self.bucket)
@@ -164,10 +185,17 @@ class Phase_1():
         unique_simulation_paths = list(set(simulation_paths_list))
         return unique_simulation_paths
 
-    # given the simulation paths, create a df containing runs
-    # for all paths that have corresponding files
     def get_df_from_paths(self, simulation_paths: list[str],
                           batch_size: int = 1000) -> pd.DataFrame:
+        """
+        Given the simulation paths, create a df containing runs for all paths that
+        have corresponding files
+        Parameters:
+            simulation_paths: list of paths gathered from `gather_all_paths`
+            batch_size: the number of rows in a batch
+        Returns:
+            a dataframe of run information
+        """
         # find out how many runs have been looked at already
         try:
             runs_df = pd.read_csv(self.files['runs_df'], index_col=0)
@@ -262,9 +290,11 @@ class Phase_1():
             for entry in batch:
                 file.write(str(entry) + "\n")  # Write each entry on a new line
 
-    # given the path to a .txt file, return a list where each line of the
-    # txt file is an element in the list
     def read_txt_file(self, txt_file: str) -> list[str]:
+        """
+        Given the path to a .txt file, return a list where each line of the
+        txt file is an element in the list
+        """
         contents = []
         with open(txt_file, "r", encoding="utf-8") as file:
             contents = file.read().splitlines()
