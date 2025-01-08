@@ -1,3 +1,7 @@
+"""
+This class implements step 1 of automatic training data: preprocessing
+When using this class, specify the input parameters and then call the `run` method.
+"""
 # autopep8: off
 import sys
 import os
@@ -25,6 +29,10 @@ pd.set_option('display.width', terminal_width)
 
 
 class Phase_2():
+    """
+    This class implements step 1 of automatic training data: preprocessing
+    When using this class, specify the input parameters and then call the `run` method.
+    """
     # files are only read, so pylint: disable=dangerous-default-value
     def __init__(self, files: dict[str, str] = PHASE_2_FILES) -> None:
         self.files = files
@@ -67,7 +75,8 @@ class Phase_2():
         Args:
             df: The dataframe to insert the columns into
             n: how many partial duration columns to insert
-            single_method: (0 to 2) the method by which the durations are calculated. Default is -1: use all of them if possible (bounded by n)
+            single_method: (0 to 2) the method by which the durations are calculated. 
+                - Default is -1: use all of them if possible (bounded by n)
 
         Returns:
             The updated dataframe
