@@ -1,5 +1,5 @@
 """
-This class implements step 1 of automatic training data: preprocessing
+This class implements step 2 of automatic training data: preprocessing
 When using this class, specify the input parameters and then call the `run` method.
 """
 # autopep8: off
