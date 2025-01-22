@@ -11,11 +11,12 @@ from helpers.filtering import filter_df_for_workers
 from helpers.time_functions import (
     datetime_ify, delta_to_time_str, time_str_to_delta, find_time_from_offset)
 from inputs import (NAMESPACE, DEFAULT_FINAL_GRAPH_TIME, DEFAULT_DURATION,
-                    DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP, REQUERY_GRAPH_STEP_DIVISOR)
+                    DEFAULT_GRAPH_TIME_OFFSET, DEFAULT_GRAPH_STEP, REQUERY_GRAPH_STEP_DIVISOR, 
+                    QUERY_TIMEOUT_SEC)
 
 
 class Graphs():
-    def __init__(self, namespace: str = NAMESPACE, end: datetime = DEFAULT_FINAL_GRAPH_TIME, duration: str = DEFAULT_DURATION, time_offset: str = DEFAULT_GRAPH_TIME_OFFSET, time_step: str = DEFAULT_GRAPH_STEP, requery_step_divisor: int = REQUERY_GRAPH_STEP_DIVISOR) -> None:
+    def __init__(self, namespace: str = NAMESPACE, end: datetime = DEFAULT_FINAL_GRAPH_TIME, duration: str = DEFAULT_DURATION, time_offset: str = DEFAULT_GRAPH_TIME_OFFSET, time_step: str = DEFAULT_GRAPH_STEP, requery_step_divisor: int = REQUERY_GRAPH_STEP_DIVISOR, query_timeout_seconds:int = QUERY_TIMEOUT_SEC) -> None:
         # variables for querying data for graphs
         self.namespace = namespace
         self.end = end
@@ -23,6 +24,7 @@ class Graphs():
         self.time_offset = time_offset
         self.time_step = time_step
         self.requery_step_divisor = requery_step_divisor
+        self.query_timeout_seconds = query_timeout_seconds
 
         # dict storing titles and their queries.
         self.queries = {
@@ -81,7 +83,7 @@ class Graphs():
     #       to be what the query has in "sum by(_____)""
     #       If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of graphs of the same names as the queries
-    def get_graphs_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", start: datetime | None = None, end: datetime | None = None, display_time_as_datetime: bool = False, progress_bars: bool = True) -> dict[str, pd.DataFrame]:
+    def get_graphs_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", start: datetime | None = None, end: datetime | None = None, time_step: str | None = None, display_time_as_datetime: bool = False, progress_bars: bool = True) -> dict[str, pd.DataFrame]:
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -98,7 +100,7 @@ class Graphs():
         graphs_dict = {}
         for title, query in tqdm(queries_dict.items(), disable=disable_bars):
             graphs_dict[title] = self._generate_graph_df(
-                title, query, start=start, end=end, sum_by=sum_by)
+                title, query, start=start, end=end, time_step=time_step, sum_by=sum_by)
 
         # update times to be datetimes if requested
         if display_time_as_datetime:
@@ -229,7 +231,7 @@ class Graphs():
             runtime_start = time.time()
 
         # query for data
-        result_list = query_data_for_graph(query, time_filter)
+        result_list = query_data_for_graph(query, time_filter, timeout_sec=self.query_timeout_seconds)
         if len(result_list) == 0:
             return None
 
@@ -241,6 +243,7 @@ class Graphs():
         # prepare columns to be put into graph.
         times_column = []
         values_column = []
+        sum_by_columns = {}
         # initialize sum_by columns to eventually be put into the graph
         if sum_by is not None:
             sum_by_columns = {metric: [] for metric in sum_by}

@@ -4,12 +4,13 @@ import pandas as pd
 from tqdm import tqdm
 from helpers.querying import query_data
 from helpers.filtering import filter_df_for_workers
-from inputs import NAMESPACE
+from inputs import NAMESPACE, QUERY_TIMEOUT_SEC
 
 
 class Header():
-    def __init__(self, namespace: str = NAMESPACE) -> None:
+    def __init__(self, namespace: str = NAMESPACE, query_timeout_seconds: int = QUERY_TIMEOUT_SEC) -> None:
         self.namespace = namespace
+        self.query_timeout_seconds = query_timeout_seconds
         self.queries = {
             'CPU Utilisation (from requests)': 'sum by(node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}) / sum by(node, pod) (kube_pod_container_resource_requests{job="kube-state-metrics", namespace="' + self.namespace + '", resource="cpu"})',
             'CPU Utilisation (from limits)': 'sum by (node, pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="' + self.namespace + '"}) / sum by(node, pod) (kube_pod_container_resource_limits{job="kube-state-metrics", namespace="' + self.namespace + '", resource="cpu"})',
@@ -25,7 +26,7 @@ class Header():
         # generate a dataframe for each header item, then add it to header_dict
         for query_title, query in tqdm(self.queries.items()):
             # generate dataframe
-            result_list = query_data(query)
+            result_list = query_data(query, timeout_sec=self.query_timeout_seconds)
             header_item = self._generate_df(query_title, result_list)
 
             # filter by worker pods if requested

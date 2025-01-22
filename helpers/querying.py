@@ -1,12 +1,11 @@
 import json
 from termcolor import colored
 import requests
-
-TIMEOUT_SEC = 20
+from inputs import QUERY_TIMEOUT_SEC
 
 
 # Use url and a given query to request data from the website
-def query_data(query: str, handle_fail: bool = True) -> list[dict]:
+def query_data(query: str, timeout_sec:int=QUERY_TIMEOUT_SEC, handle_fail: bool = True) -> list[dict]:
     # handle_fail will re request the api if no response from query. Set to true by default
     # there is a bug with the api itself where every fifth request comes back with no data,
     # this parameter set to True will re request to deal with that
@@ -17,7 +16,7 @@ def query_data(query: str, handle_fail: bool = True) -> list[dict]:
     endpoint = f"query?query={query}"
     full_url = base_url + endpoint
     # query database
-    queried_data = requests.get(full_url, timeout=TIMEOUT_SEC).json()
+    queried_data = requests.get(full_url, timeout=timeout_sec).json()
 
     # re-request data if it comes back with no value
     if handle_fail:
@@ -25,7 +24,7 @@ def query_data(query: str, handle_fail: bool = True) -> list[dict]:
             res_list = queried_data['data']['result']
             if len(res_list) == 0:
                 queried_data = requests.get(
-                    full_url, timeout=TIMEOUT_SEC).json()
+                    full_url, timeout=timeout_sec).json()
         except KeyError:
             print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
             # pylint: disable=raise-missing-from
@@ -37,7 +36,7 @@ def query_data(query: str, handle_fail: bool = True) -> list[dict]:
 
 # Use url and a given query and time_filter to request data for a graph from the api
 # Different function from query_data() to avoid confusion with querying single data points and tables vs graphs
-def query_data_for_graph(query: str, time_filter: str, handle_fail: bool = True) -> list[dict]:
+def query_data_for_graph(query: str, time_filter: str, timeout_sec=QUERY_TIMEOUT_SEC, handle_fail: bool = True) -> list[dict]:
     # handle_fail will re request the api if it gets no response from your query. Set to true by default
     # there is a bug with the api itself where every fifth request comes back with no data,
     # this parameter set to True will re request to deal with that
@@ -48,7 +47,7 @@ def query_data_for_graph(query: str, time_filter: str, handle_fail: bool = True)
     endpoint = f'query_range?query={query}&{time_filter}'
     full_url = base_url + endpoint
     # query database
-    queried_data = requests.get(full_url, timeout=TIMEOUT_SEC).json()
+    queried_data = requests.get(full_url, timeout=timeout_sec).json()
 
     # re-request data if it comes back with no value
     if (handle_fail):
@@ -56,7 +55,7 @@ def query_data_for_graph(query: str, time_filter: str, handle_fail: bool = True)
             res_list = queried_data['data']['result']
             if (len(res_list) == 0):
                 queried_data = requests.get(
-                    full_url, timeout=TIMEOUT_SEC).json()
+                    full_url, timeout=timeout_sec).json()
         except KeyError:
             print(f'\n\nqueried_data is\n{colored(queried_data,"red")}\n')
             # pylint: disable=raise-missing-from

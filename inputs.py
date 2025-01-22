@@ -17,3 +17,5 @@ DEFAULT_FINAL_GRAPH_TIME = datetime.now()  # must be a datetime object
 # requerying
 # a value of 10 means there will be 10x the number of datapoints for a given timeframe
 REQUERY_GRAPH_STEP_DIVISOR = 10
+# how long to wait for data from a query before abandoning it
+QUERY_TIMEOUT_SEC = 20

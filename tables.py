@@ -4,13 +4,14 @@ import pandas as pd
 from tqdm import tqdm
 from helpers.querying import query_data
 from helpers.filtering import filter_df_for_workers
-from inputs import NAMESPACE, DEFAULT_DURATION
+from inputs import NAMESPACE, DEFAULT_DURATION, QUERY_TIMEOUT_SEC
 
 
 class Tables():
-    def __init__(self, namespace: str = NAMESPACE, duration: str = DEFAULT_DURATION) -> None:
+    def __init__(self, namespace: str = NAMESPACE, duration: str = DEFAULT_DURATION, query_timeout_seconds:int = QUERY_TIMEOUT_SEC) -> None:
         self.namespace = namespace
         self.duration = duration
+        self.query_timeout_seconds = query_timeout_seconds
         self.cpu_quota = pd.DataFrame(columns=[
                                       "Node", "Pod", "CPU Usage", "CPU Requests", "CPU Requests %", "CPU Limits", "CPU Limits %"])
         self.mem_quota = pd.DataFrame(columns=["Node", "Pod", "Memory Usage", "Memory Requests",  "Memory Requests %",
@@ -167,7 +168,7 @@ class Tables():
                 continue
 
             # update the table with the new column information
-            result_list = query_data(query)
+            result_list = query_data(query, timeout_sec=self.query_timeout_seconds)
             new_df = self._generate_df(col_title, result_list)
 
             # if table_df is not empty
@@ -186,7 +187,7 @@ class Tables():
         if sum_by == "_":
             sum_by = ["node", "pod"]
         # query for data
-        result_list = query_data(query)
+        result_list = query_data(query, timeout_sec=self.query_timeout_seconds)
         if len(result_list) == 0:
             return None
 
