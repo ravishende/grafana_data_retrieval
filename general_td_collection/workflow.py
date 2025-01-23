@@ -83,6 +83,8 @@ df = query_handler.query_df(
 )
 df = finalizer.sum_df(
     df, graph_metrics=['min', 'max', 'mean', 'median', 'increase'])
+    # graph_metrics describe the data for graph-based queries. Choose the metrics you want
+    # all metrics are [["min", "max", "mean", "median", "std", "var", "sum", "increase", "q1", "q3", "iqr"]]
 
 df.to_csv(WRITE_FILE)
 print(f"Finalized dataframe:\n{df}")
