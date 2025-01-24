@@ -57,13 +57,13 @@ df = df.loc[:, ~unnamed_cols]
 prompt_new_run(NEW_RUN)
 
 # way to filter - can be pod, node, namespace, or regex of any of the three
-NODE_NAME = "node-1-1.sdsc.optiputer.net"
-POD_PREFIX = 'fc-worker-1-'
-pod_regex_str = f'^{POD_PREFIX}.*'
+POD_SUBSTRING = 'fc-worker-1-'
+pod_regex_str = f'.*{POD_SUBSTRING}.*'
+# NODE_NAME = "node-1-1.sdsc.optiputer.net"
 
 # initialize classes with desired filter and data settings
-query_handler = QueryHandler(node=NODE_NAME)
-# query_handler = QueryHandler(pod_regex=pod_regex_str)
+query_handler = QueryHandler(pod_regex=pod_regex_str)
+# query_handler = QueryHandler(node=NODE_NAME)
 # query_handler = QueryHandler(namespace="rook")  # has data for rgw queries
 finalizer = Finalizer()
 
