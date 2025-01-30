@@ -99,7 +99,7 @@ def query_cpu_activity(start:datetime, end:datetime, filter_str:str, timestep:st
 
 
 def find_user_history(start:datetime, end:datetime, filter_str:str, timeout_seconds: int = 60,
-                      sum_by = "_", verbose=False) -> list[datetime]:
+                      sum_by = "_", verbose=False) -> pd.DataFrame:
     """
     Given a start time, end time, and filter string, find all of the days that the given pod was active. Look at the cpu usage to do so.
     """
@@ -116,36 +116,38 @@ def find_user_history(start:datetime, end:datetime, filter_str:str, timeout_seco
                             timeout_seconds=timeout_seconds, timestep=timestep, sum_by=sum_by)
     if df is None:
         print("No cpu usage data for the given filter string over the given time period")
-        return {}
+        return pd.DataFrame()
 
-    active_periods = df[df['cpu_usage'] != 0]  # TODO should be absolete bc the query has "> 0"
-    periods_list = active_periods['time'].to_list()
+    # verify that there is no 0 cpu usage (because the query has > 0)
+    assert (df['cpu_usage'] == 0).sum() == 0
+    periods_list = df['time'].to_list()
 
-    return_dict = {}
-    pod_separated_dfs = active_periods.groupby('pod')
-    for pod, df in pod_separated_dfs:
-        assert pod not in pod_separated_dfs, "duplicate pod - should not be possible"
-        return_dict[pod] = df['time'].to_list()
+    df = df.sort_values(by=['pod', 'time'])
+    df = df.reset_index(drop=True)
 
     if verbose:
         print("Unique Times:\n", list(set(periods_list)), "\nNumber of Total Times:", len(periods_list))
         # print(periods_list)
-        print("unique pods:", active_periods['pod'].nunique())
+        print("unique pods:", df['pod'].nunique())
         msg = "Number of Unique Times per pod (unique times | number of pods with that many times)"
-        print(msg, active_periods.groupby('pod').size().value_counts(), sep="\n")
+        print(msg, df.groupby('pod').size().value_counts(), sep="\n")
     
-    # return periods_list
-    return return_dict
+    return df
 
-def _find_coarse_periods(history:dict[str, float]):
-     # get all course active periods for each pod
-    coarse_periods_by_pod: dict[str, list[tuple[str, str]]] = {}
-    for pod, timestamps in history.items():
-        if len(timestamps) == 0:
+def _find_coarse_periods(history_df:pd.DataFrame) -> pd.DataFrame:
+    if len(history_df) == 0:
+        return history_df
+    # label column is the column that isn't 'time' - ex: 'pod', 'node', etc.
+    label_col = [col for col in history_df.columns if col != 'time'][0]
+    coarse_periods_df = pd.DataFrame()
+    # get all course active periods for each label
+    for label, df in history_df.groupby(label_col):
+        if len(df) == 0:
             continue
+        timestamps = df['time'].to_list()
         timestamps.sort()
-        query_periods: list[tuple[float, float]] = []
         # find all the chunks that are at least 3 days apart, then query each chunk with a 1 day buffer on each side
+        query_periods: list[tuple[float, float]] = []
         start_w_buffer = timestamps[0] - SECONDS_PER_DAY
         prev_timestamp = start_w_buffer
         for i, timestamp in enumerate(timestamps):
@@ -159,11 +161,12 @@ def _find_coarse_periods(history:dict[str, float]):
             elif i == len(timestamps) - 1:
                 end_w_buffer = prev_timestamp + SECONDS_PER_DAY
                 query_periods.append((start_w_buffer, end_w_buffer))
-            
             prev_timestamp = timestamp
 
-        coarse_periods_by_pod[pod] = query_periods
-    return coarse_periods_by_pod
+        periods_df = pd.DataFrame(data=query_periods, columns=['start', 'end'])
+        periods_df[label_col] = label
+        coarse_periods_df = pd.concat([coarse_periods_df, periods_df], ignore_index=True)
+    return coarse_periods_df
 
 
 def _designate_run_boundaries(times: list[float | int], min_break_sec: float | int, 
@@ -174,9 +177,9 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
         min_break_sec: the minimum amount of time between 2 data points to be considered a new run
             - make sure min_break_sec is longer than the timestep used when querying, 
             otherwise each data point will be considered as a new run.
-
+    Returns:
+        dataframe of runs
     """
-    # TODO: If there is ever at least min_break_sec between 2 times, separate the periods of active usage by saving their start and end times, note that the start time is 10 minutes (timestep) before the first end time that had data.
     run_periods = []
     
     start_time = times[0]
@@ -187,6 +190,7 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
         if inactive_period >= min_break_sec:
             run_periods.append((start_time - aggregate_period_sec, prev_time))
             start_time = curr_time
+        prev_time = curr_time
 
     # make sure the final period is added
     if run_periods[-1][1] != times[-1]:
@@ -195,101 +199,109 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
     return pd.DataFrame(run_periods, columns=['start', 'end'])
 
 
-def _find_fine_periods(coarse_periods:dict[str, float], timestep:str='10m', sum_by='_', timeout_seconds: int = 60):
+def _find_fine_periods(coarse_periods_df:pd.DataFrame, timestep:str='10m',
+                       sum_by: list[str] | str = '_', timeout_seconds: int = 60) -> pd.DataFrame:
     """
     Parameters
-        coarse_periods: a dict of timestamps, where there was at least some cpu usage within the past 24 hours from the timestamps. Indexed by pod (or sum_by).
-        timestep: how in depth to query data for.
+        coarse_periods_df: a dataframe of labels and timestamps, where there was at least some cpu usage within the past 24 hours from the timestamps.
+        timestep: a promql time string of how in depth to query data for.
             - Timestep does not need to be too small, (10 minutes to an hour is fine) because cpu_usage is based on increase not average. Timestep should be lower than minimum_break
-        timout_seconds: how long to wait without activity in a query before quitting
+        sum_by: TODO
+        timout_seconds: how many seconds to wait without activity in a query before quitting
     Returns
-        a dict of {pod: dataframe of queried periods (with a 'time' column)}
+        a dataframe of queried periods (with some label column and a 'time' column)}
     """
+    label_col = [col for col in coarse_periods_df.columns if col not in ['start', 'end']][0]
 
     # query over each period
-    pod_df_dict = {}
-    for pod, periods in coarse_periods.items():
-        filter_str = f'pod="{pod}"'
+    fine_periods_df = pd.DataFrame()
+    for label, periods_df in coarse_periods_df.groupby(label_col):
+        filter_str = f'{label_col}="{label}"'
         df = pd.DataFrame()
-        for (start, end) in periods:
-            period_df = query_cpu_activity(start=start, end=end, filter_str=filter_str, timestep=timestep, sum_by=sum_by, timeout_seconds=timeout_seconds)
+        for tup in periods_df.itertuples():
+            start, end = tup.start, tup.end
+            fine_df = query_cpu_activity(
+                start=start, end=end, filter_str=filter_str,
+                timestep=timestep, sum_by=sum_by, timeout_seconds=timeout_seconds)
 
-            if period_df is None:
+            if fine_df is None:
                 continue
-            df = pd.concat([df, period_df], ignore_index=True)
+            
+            df = pd.concat([df, fine_df], ignore_index=True)
+        df[label_col] = label
+        fine_periods_df = pd.concat([fine_periods_df, df], ignore_index=True)
+    return fine_periods_df
 
-        pod_df_dict[pod] = df
-        print(df['time'].describe())
-    
-    return pod_df_dict
-
-def _get_runs_df(fine_active_periods:dict[str, pd.DataFrame],
+def _get_runs_df(fine_periods_df:pd.DataFrame,
                 queried_timestep:str, minimum_break:str='1h') -> dict[str, pd.DataFrame]:
     """
     Parameters:
-        fine_active_periods: a dict of pod:df returned from find_fine_periods
+        fine_active_periods: df with columns [label, 'time'] returned from find_fine_periods
         queried_timestep: the timestep used in find_fine_periods for querying
         minimum_break: the minimum time of 0 cpu_usage to separate two periods
             - Essentially, how much time must elapse after one run for us to count it as a second session
     Returns:
-        a dict mapping pod to runs_df with the columns ['start', 'end', 'pod']
+        a dict mapping pod to runs_df with the columns [label, 'start', 'end']
     """
     min_break_seconds = time_str_to_delta(minimum_break).total_seconds()
     aggregate_period_sec = time_str_to_delta(queried_timestep).total_seconds()
 
-    pod_dfs_dict = {}
-    for pod, df in fine_active_periods.items():
+    label_col = [col for col in fine_periods_df.columns if col != 'time'][0]
+
+    final_df = pd.DataFrame()
+    for label, df in fine_periods_df.groupby(label_col):
         times = df['time'].to_list()
-        runs_df = _designate_run_boundaries(times=times, min_break_sec=min_break_seconds, 
+        runs_df = _designate_run_boundaries(times=times, min_break_sec=min_break_seconds,
                                            aggregate_period_sec=aggregate_period_sec)
-        runs_df[pod] = pod
-        pod_dfs_dict[pod] = runs_df
-    return  pod_dfs_dict
+        runs_df.insert(loc=0, column=label_col, value=label)
+        final_df = pd.concat([final_df, runs_df], ignore_index=True)
+    return final_df
 
 
-def find_user_runs(history, timestep:str = '10m', min_break:str = '1h', timeout_seconds:int=60):
+def find_user_runs(history_df, timestep:str = '10m', min_break:str = '1h', 
+                   timeout_seconds:int=60, display_time_as_datetime:bool=True) -> pd.DataFrame:
     """
     Parameters:
-        history: how 
+        history_df: df containing pod and time columns, where time is a 24 hour period where each one had a 
         timestep: resolution with which to query over (resolution for the runs)
         min_break: minimum time of inactive cpu for a period to be considered 2 separate runs
 
     """
-    # TODO: use columns in a single df to designate pod/label differences, don't use a dict of dfs
     # TODO: add batches and save query progress to csvs
-    # TODO: add options for saving time column as datetimes or numerical timestamps
-    coarse_active_periods = _find_coarse_periods(history)
+    if time_str_to_delta(timestep).total_seconds() >= time_str_to_delta(min_break).total_seconds():
+        print("Warning: timestep resolution should be less than min_break. Otherwise breaks may be inaccurate")
+    
+    coarse_active_periods = _find_coarse_periods(history_df)
     fine_active_periods = _find_fine_periods(
-        coarse_periods=coarse_active_periods, timestep=timestep,timeout_seconds=timeout_seconds)
-    user_runs_dict = _get_runs_df(
-        fine_active_periods=fine_active_periods, queried_timestep=timestep, minimum_break=min_break)
+        coarse_periods_df=coarse_active_periods, timestep=timestep,timeout_seconds=timeout_seconds)
+    user_runs_df = _get_runs_df(
+        fine_periods_df=fine_active_periods, queried_timestep=timestep, minimum_break=min_break)
+    
+    if display_time_as_datetime and len(user_runs_df) > 0:
+        user_runs_df['start'] = user_runs_df['start'].apply(datetime_ify)
+        user_runs_df['end'] = user_runs_df['end'].apply(datetime_ify)
 
-    return user_runs_dict
+    return user_runs_df
 
 
 # TODO: handle if queries time out - add message
 def main():
     period_start = datetime.now() - timedelta(days=100)
     period_end = datetime.now()
-    # POD_SUBSTRING = 'fc-worker-1-'
-    # POD_SUBSTRING = 'bp3d-worker-k8s-'
-    POD_SUBSTRING = 't1coleman'
-    pod_regex_str = f'.*{POD_SUBSTRING}.*'
+    # pod_substring = 'fc-worker-1-'
+    # pod_substring = 'bp3d-worker-k8s-'
+    pod_substring = 't1coleman'
+    pod_regex_str = f'.*{pod_substring}.*'
     filter_str = get_filter_str(pod_regex=pod_regex_str)
     
-    active_days = find_user_history(start=period_start, end=period_end,
+    active_days_df = find_user_history(start=period_start, end=period_end,
                                 filter_str=filter_str, timeout_seconds=60,
                                 sum_by=['Pod'])
     
-    user_runs = find_user_runs(history=active_days, timestep='10m',
-                               min_break='1h', timeout_seconds=60)
-    print(user_runs)
-
-    # TODO: once it is just one df instead of dict of dfs being passed around, delete this
-    combined_df = pd.DataFrame()
-    for runs_df in user_runs.values():
-        combined_df = pd.concat([combined_df, runs_df], ignore_index=True)
-    combined_df.to_csv(SAVE_FILE)
+    user_runs = find_user_runs(history_df=active_days_df, timestep='10m',
+                               min_break='30m', timeout_seconds=60)
+    print("\n\nuser runs:", user_runs, "\n", sep='\n')
+    user_runs.to_csv(SAVE_FILE)
     
 if __name__ == "__main__":
     main()
