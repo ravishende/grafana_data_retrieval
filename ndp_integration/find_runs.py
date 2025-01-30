@@ -1,6 +1,7 @@
 import sys
 import os
 import warnings
+import re
 import pandas as pd
 from datetime import datetime, timedelta
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
@@ -72,6 +73,17 @@ def get_filter_str(node: str | None = None, node_regex: str | None = None,
             
         return filter_str
 
+def filter_str_to_sum_by(filter_str:str) -> str | None:
+    """ get the sum_by list from a filter_str.
+    """
+    # find all of the metrics specified in the filter str (by finding matches btwn a ',' and '=')
+    # ex: new_filter_str = ',pod="x", node="y"' --> sum_by = ['pod', 'node']
+    new_filter_str = ',' + filter_str
+    sum_by = re.findall(r",\s*(.*?)=", new_filter_str)
+    if len(sum_by) == 0:
+        sum_by = None
+    return sum_by
+
 def query_cpu_activity(start:datetime, end:datetime, filter_str:str, timestep:str, timeout_seconds: int = 60, sum_by:list[str]= "_") -> pd.DataFrame:
     graphs = Graphs(query_timeout_seconds=timeout_seconds)
     aggregate_period = timestep
@@ -81,12 +93,8 @@ def query_cpu_activity(start:datetime, end:datetime, filter_str:str, timestep:st
     }
     # find out what to sum the graphs by
     if sum_by == "_":
-        sum_by = []
-        for metric in ['node', 'pod']:
-            if metric in filter_str:
-                sum_by.append(metric)
-        if len(sum_by) == 0:
-            sum_by = None
+        sum_by = filter_str_to_sum_by(filter_str)
+        
     if isinstance(sum_by, str):
         sum_by = [sum_by]
     
@@ -138,10 +146,10 @@ def _find_coarse_periods(history_df:pd.DataFrame) -> pd.DataFrame:
     if len(history_df) == 0:
         return history_df
     # label column is the column that isn't 'time' - ex: 'pod', 'node', etc.
-    label_col = [col for col in history_df.columns if col != 'time'][0]
+    label_cols = [col for col in history_df.columns if col not in ['time', 'cpu_usage']]
     coarse_periods_df = pd.DataFrame()
     # get all course active periods for each label
-    for label, df in history_df.groupby(label_col):
+    for labels, df in history_df.groupby(label_cols):
         if len(df) == 0:
             continue
         timestamps = df['time'].to_list()
@@ -164,7 +172,7 @@ def _find_coarse_periods(history_df:pd.DataFrame) -> pd.DataFrame:
             prev_timestamp = timestamp
 
         periods_df = pd.DataFrame(data=query_periods, columns=['start', 'end'])
-        periods_df[label_col] = label
+        periods_df[label_cols] = labels
         coarse_periods_df = pd.concat([coarse_periods_df, periods_df], ignore_index=True)
     return coarse_periods_df
 
@@ -180,6 +188,7 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
     Returns:
         dataframe of runs
     """
+    assert len(times) > 1, "times is empty - no run boundaries to separate"
     run_periods = []
     
     start_time = times[0]
@@ -193,7 +202,7 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
         prev_time = curr_time
 
     # make sure the final period is added
-    if run_periods[-1][1] != times[-1]:
+    if len(run_periods)==0 or run_periods[-1][1] != times[-1]:
         run_periods.append((start_time - aggregate_period_sec, times[-1]))
     
     return pd.DataFrame(run_periods, columns=['start', 'end'])
@@ -211,12 +220,13 @@ def _find_fine_periods(coarse_periods_df:pd.DataFrame, timestep:str='10m',
     Returns
         a dataframe of queried periods (with some label column and a 'time' column)}
     """
-    label_col = [col for col in coarse_periods_df.columns if col not in ['start', 'end']][0]
+    label_cols = [col for col in coarse_periods_df.columns if col not in ['start', 'end', 'cpu_usage']]
 
     # query over each period
     fine_periods_df = pd.DataFrame()
-    for label, periods_df in coarse_periods_df.groupby(label_col):
-        filter_str = f'{label_col}="{label}"'
+    for labels, periods_df in coarse_periods_df.groupby(label_cols):
+        filter_str_components = [f'{label_col}="{label}",' for label_col, label in zip(label_cols, labels)]
+        filter_str = ' '.join(filter_str_components)
         df = pd.DataFrame()
         for tup in periods_df.itertuples():
             start, end = tup.start, tup.end
@@ -228,7 +238,7 @@ def _find_fine_periods(coarse_periods_df:pd.DataFrame, timestep:str='10m',
                 continue
             
             df = pd.concat([df, fine_df], ignore_index=True)
-        df[label_col] = label
+        df[label_cols] = labels
         fine_periods_df = pd.concat([fine_periods_df, df], ignore_index=True)
     return fine_periods_df
 
@@ -246,15 +256,16 @@ def _get_runs_df(fine_periods_df:pd.DataFrame,
     min_break_seconds = time_str_to_delta(minimum_break).total_seconds()
     aggregate_period_sec = time_str_to_delta(queried_timestep).total_seconds()
 
-    label_col = [col for col in fine_periods_df.columns if col != 'time'][0]
+    label_cols = [col for col in fine_periods_df.columns if col not in ['time', 'cpu_usage']]
 
     final_df = pd.DataFrame()
-    for label, df in fine_periods_df.groupby(label_col):
+    for labels, df in fine_periods_df.groupby(label_cols):
         times = df['time'].to_list()
         runs_df = _designate_run_boundaries(times=times, min_break_sec=min_break_seconds,
                                            aggregate_period_sec=aggregate_period_sec)
-        runs_df.insert(loc=0, column=label_col, value=label)
+        runs_df[label_cols] = labels
         final_df = pd.concat([final_df, runs_df], ignore_index=True)
+    final_df = final_df.sort_values(by = label_cols + ['start'])
     return final_df
 
 
@@ -271,9 +282,13 @@ def find_user_runs(history_df, timestep:str = '10m', min_break:str = '1h',
     if time_str_to_delta(timestep).total_seconds() >= time_str_to_delta(min_break).total_seconds():
         print("Warning: timestep resolution should be less than min_break. Otherwise breaks may be inaccurate")
     
+    if len(history_df) == 0:
+        print("\nhistory_df is empty - no runs to find")
+        return pd.DataFrame()
+    
     coarse_active_periods = _find_coarse_periods(history_df)
-    fine_active_periods = _find_fine_periods(
-        coarse_periods_df=coarse_active_periods, timestep=timestep,timeout_seconds=timeout_seconds)
+    fine_active_periods = _find_fine_periods(coarse_periods_df=coarse_active_periods,   
+                                            timestep=timestep, timeout_seconds=timeout_seconds)
     user_runs_df = _get_runs_df(
         fine_periods_df=fine_active_periods, queried_timestep=timestep, minimum_break=min_break)
     
@@ -284,7 +299,6 @@ def find_user_runs(history_df, timestep:str = '10m', min_break:str = '1h',
     return user_runs_df
 
 
-# TODO: handle if queries time out - add message
 def main():
     period_start = datetime.now() - timedelta(days=100)
     period_end = datetime.now()
@@ -295,11 +309,9 @@ def main():
     filter_str = get_filter_str(pod_regex=pod_regex_str)
     
     active_days_df = find_user_history(start=period_start, end=period_end,
-                                filter_str=filter_str, timeout_seconds=60,
-                                sum_by=['Pod'])
-    
+                                filter_str=filter_str, timeout_seconds=60)
     user_runs = find_user_runs(history_df=active_days_df, timestep='10m',
-                               min_break='30m', timeout_seconds=60)
+                               min_break='1h', timeout_seconds=60)
     print("\n\nuser runs:", user_runs, "\n", sep='\n')
     user_runs.to_csv(SAVE_FILE)
     
