@@ -246,7 +246,7 @@ def _get_runs_df(fine_periods_df:pd.DataFrame,
                 queried_timestep:str, minimum_break:str='1h') -> dict[str, pd.DataFrame]:
     """
     Parameters:
-        fine_active_periods: df with columns [label, 'time'] returned from find_fine_periods
+        fine_periods_df: df with columns [label, 'time'] returned from find_fine_periods
         queried_timestep: the timestep used in find_fine_periods for querying
         minimum_break: the minimum time of 0 cpu_usage to separate two periods
             - Essentially, how much time must elapse after one run for us to count it as a second session
@@ -278,9 +278,8 @@ def find_user_runs(history_df, timestep:str = '10m', min_break:str = '1h',
         min_break: minimum time of inactive cpu for a period to be considered 2 separate runs
 
     """
-    # TODO: add batches and save query progress to csvs
     if time_str_to_delta(timestep).total_seconds() >= time_str_to_delta(min_break).total_seconds():
-        print("Warning: timestep resolution should be less than min_break. Otherwise breaks may be inaccurate")
+        warnings.warn("timestep resolution should be less than min_break. Otherwise breaks may be inaccurate")
     
     if len(history_df) == 0:
         print("\nhistory_df is empty - no runs to find")
@@ -299,21 +298,71 @@ def find_user_runs(history_df, timestep:str = '10m', min_break:str = '1h',
     return user_runs_df
 
 
-def main():
-    period_start = datetime.now() - timedelta(days=100)
-    period_end = datetime.now()
-    # pod_substring = 'fc-worker-1-'
-    # pod_substring = 'bp3d-worker-k8s-'
-    pod_substring = 't1coleman'
-    pod_regex_str = f'.*{pod_substring}.*'
+def find_ndp_user_runs(username:str, start:datetime, end:datetime = None, timestep:str = '10m',
+                       min_break:str ='1h', timeout_seconds:int = 60) -> pd.DataFrame:
+    """
+    Finds all jupyterhub runs for a user within a given time period and puts them in a dataframe
+    Parameters:
+        username: the username of the ndp user.
+        start: the datetime representing when to start looking for the users' past runs. 
+            - No runs done before start will be included in the final dataframe.
+        end: the datetime representing when to stop looking for the users' past runs.
+            - default is datetime.now().
+        timestep: promql time string representing resolution of how often to query data points for
+            - recommended to be at least 3 times smaller than min_break
+            - for more info on time strings: https://prometheus.io/docs/prometheus/latest/querying/basics/#float-literals-and-time-durations
+        min_break: promql time string representing the min time of no cpu usage to separate runs
+            - in other words, the limit for how long a single run can be inactive.
+            - if min_break is large, this could separate the different sessions where a user logs in and starts running code. If min_break is small, it could separate the individual executions of code cells by the user in one session.
+        timeout_seconds: how many seconds to wait without activity in a query before quitting
+    Returns:
+        a dataframe of the users history of runs with start and end times and a pod column. 
+            - If there are multiple pods with the username as a substring, all matching pods will be included in the dataframe. 
+    """
+
+    if end is None:
+        end = datetime.now()
+    assert isinstance(start, datetime), "start must be a of type datetime.datetime"
+    assert isinstance(end, datetime), "end must be None or of type datetime.datetime"
+    assert isinstance(timestep, str), "timestep must be a time string e.g. '1h15m'"
+    assert isinstance(min_break, str), "min_break must be a time string e.g. '5m30s'"
+    assert isinstance(timeout_seconds, int), "timeout_seconds must be an int"
+    # get the regex of the username in jupyterhub
+    pod_regex_str = f'jupyter-{username}.*'
     filter_str = get_filter_str(pod_regex=pod_regex_str)
+    active_days_df = find_user_history(start=start, end=end, filter_str=filter_str, 
+                                       timeout_seconds=timeout_seconds, sum_by=['pod'])
+    user_runs_df = find_user_runs(history_df=active_days_df, timestep=timestep, 
+                               min_break=min_break, timeout_seconds=timeout_seconds)
+    return user_runs_df
+
+# def _():
+#     period_start = datetime.now() - timedelta(days=100)
+#     period_end = datetime.now()
+#     # pod_substring = 'fc-worker-1-'
+#     # pod_substring = 'bp3d-worker-k8s-'
+#     pod_substring = 't1coleman'
+#     pod_regex_str = f'.*{pod_substring}.*'
+#     filter_str = get_filter_str(pod_regex=pod_regex_str)
     
-    active_days_df = find_user_history(start=period_start, end=period_end,
-                                filter_str=filter_str, timeout_seconds=60)
-    user_runs = find_user_runs(history_df=active_days_df, timestep='10m',
-                               min_break='1h', timeout_seconds=60)
-    print("\n\nuser runs:", user_runs, "\n", sep='\n')
-    user_runs.to_csv(SAVE_FILE)
+#     active_days_df = find_user_history(start=period_start, end=period_end,
+#                                 filter_str=filter_str, timeout_seconds=60)
+#     user_runs = find_user_runs(history_df=active_days_df, timestep='10m',
+#                                min_break='1h', timeout_seconds=60)
+#     print("\n\nuser runs:", user_runs, "\n", sep='\n')
+#     user_runs.to_csv(SAVE_FILE)
     
 if __name__ == "__main__":
-    main()
+    # settings
+    ndp_username = "t1coleman"
+    start = datetime.now() - timedelta(days=100)
+    end = datetime.now()
+    timestep = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
+    min_break = '1h'  # timestep should be smaller than min_break
+
+
+    user_runs_df = find_ndp_user_runs(
+        username=ndp_username, start=start, end=end, 
+        timestep=timestep, min_break=min_break, timeout_seconds=60)
+    
+    user_runs_df.to_csv("csvs/save_file.csv")
