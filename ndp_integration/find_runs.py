@@ -20,58 +20,58 @@ SAVE_FILE = 'csvs/write.csv'
 
 def _get_component_filter_str(component: str, component_name: str = None,
                               component_regex: str = None) -> str:
-        if component_name and component_regex:
-            raise ValueError(
-                "at most one of component_name or component_regex should be defined.")
-        # give a warning if it doesn't seem like the filter str is being used correctly
-        known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job', 'instance',
-                                'instance_id', 'container', 'Hostname', 'UUID', 'device',
-                                'endpoint', 'service', 'prometheus', 'service']
-        if component not in known_k8s_components:
-            warnings.warn(
-                f"Unknown component '{component}'. Known components are: {known_k8s_components}")
-        # give the string depending on if it's a regex expression or not
-        if component_name:
-            return f'{component}="{component_name}"'
-        if component_regex:
-            return f'{component}=~"{component_regex}"'
-        # neither are defined
-        return ""
+    if component_name and component_regex:
+        raise ValueError(
+            "at most one of component_name or component_regex should be defined.")
+    # give a warning if it doesn't seem like the filter str is being used correctly
+    known_k8s_components = ['node', 'pod', 'namespace', 'cluster', 'job', 'instance',
+                            'instance_id', 'container', 'Hostname', 'UUID', 'device',
+                            'endpoint', 'service', 'prometheus', 'service']
+    if component not in known_k8s_components:
+        warnings.warn(
+            f"Unknown component '{component}'. Known components are: {known_k8s_components}")
+    # give the string depending on if it's a regex expression or not
+    if component_name:
+        return f'{component}="{component_name}"'
+    if component_regex:
+        return f'{component}=~"{component_regex}"'
+    # neither are defined
+    return ""
 
 def get_filter_str(node: str | None = None, node_regex: str | None = None,
                    pod: str | None = None, pod_regex: str | None = None,
                    namespace: str | None = None, namespace_regex: str | None = None) -> str:
-        """creates the filter settings used in querying based on the passed in filter parameters
+    """creates the filter settings used in querying based on the passed in filter parameters
 
-        Args:
-            node: the node to filter on
-            node_regex: regex pattern to include any nodes that match the pattern
-            pod: the pod to filter on
-            pod_regex: regex pattern to include any pods that match the pattern
-            namespace: the namespace to filter on
-            namespace_regex: regex pattern to include any namespaces that match the pattern
+    Args:
+        node: the node to filter on
+        node_regex: regex pattern to include any nodes that match the pattern
+        pod: the pod to filter on
+        pod_regex: regex pattern to include any pods that match the pattern
+        namespace: the namespace to filter on
+        namespace_regex: regex pattern to include any namespaces that match the pattern
 
-        Returns:
-            the new filter string
-        """
-        # get individual filters
-        node_filter = _get_component_filter_str("node", node, node_regex)
-        pod_filter = _get_component_filter_str("pod", pod, pod_regex)
-        namespace_filter = _get_component_filter_str("namespace", namespace, namespace_regex)
+    Returns:
+        the new filter string
+    """
+    # get individual filters
+    node_filter = _get_component_filter_str("node", node, node_regex)
+    pod_filter = _get_component_filter_str("pod", pod, pod_regex)
+    namespace_filter = _get_component_filter_str("namespace", namespace, namespace_regex)
 
-        # assemble filter str
-        filters = [node_filter, pod_filter, namespace_filter]
-        filter_str = ""
-        for filt in filters:
-            if filt == "":
-                continue
-            # in PromQL, it still works if the filter string ends in a comma
-            filter_str += filt + ', '
+    # assemble filter str
+    filters = [node_filter, pod_filter, namespace_filter]
+    filter_str = ""
+    for filt in filters:
+        if filt == "":
+            continue
+        # in PromQL, it still works if the filter string ends in a comma
+        filter_str += filt + ', '
 
-        if filter_str == "":
-            warnings.warn("No filters specified. This will likely cause any queried data to be inaccurate.")
-            
-        return filter_str
+    if filter_str == "":
+        warnings.warn("No filters specified. This will likely cause any queried data to be inaccurate.")
+        
+    return filter_str
 
 def filter_str_to_sum_by(filter_str:str) -> str | None:
     """ get the sum_by list from a filter_str.
@@ -91,13 +91,12 @@ def query_cpu_activity(start:datetime, end:datetime, filter_str:str, timestep:st
         'cpu_usage': 'increase(container_cpu_usage_seconds_total{' + filter_str + '}['+ aggregate_period + ']) > 0'
         # 'cpu_usage': 'container_cpu_usage_seconds_total'
     }
-    # find out what to sum the graphs by
+    # find out what to sum the graphs by, using the filters from the filter string
     if sum_by == "_":
         sum_by = filter_str_to_sum_by(filter_str)
-        
     if isinstance(sum_by, str):
         sum_by = [sum_by]
-    
+
     graphs_dict = graphs.get_graphs_from_queries(
         queries, sum_by=sum_by, start=start, end=end, time_step=timestep, progress_bars=False)
     df = graphs_dict['cpu_usage']
@@ -351,8 +350,8 @@ def find_ndp_user_runs(username:str, start:datetime, end:datetime = None, timest
 #                                min_break='1h', timeout_seconds=60)
 #     print("\n\nuser runs:", user_runs, "\n", sep='\n')
 #     user_runs.to_csv(SAVE_FILE)
-    
-if __name__ == "__main__":
+
+def main():
     # settings
     ndp_username = "t1coleman"
     start = datetime.now() - timedelta(days=100)
@@ -360,9 +359,12 @@ if __name__ == "__main__":
     timestep = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
     min_break = '1h'  # timestep should be smaller than min_break
 
-
+    # find all the runs for the specified user within the specified timeframe
     user_runs_df = find_ndp_user_runs(
-        username=ndp_username, start=start, end=end, 
+        username=ndp_username, start=start, end=end,
         timestep=timestep, min_break=min_break, timeout_seconds=60)
-    
+
     user_runs_df.to_csv("csvs/save_file.csv")
+
+if __name__ == "__main__":
+    main()
