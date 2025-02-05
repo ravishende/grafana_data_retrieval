@@ -1,9 +1,19 @@
+"""
+This file is mainly used to collect run information from ndp's Jupyterhub usage data, 
+but its funcitons can be used for broader domains as well.
+
+Given an ndp username along with some other settings, the main function finds all runs
+by that user on ndp's JupyterHub within a given time period. It gives a dataframe with 
+the user's pod as well as start and stop time for each run.
+"""
+
+
 import sys
 import os
 import warnings
 import re
-import pandas as pd
 from datetime import datetime, timedelta
+import pandas as pd
 # get set up to be able to import helper functions from parent directory (grafana_data_retrieval)
 # Adjust the path to go up one level
 sys.path.append("../grafana_data_retrieval")
@@ -16,7 +26,24 @@ from graphs import Graphs
 
 SECONDS_PER_DAY = 86400
 PROGRESS_FILE = 'csvs/_query_progress.csv'
-SAVE_FILE = 'csvs/write.csv'
+
+
+def main():
+    save_file = "csvs/runs_df.csv"
+    # settings
+    ndp_username = "t1coleman"
+    start = datetime.now() - timedelta(days=100)
+    end = datetime.now()
+    min_break = '1h'  # min_break should be longer than timestep (ideally by at least 3x)
+    timestep = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
+
+    # find all the runs for the specified user within the specified timeframe
+    user_runs_df = find_ndp_user_runs(
+        username=ndp_username, start=start, end=end,
+        timestep=timestep, min_break=min_break, timeout_seconds=60)
+
+    user_runs_df.to_csv(save_file)
+
 
 # =============================
 #        USER FUNCTIONS
@@ -132,7 +159,7 @@ def get_filter_str(node: str | None = None, node_regex: str | None = None,
                    namespace: str | None = None, namespace_regex: str | None = None) -> str:
     """creates the filter settings used in querying based on the passed in filter parameters
 
-    Args:
+    Paramteters:
         node: the node to filter on
         node_regex: regex pattern to include any nodes that match the pattern
         pod: the pod to filter on
@@ -357,21 +384,6 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
 #                                min_break='1h', timeout_seconds=60)
 #     print("\n\nuser runs:", user_runs, "\n", sep='\n')
 #     user_runs.to_csv(SAVE_FILE)
-
-def main():
-    # settings
-    ndp_username = "t1coleman"
-    start = datetime.now() - timedelta(days=100)
-    end = datetime.now()
-    timestep = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
-    min_break = '1h'  # timestep should be smaller than min_break
-
-    # find all the runs for the specified user within the specified timeframe
-    user_runs_df = find_ndp_user_runs(
-        username=ndp_username, start=start, end=end,
-        timestep=timestep, min_break=min_break, timeout_seconds=60)
-
-    user_runs_df.to_csv("csvs/save_file.csv")
 
 if __name__ == "__main__":
     main()
