@@ -6,8 +6,6 @@ Given an ndp username along with some other settings, the main function finds al
 by that user on ndp's JupyterHub within a given time period. It gives a dataframe with 
 the user's pod as well as start and stop time for each run.
 """
-
-
 import sys
 import os
 import warnings
@@ -354,6 +352,7 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
         dataframe of runs
     """
     assert len(times) > 1, "times is empty - no run boundaries to separate"
+    times.sort()
     run_periods = []
     
     start_time = times[0]
@@ -362,6 +361,7 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
     for curr_time in times[1:]:
         inactive_period = curr_time - aggregate_period_sec - prev_time
         if inactive_period >= min_break_sec:
+            assert inactive_period > 0, f"Error: inactive_period ({inactive_period}) is <= 0."
             run_periods.append((start_time - aggregate_period_sec, prev_time))
             start_time = curr_time
         prev_time = curr_time
