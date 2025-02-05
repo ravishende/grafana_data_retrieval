@@ -43,7 +43,7 @@ def main():
         timestep=timestep, min_break=min_break, timeout_seconds=60)
 
     user_runs_df.to_csv(save_file)
-
+    print(user_runs_df)
 
 # =============================
 #        USER FUNCTIONS
@@ -243,6 +243,7 @@ def _query_cpu_activity(start:datetime, end:datetime, filter_str:str, timestep:s
     df = graphs_dict['cpu_usage']
     if df is not None:
         df.columns = [col.lower() for col in df.columns]
+        df = df.drop_duplicates(subset='time').reset_index(drop=True)
     return df
 
 def _find_coarse_periods(history_df:pd.DataFrame) -> pd.DataFrame:
@@ -286,12 +287,13 @@ def _find_fine_periods(coarse_periods_df:pd.DataFrame, timestep:str='10m',
         coarse_periods_df: a dataframe of labels and timestamps, where there was at least some cpu usage within the past 24 hours from the timestamps.
         timestep: a promql time string of how in depth to query data for.
             - Timestep does not need to be too small, (10 minutes to an hour is fine) because cpu_usage is based on increase not average. Timestep should be lower than minimum_break
-        sum_by: TODO
+        sum_by: what labels to sum by when querying for cpu usage
         timout_seconds: how many seconds to wait without activity in a query before quitting
     Returns
         a dataframe of queried periods (with some label column and a 'time' column)}
     """
-    label_cols = [col for col in coarse_periods_df.columns if col not in ['start', 'end', 'cpu_usage']]
+    non_label_cols = ['start', 'end', 'cpu_usage']
+    label_cols = [col for col in coarse_periods_df.columns if col not in non_label_cols]
 
     # query over each period
     fine_periods_df = pd.DataFrame()
@@ -299,18 +301,18 @@ def _find_fine_periods(coarse_periods_df:pd.DataFrame, timestep:str='10m',
         filter_str_components = [f'{label_col}="{label}",' for label_col, label in zip(label_cols, labels)]
         filter_str = ' '.join(filter_str_components)
         df = pd.DataFrame()
-        for tup in periods_df.itertuples():
-            start, end = tup.start, tup.end
-            fine_df = _query_cpu_activity(
-                start=start, end=end, filter_str=filter_str,
-                timestep=timestep, sum_by=sum_by, timeout_seconds=timeout_seconds)
 
+        for tup in periods_df.itertuples():
+            fine_df = _query_cpu_activity(
+                start=tup.start, end=tup.end, filter_str=filter_str,
+                timestep=timestep, sum_by=sum_by, timeout_seconds=timeout_seconds)
             if fine_df is None:
                 continue
-            
             df = pd.concat([df, fine_df], ignore_index=True)
+
         df[label_cols] = labels
         fine_periods_df = pd.concat([fine_periods_df, df], ignore_index=True)
+
     return fine_periods_df
 
 def _get_runs_df(fine_periods_df:pd.DataFrame,
@@ -337,6 +339,7 @@ def _get_runs_df(fine_periods_df:pd.DataFrame,
         runs_df[label_cols] = labels
         final_df = pd.concat([final_df, runs_df], ignore_index=True)
     final_df = final_df.sort_values(by = label_cols + ['start'])
+    final_df = final_df.reset_index(drop=True)
     return final_df
 
 def _designate_run_boundaries(times: list[float | int], min_break_sec: float | int, 
@@ -357,7 +360,7 @@ def _designate_run_boundaries(times: list[float | int], min_break_sec: float | i
     prev_time = times[0]
 
     for curr_time in times[1:]:
-        inactive_period = curr_time - (prev_time - aggregate_period_sec)
+        inactive_period = curr_time - aggregate_period_sec - prev_time
         if inactive_period >= min_break_sec:
             run_periods.append((start_time - aggregate_period_sec, prev_time))
             start_time = curr_time
