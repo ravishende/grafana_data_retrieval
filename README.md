@@ -4,7 +4,7 @@
 
 > Performance Retrieval and Estimation for Metric Optimization and Analysis
 
-This code base uses Python with PromQL querying to collect data from Nautilus databases about analytics of wifire-quicfire runs.
+This code base uses Python with PromQL querying to collect data from Nautilus databases about analytics of various projects, including the wifire-quicfire namespace.
 
 It collects all of the information that can be found on the [Grafana](https://grafana.nrp-nautilus.io/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods?orgId=1&var-datasource=default&var-cluster=&var-namespace=wifire-quicfire&from=1690454188000&to=1690472188000) website and displays each statistic by Node and Pod, rather than a sum of all pods like Grafana does.
 
@@ -27,6 +27,10 @@ Other Features:
 4. Get analytics from other Grafana Dashboards - GPUs, storage, etc.
 
    &nbsp; &nbsp; `dashboards/`
+
+5. Get information on historic application run data from NDP (National Data Platform) users.
+
+   &nbsp; &nbsp; `ndp_integration/`
 
 ---
 
