@@ -40,7 +40,7 @@ class QueryHandler():
                  node: str | None = None, node_regex: str | None = None,
                  pod: str | None = None, pod_regex: str | None = None,
                  namespace: str | None = None, namespace_regex: str | None = None,
-                 verbose: bool = True) -> None:
+                 verbose: bool = True, display_warnings: bool = True) -> None:
         if node and node_regex:
             raise ValueError(
                 "At most one of node or node_regex can be defined")
@@ -50,6 +50,7 @@ class QueryHandler():
             raise ValueError(
                 "At most one of namespace or namespace_regex can be defined")
         self.verbose = verbose
+        self.display_warnings = display_warnings
         # changes how many datapoints are in each queried graph - tunes accuracy of graph metrics
         self._graph_timestep = graph_timestep
         # string to insert into queries to filter them
@@ -96,6 +97,9 @@ class QueryHandler():
 
         if filter_str != "":
             self._filter = filter_str
+            return
+        
+        if not self.display_warnings:
             return
 
         warning_msg = (
