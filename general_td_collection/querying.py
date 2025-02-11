@@ -141,6 +141,9 @@ class QueryHandler():
             except Exception as exc:
                 raise ValueError(
                     f"No df passed in, and default read file ({self._read_file}) cannot be read: {exc}") from exc
+        if len(df) == 0:
+            print("df is empty")
+            return df
 
         # set up dataframes - progress df and what's left to query
         queried_df = pd.DataFrame()
@@ -157,7 +160,8 @@ class QueryHandler():
         else:
             df_to_query = df.reset_index(drop=True)
 
-        df_to_query = self._preprocess_df(df_to_query)
+        if len(df_to_query > 0):
+            df_to_query = self._preprocess_df(df_to_query)
         # get queries
         graph_queries = self._get_graph_queries(
             gpu_queries=gpu_queries, gpu_compute_resource_queries=gpu_compute_resource_queries, rgw_queries=rgw_queries,
@@ -224,6 +228,7 @@ class QueryHandler():
         # deal with times and create runtime column
         df['start'] = df['start'].apply(datetime_ify)
         df['end'] = df['end'].apply(datetime_ify)
+        print("___________\n", df['start'], "\n",  df['end'])
         df['runtime'] = (df['end'] - df['start']).dt.total_seconds()
         df['runtime'] = df['runtime'].round()
         return df
