@@ -14,14 +14,14 @@ class Finalizer():
     """
 
     def __init__(self, graph_metrics: list[str] | str | None = None) -> None:
+        self._all_graph_metrics = ["min", "max", "mean", "median",
+                                   "std", "var", "sum", "increase", "q1", "q3", "iqr"]
         if graph_metrics is None:
             graph_metrics = []
         else:
             self._check_graph_metrics(graph_metrics)
         self.graph_metrics = graph_metrics
         # NOTE: if any metric gets updated here, self._summarize_graph_data must also be updated
-        self._all_graph_metrics = ["min", "max", "mean", "median",
-                                   "std", "var", "sum", "increase", "q1", "q3", "iqr"]
         self._read_file = "csvs/queried.csv"
         self._graph_columns = []  # they become initialized when self.sum_df is called
 
