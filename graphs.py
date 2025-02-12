@@ -83,7 +83,7 @@ class Graphs():
     #       to be what the query has in "sum by(_____)""
     #       If queries do not have "sum by(...)", then set sum_by to None
     # Return a dictionary of graphs of the same names as the queries
-    def get_graphs_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", start: datetime | None = None, end: datetime | None = None, time_step: str | None = None, display_time_as_datetime: bool = False, progress_bars: bool = True) -> dict[str, pd.DataFrame]:
+    def get_graphs_from_queries(self, queries_dict: dict[str, str], sum_by: list[str] | str | None = "_", start: datetime | None = None, end: datetime | None = None, time_step: str | None = None, display_time_as_datetime: bool = False, progress_bars: bool = True, as_one_df: bool = False) -> dict[str, pd.DataFrame] | pd.DataFrame:
         # set ['node', 'pod'] as default for sum_by without putting dangerous default list in definition
         if sum_by == "_":
             sum_by = ["node", "pod"]
@@ -110,6 +110,9 @@ class Graphs():
                 # update graphs with correct time columns
                 graph['Time'] = pd.to_datetime(graph['Time'], unit="s")
                 graphs_dict[graph_title] = graph
+
+        if as_one_df:
+            return self.get_graphs_as_one_df(graphs_dict=graphs_dict, sum_by=sum_by)
 
         return graphs_dict
 
