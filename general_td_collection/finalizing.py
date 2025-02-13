@@ -24,6 +24,7 @@ class Finalizer():
         # NOTE: if any metric gets updated here, self._summarize_graph_data must also be updated
         self._read_file = "csvs/queried.csv"
         self._graph_columns = []  # they become initialized when self.sum_df is called
+        self._static_columns = []  # they become initialized when self.sum_df is called
 
     def get_graph_metrics_list(self):
         """Get a list of all available metrics to describe graph queries"""
@@ -45,6 +46,14 @@ class Finalizer():
         graph_columns = [
             col for col in df.columns if col[:len(prefix)] == prefix]
         return graph_columns
+    
+    def get_static_columns(self, df: pd.DataFrame) -> list[str]:
+        """Given a dataframe with some columns prepended with 'static_', 
+        return a list of all those column names."""
+        prefix = "static_"
+        static_graph_columns = [
+            col for col in df.columns if col[:len(prefix)] == prefix]
+        return static_graph_columns
 
     def sum_df(self, df: pd.DataFrame, graph_metrics: list[str] | None = None) -> pd.DataFrame:
         """Sum over a dataframe to go from queried json data to single datapoints in columns
@@ -60,6 +69,7 @@ class Finalizer():
         wrong_type_msg = f"Expected df to be a pandas DataFrame but was type {type(df)}"
         assert isinstance(df, pd.DataFrame), wrong_type_msg
         self._graph_columns = self.get_graph_columns(df)
+        self._static_columns = self.get_static_columns(df)
         sum_col_prefix = "queried_"
         sum_columns = [
             col for col in df.columns if col[:len(sum_col_prefix)] == sum_col_prefix]
@@ -73,6 +83,8 @@ class Finalizer():
         df = self._insert_graph_metric_columns(
             df, graph_metrics)
         df = df.drop(columns=self._graph_columns)
+        df = self._sum_static_columns(df)
+        df = df.drop(columns=self._static_columns)
         return df
 
     # given a list of graph columns (strings), check that it is the right type
@@ -130,6 +142,8 @@ class Finalizer():
         # NOTE: if any metric gets updated here, self.all_graph_metrics must also be updated
         calculated_metric = 0
         match metric:
+            case "mode":
+                calculated_metric = graph_data.mode()
             case "min":
                 calculated_metric = graph_data.min()
             case "max":
@@ -181,6 +195,14 @@ class Finalizer():
                 # make sure metric is passed in by value, not reference (cell-var-from-loop warning)
                 df[metric_col_name] = df[graph_title].apply(
                     lambda cell, metric=graph_metric: self._summarize_graph_data(cell, metric))
+        return df
+    
+    def _sum_static_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        for static_title in self._static_columns:
+            prefix = 'static_'
+            updated_title = static_title[len(prefix):]
+            df[updated_title] = df[static_title].apply(
+                lambda cell, metric='mode': self._summarize_graph_data(cell, metric))
         return df
 
     # given a result list from a query, sum it to get the result

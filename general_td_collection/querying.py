@@ -160,7 +160,7 @@ class QueryHandler():
         else:
             df_to_query = df.reset_index(drop=True)
 
-        if len(df_to_query > 0):
+        if len(df_to_query) > 0:
             df_to_query = self._preprocess_df(df_to_query)
         # get queries
         graph_queries = self._get_graph_queries(
@@ -172,6 +172,10 @@ class QueryHandler():
         if cpu_compute_resource_queries:
             non_graph_query_functions.append(
                 self._get_cpu_compute_resource_queries)
+
+        static_graph_queries = self._get_static_graph_queries(
+            cpu_compute_resource_queries=cpu_compute_resource_queries)
+
         graphs_class = Graphs(time_step=self._graph_timestep)
 
         # query in batches
@@ -190,10 +194,15 @@ class QueryHandler():
                 print("querying non-graph information")
             df_chunk = df_chunk.apply(lambda row: self._query_row_for_non_graphs(
                 row, non_graph_query_functions), axis=1)
+            # query static graphs\
+            is_static = True
+            df_chunk = df_chunk.apply(self._query_row_for_graphs,
+                                      args=(graphs_class, static_graph_queries, is_static), axis=1)
+            # update df
             queried_df = pd.concat(
                 [queried_df, df_chunk]).reset_index(drop=True)
             queried_df.to_csv(self._progress_file)
-        print(queried_df)
+        # print(queried_df)
         queried_df.to_csv(self._write_file)
         return queried_df
 
@@ -228,7 +237,6 @@ class QueryHandler():
         # deal with times and create runtime column
         df['start'] = df['start'].apply(datetime_ify)
         df['end'] = df['end'].apply(datetime_ify)
-        print("___________\n", df['start'], "\n",  df['end'])
         df['runtime'] = (df['end'] - df['start']).dt.total_seconds()
         df['runtime'] = df['runtime'].round()
         return df
@@ -280,16 +288,10 @@ class QueryHandler():
         end = datetime_ify(end)
         duration_seconds = int((end-start).total_seconds())
         offset = calculate_offset(start, duration_seconds)
-        static_offset = calculate_offset(start, 10)
         duration = delta_to_time_str(timedelta(seconds=duration_seconds))
 
         # all resources and the heart of their queries
         queries = {
-            # static metrics
-            'cpu_request': 'sum (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self._filter + '} offset ' + static_offset + ')',
-
-            'mem_request': 'sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self._filter + '} offset ' + static_offset + ')',
-
             # non static metrics
             'mem_usage': 'sum(max_over_time(container_memory_working_set_bytes{' + self._filter + '}[' + duration + '] offset ' + offset + '))',
 
@@ -323,16 +325,33 @@ class QueryHandler():
 
         return graph_queries
 
+    def _get_static_graph_queries(self, cpu_compute_resource_queries: bool = False):
+        static_graph_queries = {}
+        if cpu_compute_resource_queries:
+            new_queries = {
+                'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + self._filter + '})',
+                'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + self._filter + '})'
+            }
+            static_graph_queries.update(new_queries)
+        return static_graph_queries
+
     # given a row of a dataframe, a graphs class instantiation, and a dict of queries for graphs,
     # return a queried version of that row,
     # with the new columns being the graph titles prepended with 'graph_'
     def _query_row_for_graphs(
-            self, row: pd.Series, graphs_class: Graphs, graph_queries: dict[str, str]) -> pd.Series:
+            self, row: pd.Series, graphs_class: Graphs, graph_queries: dict[str, str], static: bool = False) -> pd.Series:
+        assert isinstance(row, pd.Series), "row must be a pandas Series"
+        assert isinstance(graphs_class, Graphs), "graphs_class must be of type Graphs"
+        assert isinstance(static, bool), "static must be a boolean"
         # sum by none since we eventually get it to one datapoint --> no need to split it further
         graphs_dict = graphs_class.get_graphs_from_queries(
             queries_dict=graph_queries, sum_by=None, start=row['start'], end=row['end'])
         for title, data in graphs_dict.items():
-            new_title = "graph_" + title
+            new_title = ""
+            if static:
+                new_title = "static_" + title
+            else:
+                new_title = "graph_" + title
             if data is not None:
                 data = data[title].astype(float).to_list()
             row[new_title] = data
