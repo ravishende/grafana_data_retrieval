@@ -13,8 +13,10 @@ class Finalizer():
                        options, use Finalizer.get_graph_metrics_list()
     """
 
-    def __init__(self, graph_metrics: list[str] | str | None = None) -> None:
-        self._all_graph_metrics = ["min", "max", "mean", "median",
+    def __init__(self, graph_metrics: list[str] | str | None = None, 
+                 suppress_warnings: bool = False) -> None:
+        self.suppress_warnings = suppress_warnings
+        self._all_graph_metrics = ["min", "max", "mean", "median", "mode",
                                    "std", "var", "sum", "increase", "q1", "q3", "iqr"]
         if graph_metrics is None:
             graph_metrics = []
@@ -133,17 +135,22 @@ class Finalizer():
 
     # takes in a list containing graph data (result list from a query) and a metric
     # returns the metric taken of the series, e.g. if metric is "std", takes the standard deviation
-    def _summarize_graph_data(self, graph_data_list: pd.DataFrame, metric: str) -> float:
+    def _summarize_graph_data(self, graph_data_list: pd.Series | list | str , metric: str) -> float:
         if not isinstance(graph_data_list, list) and pd.isna(graph_data_list):
             return None
         if isinstance(graph_data_list, str):
             graph_data_list = ast.literal_eval(graph_data_list)
-        graph_data = pd.Series(data=graph_data_list)
+        graph_data = graph_data_list
+        if isinstance(graph_data_list, list):
+            graph_data = pd.Series(data=graph_data_list)
         # NOTE: if any metric gets updated here, self.all_graph_metrics must also be updated
         calculated_metric = 0
         match metric:
             case "mode":
-                calculated_metric = graph_data.mode()
+                mode_series = graph_data.mode()
+                if len(mode_series) > 1 and not self.suppress_warnings:
+                    warnings.warn(f"Multiple ({len(mode_series)}) mode values. Choosing the first one.")
+                calculated_metric = mode_series.iloc[0]
             case "min":
                 calculated_metric = graph_data.min()
             case "max":
