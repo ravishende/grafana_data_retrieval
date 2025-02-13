@@ -92,8 +92,11 @@ class QueryHandler():
         for filt in filters:
             if filt == "":
                 continue
-            # in PromQL, it still works if the filter string ends in a comma
             filter_str += filt + ', '
+
+        # remove trailing comma
+        if filter_str[-2:] == ', ':
+            filter_str = filter_str[:-2]
 
         if filter_str != "":
             self._filter = filter_str
