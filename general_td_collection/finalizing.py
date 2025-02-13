@@ -14,8 +14,8 @@ class Finalizer():
     """
 
     def __init__(self, graph_metrics: list[str] | str | None = None, 
-                 suppress_warnings: bool = False) -> None:
-        self.suppress_warnings = suppress_warnings
+                 display_warnings: bool = True) -> None:
+        self.display_warnings = display_warnings
         self._all_graph_metrics = ["min", "max", "mean", "median", "mode",
                                    "std", "var", "sum", "increase", "q1", "q3", "iqr"]
         if graph_metrics is None:
@@ -148,7 +148,7 @@ class Finalizer():
         match metric:
             case "mode":
                 mode_series = graph_data.mode()
-                if len(mode_series) > 1 and not self.suppress_warnings:
+                if len(mode_series) > 1 and self.display_warnings:
                     warnings.warn(f"Multiple ({len(mode_series)}) mode values. Choosing the first one.")
                 calculated_metric = mode_series.iloc[0]
             case "min":
