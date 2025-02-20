@@ -36,10 +36,13 @@ def main():
     min_break = '1h'  # min_break should be longer than timestep (ideally by at least 3x)
     timestep = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
 
-    # find all the runs for the specified user within the specified timeframe
+    # find all the runs for the user within the specified timeframe
+    # runs are when the user was actively running something on jupyterhub - the cpu was doing work
     user_runs_df = find_ndp_user_runs(
         username=ndp_username, start=start, end=end,
         timestep=timestep, min_break=min_break, timeout_seconds=60)
+    # find all the sessions for the user within the specified timeframe
+    # sessions are when the user had an allocated pod on jupyterhub
     user_sessions_df = find_ndp_user_sessions(
         username=ndp_username, start=start, end=end,
         timestep=timestep, min_break=min_break, timeout_seconds=60)
