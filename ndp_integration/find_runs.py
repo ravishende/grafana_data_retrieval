@@ -134,6 +134,9 @@ def find_user_history(metric: str, start: datetime, end: datetime, filter_str: s
         print("No cpu usage data for the given filter string over the given time period")
         return pd.DataFrame()
 
+    if len(df) == 0:
+        return df
+
     df = df.sort_values(by=['pod', 'time'])
     df = df.reset_index(drop=True)
     return df
@@ -229,12 +232,20 @@ def _find_ndp_user_activity(
     assert isinstance(timestep, str), "timestep must be a time string e.g. '1h15m'"
     assert isinstance(min_break, str), "min_break must be a time string e.g. '5m30s'"
     assert isinstance(timeout_seconds, int), "timeout_seconds must be an int"
+    assert start < end, "start must be before end in time."
     # get the regex of the username in jupyterhub
     pod_regex_str = f'jupyter-{username}.*'
     filter_str = get_filter_str(pod_regex=pod_regex_str)
     active_days_df = find_user_history(
         metric=metric, start=start, end=end, filter_str=filter_str,
         sum_by=['pod'], timeout_seconds=timeout_seconds)
+    
+    if len(active_days_df) == 0:
+        warning_msg = ("No history for given username and timeframe. "
+                       "Make sure the username and time range (start, end) is correct.")
+        warnings.warn(warning_msg)
+        return pd.DataFrame()
+    
     user_runs_df = find_user_activity(history_df=active_days_df, metric=metric, timestep=timestep,
                                       min_break=min_break, timeout_seconds=timeout_seconds)
     return user_runs_df
