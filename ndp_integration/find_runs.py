@@ -30,27 +30,34 @@ def main():
     runs_save_file = "csvs/runs_df.csv"
     sessions_save_file = "csvs/sessions_df.csv"
     # settings
-    ndp_username = "mfloca"
-    start = datetime.now() - timedelta(days=100)
-    end = datetime.now()
-    min_break = '1h'  # min_break should be longer than timestep (ideally by at least 3x)
-    timestep = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
+    find_runs = False
+    find_sessions = True
+    # parameters
+    ndp_username: str = "mfloca"
+    start: datetime = datetime.now() - timedelta(days=50)
+    end: datetime = datetime.now()
+    min_break: str = '1h'  # min_break should be longer than timestep (ideally by at least 3x)
+    timestep: str = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
 
-    # find all the runs for the user within the specified timeframe
-    # runs are when the user was actively running something on jupyterhub - the cpu was doing work
-    user_runs_df = find_ndp_user_runs(
-        username=ndp_username, start=start, end=end,
-        timestep=timestep, min_break=min_break, timeout_seconds=60)
-    # find all the sessions for the user within the specified timeframe
-    # sessions are when the user had an allocated pod on jupyterhub
-    user_sessions_df = find_ndp_user_sessions(
-        username=ndp_username, start=start, end=end,
-        timestep=timestep, min_break=min_break, timeout_seconds=60)
-
-    user_runs_df.to_csv(runs_save_file)
-    user_sessions_df.to_csv(sessions_save_file)
-    print("User Runs:", user_runs_df, sep="\n")
-    print("\nUser sessions:", user_sessions_df, sep="\n")
+    user_runs_df = None
+    user_sessions_df = None
+    if find_runs:
+        # find all the runs for the user within the specified timeframe
+        # runs are when the user was actively running something on jupyterhub - the cpu was doing work
+        user_runs_df = find_ndp_user_runs(
+            username=ndp_username, start=start, end=end,
+            timestep=timestep, min_break=min_break, timeout_seconds=60)
+        print("User Runs:", user_runs_df, sep="\n")
+        user_runs_df.to_csv(runs_save_file)
+    
+    if find_sessions:
+        # find all the sessions for the user within the specified timeframe
+        # sessions are when the user had an allocated pod on jupyterhub
+        user_sessions_df = find_ndp_user_sessions(
+            username=ndp_username, start=start, end=end,
+            timestep=timestep, min_break=min_break, timeout_seconds=60)
+        print("\nUser sessions:", user_sessions_df, sep="\n")
+        user_sessions_df.to_csv(sessions_save_file)
 
 # =============================
 #        USER FUNCTIONS
@@ -212,7 +219,8 @@ def _find_ndp_user_activity(
     """
     Given a metric ("request" or "usage"), as well as ndp username, start and end times, and 
     other querying details for the resolution of the queries and returned periods, 
-    find all periods in the given time frame the user was active according to that metric"""
+    find all periods in the given time frame the user was active according to that metric
+    """
     _validate_metric(metric)
     if end is None:
         end = datetime.now()
@@ -280,8 +288,8 @@ def _query_activity(metric: str, start:datetime, end:datetime, filter_str:str, t
         }
     elif metric == "request":
         queries = {
-            'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + filter_str + '}) > 0',
-            'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + filter_str + '}) > 0'
+            'cpu_request': 'sum by (pod) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{resource="cpu", ' + filter_str + '})', # > 0',
+            'mem_request': 'sum by (pod) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{resource="memory", ' + filter_str + '})', # > 0'
         }
     # find out what to sum the graphs by, using the filters from the filter string
     if sum_by == "_":
@@ -294,7 +302,7 @@ def _query_activity(metric: str, start:datetime, end:datetime, filter_str:str, t
         time_step=timestep, progress_bars=False, as_one_df=True)
     if df is not None:
         df.columns = [col.lower() for col in df.columns]
-        df = df.drop_duplicates(subset='time').reset_index(drop=True)
+        df = df.drop_duplicates(subset='time', ignore_index=True)
     return df
 
 def _find_coarse_periods(history_df:pd.DataFrame) -> pd.DataFrame:
@@ -359,7 +367,7 @@ def _find_fine_periods(coarse_periods_df:pd.DataFrame, metric:str, timestep:str=
 
         for tup in periods_df.itertuples():
             fine_df = _query_activity(
-                metric="usage", start=tup.start, end=tup.end, filter_str=filter_str,
+                metric=metric, start=tup.start, end=tup.end, filter_str=filter_str,
                 timestep=timestep, sum_by=sum_by, timeout_seconds=timeout_seconds)
             if fine_df is None:
                 continue
@@ -398,7 +406,7 @@ def _get_runs_df(fine_periods_df:pd.DataFrame,
     final_df = final_df.reset_index(drop=True)
     return final_df
 
-def _designate_run_boundaries(times: list[float | int], min_break_sec: float | int, 
+def _designate_run_boundaries(times: list[float | int], min_break_sec: float | int,
                              aggregate_period_sec: float | int) -> pd.DataFrame:
     """
     Parameters:
