@@ -33,8 +33,8 @@ def main():
     find_runs = False
     find_sessions = True
     # parameters
-    ndp_username: str = "mfloca"
-    start: datetime = datetime.now() - timedelta(days=50)
+    ndp_username: str = "t1coleman"
+    start: datetime = datetime.now() - timedelta(days=100)
     end: datetime = datetime.now()
     min_break: str = '1h'  # min_break should be longer than timestep (ideally by at least 3x)
     timestep: str = '5m'  # if timestep is small, run boundaries will be more accurate but queries will take longer
