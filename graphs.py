@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import time
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from tqdm import tqdm
 from termcolor import colored
 from helpers.querying import query_data_for_graph
@@ -208,8 +208,10 @@ class Graphs():
             end = datetime_ify(end)
 
         # assemble strings
-        end_str = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        start_str = start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        start_utc = start.astimezone(timezone.utc)
+        end_utc = end.astimezone(timezone.utc)
+        start_str = start_utc.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        end_str = end_utc.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         # combine strings into time filter format
         time_filter = f'start={start_str}&end={end_str}&step={time_step}'
 
