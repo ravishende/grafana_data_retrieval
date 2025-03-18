@@ -30,7 +30,7 @@ def main():
     runs_save_file = "csvs/runs_df.csv"
     sessions_save_file = "csvs/sessions_df.csv"
     # settings
-    find_runs = False
+    find_runs = True
     find_sessions = True
     # parameters
     ndp_username: str = "t1coleman"
@@ -241,8 +241,9 @@ def _find_ndp_user_activity(
         sum_by=['pod'], timeout_seconds=timeout_seconds)
     
     if len(active_days_df) == 0:
-        warning_msg = ("No history for given username and timeframe. "
+        warning_msg = ("\nNo history for given username and timeframe.\n"
                        "Make sure the username and time range (start, end) is correct.")
+        print("\n")
         warnings.warn(warning_msg)
         return pd.DataFrame()
     
@@ -333,22 +334,28 @@ def _find_coarse_periods(history_df:pd.DataFrame) -> pd.DataFrame:
         query_periods: list[tuple[float, float]] = []
         start_w_buffer = timestamps[0] - SECONDS_PER_DAY
         prev_timestamp = start_w_buffer
-        for i, timestamp in enumerate(timestamps):
-            # if we've reached a chunk boundary (3 day gap), add that chunk with buffers to list
-            if (timestamp - prev_timestamp) >= (SECONDS_PER_DAY * 3):
+        for timestamp in timestamps:
+            # if we've reached a chunk boundary (> 2 day gap), add that chunk with buffers to list
+            if (timestamp - prev_timestamp) > (SECONDS_PER_DAY * 2):
                 end_w_buffer = prev_timestamp + SECONDS_PER_DAY
                 query_periods.append((start_w_buffer, end_w_buffer))
                 # start time for the next query
                 start_w_buffer = timestamp - SECONDS_PER_DAY
-            # make sure the last chunk gets added as well
-            elif i == len(timestamps) - 1:
-                end_w_buffer = prev_timestamp + SECONDS_PER_DAY
-                query_periods.append((start_w_buffer, end_w_buffer))
             prev_timestamp = timestamp
+        
+        # make sure the last chunk gets added as well
+        last_timestamp_included = False
+        if len(query_periods) > 0:
+            final_start, final_end = query_periods[-1]
+            last_timestamp_included = (final_start <= timestamps[-1]) and (final_end >= timestamps[-1])
+        if not last_timestamp_included:
+            end_w_buffer = timestamps[-1] + SECONDS_PER_DAY
+            query_periods.append((start_w_buffer, end_w_buffer))
 
         periods_df = pd.DataFrame(data=query_periods, columns=['start', 'end'])
         periods_df[label_cols] = labels
         coarse_periods_df = pd.concat([coarse_periods_df, periods_df], ignore_index=True)
+        
     return coarse_periods_df
 
 def _find_fine_periods(coarse_periods_df:pd.DataFrame, metric:str, timestep:str='10m',
@@ -413,8 +420,9 @@ def _get_runs_df(fine_periods_df:pd.DataFrame,
                                            aggregate_period_sec=aggregate_period_sec)
         runs_df[label_cols] = labels
         final_df = pd.concat([final_df, runs_df], ignore_index=True)
-    final_df = final_df.sort_values(by = label_cols + ['start'])
-    final_df = final_df.reset_index(drop=True)
+    if len(final_df) > 0:
+        final_df = final_df.sort_values(by = label_cols + ['start'])
+        final_df = final_df.reset_index(drop=True)
     return final_df
 
 def _designate_run_boundaries(times: list[float | int], min_break_sec: float | int,
