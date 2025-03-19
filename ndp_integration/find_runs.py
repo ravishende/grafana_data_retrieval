@@ -312,8 +312,23 @@ def _query_activity(metric: str, start:datetime, end:datetime, filter_str:str, t
     df = graphs.get_graphs_from_queries(
         queries, sum_by=sum_by, start=start, end=end,
         time_step=timestep, progress_bars=False, as_one_df=True)
-    if df is not None:
+    # there is a weird bug with the querying where if there is a long enough period (>9 days?)
+    # being queried, the current day's data does not get queried for.
+    # To fix this, we do another shorter query of the final day and add it to the queried df.
+    # Then we remove any duplicate times and sort the updated df.
+    period_is_long = (end - start).total_seconds() > SECONDS_PER_DAY * 2
+    if period_is_long:
+        late_start = end - timedelta(days=1)
+        df_final_day = graphs.get_graphs_from_queries(
+            queries, sum_by=sum_by, start=late_start, end=end,
+            time_step=timestep, progress_bars=False, as_one_df=True)
+        if len(df) == 0:
+            df = df_final_day
+        elif len(df_final_day) > 0:
+            df = pd.concat([df, df_final_day], ignore_index=True)
+    if len(df) > 0:
         df.columns = [col.lower() for col in df.columns]
+        df = df.sort_values(by='time', ignore_index=True)
         df = df.drop_duplicates(subset='time', ignore_index=True)
     return df
 
@@ -384,8 +399,9 @@ def _find_fine_periods(coarse_periods_df:pd.DataFrame, metric:str, timestep:str=
         df = pd.DataFrame()
 
         for tup in periods_df.itertuples():
+            start, end = datetime_ify(tup.start), datetime_ify(tup.end)
             fine_df = _query_activity(
-                metric=metric, start=tup.start, end=tup.end, filter_str=filter_str,
+                metric=metric, start=start, end=end, filter_str=filter_str,
                 timestep=timestep, sum_by=sum_by, timeout_seconds=timeout_seconds)
             if fine_df is None:
                 continue
