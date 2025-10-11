@@ -1,6 +1,4 @@
-# Grafana Data Retrieval
-
-## Repo for PREMOA Software
+# PREMOA
 
 > Performance Retrieval and Estimation for Metric Optimization and Analysis
 
